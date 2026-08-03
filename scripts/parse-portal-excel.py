@@ -117,6 +117,12 @@ for row in list_rows[1:]:
     method = get("HTTP Method")
     url = get("URL 명")
     api_id = get("API ID")
+    # kind 교정: URL 기반이 목록 시트의 통신방식보다 신뢰성 높음
+    # (목록 시트는 일부 항목을 잘못 분류 — 예: 국내주식-163 REST, 장운영정보 웹소켓)
+    if url.startswith("/uapi/"):
+        kind = "REST"
+    elif url.startswith("/tryitout/") or url.startswith("ws") or "websocket" in url.lower():
+        kind = "WEBSOCKET"
     key = f"{cat}.{api_id}" if api_id else f"{cat}.{re.sub(r'[^0-9A-Za-z가-힣]', '_', api_name)}"
     key = re.sub(r"[^\w가-힣.-]", "_", key)  # 공백/특수문자 → _ (키 안전화)
     entry = {

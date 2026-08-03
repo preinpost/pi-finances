@@ -1,7 +1,7 @@
 # pi-kis-trading
 
-한국투자증권 [OPEN API](https://github.com/koreainvestment/open-trading-api)를 **REST로 직접 호출**하는 pi 패키지입니다.
-MCP 서버 프로세스도, GitHub에서 코드를 내려받아 실행하는 방식도 없습니다 — 패키지에 포함된 API 정의(`configs/` + `src/generated/apis.json`)와 순수 TypeScript 클라이언트로 동작합니다.
+한국투자증권 [OPEN API](https://apiportal.koreainvestment.com/)를 **REST로 직접 호출**하는 pi 패키지입니다.
+MCP 서버 프로세스도, GitHub에서 코드를 내려받아 실행하는 방식도 없습니다 — 패키지에 포함된 API 정의(`src/generated/apis.json`, 공식 포털 전체 규격 기반 **338개**)와 순수 TypeScript 클라이언트로 동작합니다.
 
 ## 설치
 
@@ -15,25 +15,49 @@ pi install /Users/ms/dev/pi/pi-kis-trading
 ```bash
 # pi 안에서:
 /kis-key       # API 키 입력창 → OS 키체인 저장 (파일 폴백 시 ~/.pi/agent/kis-keys.json)
-/kis-status    # 백엔드/키/토큰/API 수 진단
+/kis-status    # 백엔드/키/토큰/API 수(338: REST 278 + WEBSOCKET 60, alias 164) 진단
 
 # 그 다음 자연어로:
 "RKLB 현재가 알려줘"              # kis_overseas_price
 "RKLB 1년 일봉으로 52주 고점 계산해줘"  # kis_overseas_chart
 "삼성전자 현재가"                  # kis_domestic_price
+"삼성전자 최근 3개월 일봉"          # kis_domestic_chart
 ```
 
 ## 도구
 
 | 도구 | 설명 |
 |---|---|
-| `kis_api` | 범용 디스패치 — `api: "category.api_type"`, `params`, `env` |
-| `kis_list_apis` | 사용 가능한 API 목록 (카테고리 필터) |
-| `kis_overseas_price` | 해외주식 현재체결가 |
-| `kis_overseas_chart` | 해외주식 기간별시세 (일/주/월) |
-| `kis_domestic_price` | 국내주식 현재가 |
+| `kis_api` | 범용 디스패치 — `api`(v2 키), `params`, `env`, `tr_id`(다중 TR_ID API), `pages`(연속조회) |
+| `kis_list_apis` | 사용 가능한 API 목록 (카테고리 필터, v2 키 확인) |
+| `kis_overseas_price` | 해외주식 현재체결가 (`overseas_stock.v1_해외주식-009`, HHDFS00000300) |
+| `kis_overseas_chart` | 해외주식 기간별시세 (`overseas_stock.v1_해외주식-010`, HHDFS76240000) |
+| `kis_domestic_price` | 국내주식 현재가 (`domestic_stock.v1_국내주식-008`, FHKST01010100) |
+| `kis_domestic_chart` | 국내주식 기간별시세 (`domestic_stock.v1_국내주식-016`, FHKST03010100) |
 
-범용 `kis_api`로는 공식 레포의 **164개 API**를 호출할 수 있습니다 (시세/차트/호가/순위/주문 등, `kis_list_apis`로 확인).
+## API 키 체계 (v2)
+
+- 키 형식: `category.api_id` (예: `overseas_stock.v1_해외주식-009`, `domestic_stock.v1_국내주식-001`). 공식 포털
+  [API_COLLECTION](https://apiportal.koreainvestment.com/files/download/apiCollection/API_COLLECTION) Excel에서
+  `scripts/parse-portal-excel.py`로 생성 (`src/generated/apis.json`).
+- **구버전 키 호환**: 예전 예제코드 파싱 스펙(164개)의 키(`overseas_stock.price` 등) → v2 키 매핑은
+  `src/generated/aliases.json` (method + api_path 동일 매칭). `lookupApi`는 v2 키 먼저, 없으면 alias.
+
+## v2 클라이언트 동작 (`src/client.ts`)
+
+- **tr_id 선택**: env에 따라 `tr_id_real[0]`/`tr_id_paper[0]` 자동 선택. **다중 TR_ID API**(배열 길이>1 또는
+  `headers.tr_id.desc`에 라벨 목록 존재 — 해외주식 주문은 12개 라벨)는 `tr_id` 파라미터 필수. desc의
+  "TRID : 한글라벨"을 파싱해 선택 목록을 제공하고, 목록에 없는 tr_id는 에러.
+- **hashkey**: POST 주문/정정/취소 계열(`/trading/` 경로)에 자동 적용. `POST {base}/uapi/hashkey`
+  (content-type/appkey/appsecret 헤더만, authorization 불필요) → `HASH` → 요청 헤더 `hashkey` 추가.
+  발급 실패 시 hashkey 없이 진행하지 않고 에러 (안전 우선).
+- **파라미터 자동 주입**: GET→query, POST→body. AUTH→`""`, CANO→등록 계좌, ACNT_PRDT_CD→`"01"`,
+  custtype 헤더→`"P"`, CTX_AREA_*→`""`(연속조회). 사용자 params는 소문자/대문자 키 모두 허용(대문자 우선),
+  required 누락 시 누락 목록 에러, 스펙에 없는 파라미터는 무시.
+- **WEBSOCKET API**: `kis_api` 호출 시 "websocket 전용, REST 호출 불가" 에러.
+- **tr_cont 페이지네이션**: `pages`(기본 1, 최대 10). 응답 body의 `ctx_area_nk100/fk100`(→nk200/fk200→nk50/fk50)을
+  다음 요청 query로 에코, 응답 헤더 `tr_cont`가 D/E 또는 ctx 키가 없으면 종료, output 배열 병합.
+- **인증**: 401/토큰 만료 시 캐시 클리어 후 토큰 재발급 + 1회 재시도 (토큰 발급 시 알림톡 발송).
 
 ## 키 & 토큰 (시크릿 저장소)
 
@@ -54,19 +78,32 @@ pi install /Users/ms/dev/pi/pi-kis-trading
 
 ## API 정의 재생성 (선택)
 
-`configs/*.json`과 `src/generated/apis.json`은 공식 레포에서 생성한 것입니다. 레포를 받아두고 재생성하려면:
-
 ```bash
-git clone --depth 1 https://github.com/koreainvestment/open-trading-api.git /tmp/open-trading-api
+# 공식 포털 전체 API 규격 Excel 다운로드:
+curl -L -o /tmp/kis_api_collection.xlsx https://apiportal.koreainvestment.com/files/download/apiCollection/API_COLLECTION
 cd pi-kis-trading
-KIS_REPO=/tmp/open-trading-api node scripts/generate-apis.mjs
+python3 scripts/parse-portal-excel.py /tmp/kis_api_collection.xlsx src/generated/apis.json
 ```
+
+`src/generated/aliases.json`은 구버전 스펙(예제코드 파싱)의 키→v2 키 정적 매핑입니다 (재생성 불필요).
+
+## 주문 API 패턴
+
+주문 전 **가능여부 검증** (모두 GET, 계좌 자동 주입):
+- 국내 매수가능: `domestic_stock.v1_국내주식-007` (TTTC8908R)
+- 국내 매도가능수량: `domestic_stock.국내주식-165` (TTTC8408R)
+- 국내 정정취소가능: `domestic_stock.v1_국내주식-004` (TTTC0084R)
+- 해외 매수가능금액: `overseas_stock.v1_해외주식-014` (TTTS3007R)
+
+주문은 다중 TR_ID — `tr_id` 필수 (hashkey 자동 적용):
+- 국내 주식주문(현금): `domestic_stock.v1_국내주식-001` (TTTC0011U/TTTC0012U)
+- 해외주식 주문: `overseas_stock.v1_해외주식-001` (TTTT1002U 미국 매수 등 12종 — tr_id 미지정 시 목록이 에러로 표시)
 
 ## 주의사항
 
-- **해외주식 실시간 시세는 유료 구독일 수 있음** — 한국투자증권 해외 시세 이용료 정책 확인. 일봉/기간별 시세는 무료인 경우가 많습니다.
+- **해외주식 실시간 시세는 유료 구독일 수 있음** — 일봉/기간별 시세는 무료인 경우가 많습니다.
 - 펀더멘털(수주잔고, 매출 등)은 조회 불가 — IR/뉴스에서 확인.
-- 주문/잔고 API는 실전에서 신중히, 기본은 조회 위주.
+- 주문/잔고 API는 실전에서 신중히, 기본은 조회 위주. 실전 주문은 사용자 확인 후에만.
 - 투자 결정은 본인 책임. 본 패키지는 투자 조언을 제공하지 않습니다.
 
 ## License

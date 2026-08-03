@@ -40,6 +40,12 @@ export interface TokenCache {
 	paper?: { token: string; appKeyHash: string; expiresAt: number };
 }
 
+/** 웹소켓 접속키 캐시 (REST 토큰과 별개 — /oauth2/Approval 발급, 유효 24h). */
+export interface ApprovalCache {
+	real?: { approvalKey: string; appKeyHash: string; expiresAt: number };
+	paper?: { approvalKey: string; appKeyHash: string; expiresAt: number };
+}
+
 type SecretBlob = Record<string, unknown> | null;
 
 export interface SecretStore {
@@ -48,6 +54,8 @@ export interface SecretStore {
 	saveKeys(keys: KisKeys): Promise<void>;
 	getTokenCache(): TokenCache;
 	saveTokenCache(cache: TokenCache): Promise<void>;
+	getApprovalCache(): ApprovalCache;
+	saveApprovalCache(cache: ApprovalCache): Promise<void>;
 }
 
 interface KeyringEntry {
@@ -63,6 +71,7 @@ interface KeyringLib {
 const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
 export const keysPath = process.env.KIS_KEYS_FILE ?? join(agentDir, "kis-keys.json");
 export const tokenPath = join(agentDir, "kis-token.json");
+export const approvalPath = join(agentDir, "kis-approval.json");
 
 const SERVICE = "pi-kis-trading";
 
@@ -121,6 +130,14 @@ class KeyringStore implements SecretStore {
 	async saveTokenCache(cache: TokenCache): Promise<void> {
 		this.write("token", cache as unknown as Record<string, unknown>);
 	}
+
+	getApprovalCache(): ApprovalCache {
+		return (this.read("approval") as ApprovalCache | null) ?? {};
+	}
+
+	async saveApprovalCache(cache: ApprovalCache): Promise<void> {
+		this.write("approval", cache as unknown as Record<string, unknown>);
+	}
 }
 
 class FileStore implements SecretStore {
@@ -154,6 +171,14 @@ class FileStore implements SecretStore {
 
 	async saveTokenCache(cache: TokenCache): Promise<void> {
 		await this.write(tokenPath, cache as unknown as Record<string, unknown>);
+	}
+
+	getApprovalCache(): ApprovalCache {
+		return (this.read(approvalPath) as ApprovalCache | null) ?? {};
+	}
+
+	async saveApprovalCache(cache: ApprovalCache): Promise<void> {
+		await this.write(approvalPath, cache as unknown as Record<string, unknown>);
 	}
 }
 
