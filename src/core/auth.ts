@@ -55,6 +55,8 @@ export function loadKeys(): KisKeys {
 		paperStock: paper.cano,
 		paperStockPrdtCd: paper.prdtCd,
 		paperFuture: file.paperFuture ?? env.KIS_PAPER_FUTURE,
+		tossClientId: file.tossClientId ?? env.TOSS_CLIENT_ID,
+		tossClientSecret: file.tossClientSecret ?? env.TOSS_CLIENT_SECRET,
 	};
 }
 

@@ -15,6 +15,8 @@ pi install git:github.com/preinpost/pi-kis
 ```bash
 # pi 안에서:
 /kis-key       # API 키 입력창 → OS 키체인 저장 (파일 폴백 시 ~/.pi/agent/kis-keys.json)
+               #   KIS: appKey/appSecret(실전·모의) + 계좌번호 (선택)
+               #   Toss: client_id/client_secret (선택 — toss_* 툴 사용 시)
 /kis-status    # 백엔드/키/토큰/API 수(338: REST 278 + WEBSOCKET 60, alias 164) 진단
 
 # 그 다음 자연어로:
@@ -42,6 +44,13 @@ pi install git:github.com/preinpost/pi-kis
 | `kis_domestic_chart` | 국내주식 기간별시세 (`domestic_stock.v1_국내주식-016`, FHKST03010100) |
 | `kis_research` | 주식 리서치 — 재무제표/뉴스/컨센서스 (`kind: income\|ratios\|news\|consensus`, `symb`) |
 | `kis_technical` | 기술적 분석(타점) — MA/RSI/ATR/볼린저/지지저항/추세 (`market`, `symb`, `period`) |
+| `toss_price` | 토스 현재가 — 복수 종목 (KRX 6자리 / US 티커, 콤마 구분 최대 200) |
+| `toss_chart` | 토스 캔들·지표 — 일봉(1d)/1분봉(1m), kis_technical과 동일 지표 로직 |
+| `toss_market` | 토스 전용 시장 데이터 (환율·장운영시간·랭킹·투자자별 매매대금·종목경고 — KIS 비겹침) |
+| `toss_balance` | 토스 자산 종합 (계좌·보유종목·매수여력 KRW/USD·수수료) |
+| `toss_order` | 토스 주문 생성 (지정가/시장가, clientOrderId 멱등, 1억원 이상 confirm 필수) |
+| `toss_orders` | 토스 주문 목록/상세/정정/취소 |
+| `toss_conditional` | 토스 조건주문 (SINGLE/OCO/OTO — KIS에 없는 강점) |
 
 ## 아키텍처 (에이전트 통합 친화적 3계층)
 
@@ -60,16 +69,34 @@ src/
     research.ts      재무제표(income/ratios)·뉴스·애널리스트 컨센서스
     indicators.ts    기술적 지표 (MA/RSI/ATR/볼린저/지지저항/추세 — 순수 계산)
     trading.ts       주문/정정/취소 — prepare/send 2단계 + 검증 API(안전 가드)
+    toss.ts          토스증권 역할 (시세·자산·주문·조건주문)
     types.ts         공용 타입 (PreparedOrder/PreparedCancel 등)
+  core/toss/         토스증권 transport (OAuth 클라이언트 + 그룹별 레이트리밋)
   agent/             — pi 통합
     extension.ts     registerExtension (마이그레이션 + tools/commands 등록)
-    tools.ts         kis_* 9개 툴 (execute는 roles/core 위임, surface 불변)
-    commands.ts      /kis-key, /kis-status
+    tools.ts         kis_* 9개 + toss_* 7개 툴 (execute는 roles/core 위임, surface 불변)
+    commands.ts      /kis-key (KIS+토스 키 등록), /kis-status
 ```
 
-- **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/research/indicators/trading)이 v2 키·tr_id·파라미터를 캡슐화한다.
+- **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/research/indicators/trading/toss)이 v2 키·tr_id·파라미터를 캡슐화한다.
   자동매매 에이전트는 `roles/trading.ts`를 직접 import해 `prepare*`(요약+검증) → 사용자 확인 → `send*`(실행) 흐름으로 사용한다.
 - 주문은 원샷 함수가 아니라 **prepare/send 2단계** — 실전 주문은 사용자 확인 후 `send*`로만 실행한다.
+
+## 브로커 비교 (KIS vs Toss)
+
+| 항목 | KIS (pi-kis) | Toss (토스증권) |
+|---|---|---|
+| 시세 | 국내·해외 현재가/차트(일·주·월) | 현재가/캔들(**일봉·1분봉만**) |
+| 리서치 | 338개 API — 재무제표·뉴스·컨센서스·투자자매매동향 | 제한적 — 투자자별 매매대금(지수), 랭킹, 종목경고 |
+| 실시간 | WebSocket (체결가/호가/체결통보) | 없음 (스냅샷·캔들만) |
+| 주문 | 국내·해외 주문/정정/취소 (hashkey) | 주문/정정/취소 + **조건주문(SINGLE/OCO/OTO)** |
+| 수수료 | API로 조회 없음 | 수수료율 조회 (`toss_balance`) |
+| 장운영 | API로 조회 없음 | KR·US 장운영시간·환율 (`toss_market`) |
+| 인증 | 토큰 24h + 알림톡, appKey/secret | OAuth2, client_id/secret |
+| 모의투자 | paper 지원 | 실전 전용 |
+| 레이트리밋 | 전역 300ms(조회)/600ms(주문) | 그룹별 (ACCOUNT 1/s ~ MARKET_DATA 10/s) |
+
+> **활용**: 시세·차트는 어느 브로커든 동일하므로 KIS 우선. 토스는 **비겹침 데이터**(조건주문·수수료·장운영시간·환율·랭킹·종목경고·투자자별 매매대금)로 인사이트를 보강한다.
 
 ## API 키 체계 (v2)
 

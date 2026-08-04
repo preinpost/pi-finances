@@ -28,6 +28,17 @@ description: 매수/매도 타점 분석 — "매수 타이밍", "타점 분석"
 - **장기 지표**(200일 MA 등) 필요 시: 기간을 나눠 2회 호출(`kis_domestic_chart { date1, date2 }` 등)해 합산
 - 종목코드가 틀리면 빈 응답 — `kis_domestic_price`로 유효성 확인
 
+토스증권 키가 있으면 `toss_chart`로도 동일 지표 계산 가능:
+
+```jsonc
+// toss_chart (토스 캔들 → 공용 indicators 계산 — kis_technical과 동일 로직)
+{ "symbol": "005930", "interval": "1d", "count": 100 }
+{ "symbol": "AAPL",  "interval": "1d", "count": 200 }
+```
+
+- 토스는 **1d(일봉)/1m(1분봉)만 지원 — 주봉/월봉 없음** (필요 시 일봉을 주/월 단위로 집계)
+- 1분봉은 당일 단기 타점(스캘핑)에 활용 가능 — KIS 차트에는 없는 옵션
+
 ## 2. 지표 해석
 
 | 지표 | 판단 |

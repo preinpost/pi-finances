@@ -42,11 +42,17 @@ export interface KisKeys {
 	/** 모의 계좌 상품코드 (ACNT_PRDT_CD, 보통 "01"). */
 	paperStockPrdtCd?: string;
 	paperFuture?: string;
+	/** 토스증권 개발자센터에서 발급한 client_id (c_... 형식). */
+	tossClientId?: string;
+	/** 토스증권 개발자센터에서 발급한 client_secret (s_... 형식). */
+	tossClientSecret?: string;
 }
 
 export interface TokenCache {
 	real?: { token: string; appKeyHash: string; expiresAt: number };
 	paper?: { token: string; appKeyHash: string; expiresAt: number };
+	/** 토스증권 OAuth access token (client_credentials, 브로커별 1개). */
+	toss?: { token: string; expiresAt: number };
 }
 
 /** 웹소켓 접속키 캐시 (REST 토큰과 별개 — /oauth2/Approval 발급, 유효 24h). */

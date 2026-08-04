@@ -78,6 +78,23 @@ https://news.google.com/rss/search?q=한국콜마+주가&hl=ko&gl=KR&ceid=KR:ko
 ⚠️ **한국투자 리서치 커버 약 160개 기업 한정** — 중소형주는 빈 응답 정상 (커버 안 됨 표기).
 추정일은 월초 기준이라 실적발표 후 시차 존재.
 
+## 5b. 토스 데이터 교차 (선택 — KIS와 비겹침 보강)
+
+토스증권 키(tossClientId/tossClientSecret, `/kis-key`에서 등록)가 있으면 **KIS에 없는 데이터**로 인사이트를 보강한다:
+
+```jsonc
+// toss_market { kind: "exchange-rate" }              // KRW↔USD 환율 (해외주식 손익 환산에 유용)
+// toss_market { kind: "calendar-KR"/"calendar-US" }  // 장운영시간 (미국 프리/정규/애프터마켓)
+// toss_market { kind: "rankings", rankingsType, rankingsMarket, rankingsDuration }  // 거래대금·상승률 랭킹
+// toss_market { kind: "investor-trading", symbol: "KOSPI"/"KOSDAQ", interval }      // 투자자별 매매대금
+// toss_market { kind: "warnings", symbol }            // 매수 유의사항 (정리매매/과열/투자경고/VI) — 리스크 절에 필수 반영
+// toss_balance                                        // 수수료율·보유종목·매수여력 — KIS와 교차 확인
+```
+
+- **warnings는 리포트 '리스크' 절에 반드시 반영** (투자경고/정리매매 대상이면 매수 추천 금지)
+- 수수료율·환율은 종목 리포트의 비용/수익 계산에 사용
+- 시세·차트는 KIS와 겹치므로 굳이 토스로 중복 조회하지 않는다 (비겹침 데이터만)
+
 ## 6. 종목 리포트 포맷 (마크다운)
 
 ```markdown
