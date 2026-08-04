@@ -14,9 +14,9 @@ pi install git:github.com/preinpost/pi-kis
 
 ```bash
 # pi 안에서:
-/kis-key       # API 키 입력창 → OS 키체인 저장 (파일 폴백 시 ~/.pi/agent/kis-keys.json)
-               #   KIS: appKey/appSecret(실전·모의) + 계좌번호 (선택)
-               #   Toss: client_id/client_secret (선택 — toss_* 툴 사용 시)
+/kis-key       # KIS API 키 입력창 → OS 키체인 저장 (파일 폴백 시 ~/.pi/agent/kis-keys.json)
+               #   appKey/appSecret(실전·모의) + 계좌번호 (선택)
+/toss-key      # 토스증권 키 등록 (developers.tossinvest.com 발급 client_id/client_secret — toss_* 툴)
 /kis-status    # 백엔드/키/토큰/API 수(338: REST 278 + WEBSOCKET 60, alias 164) 진단
 
 # 그 다음 자연어로:
@@ -51,6 +51,14 @@ pi install git:github.com/preinpost/pi-kis
 | `toss_order` | 토스 주문 생성 (지정가/시장가, clientOrderId 멱등, 1억원 이상 confirm 필수) |
 | `toss_orders` | 토스 주문 목록/상세/정정/취소 |
 | `toss_conditional` | 토스 조건주문 (SINGLE/OCO/OTO — KIS에 없는 강점) |
+| `broker_price` | 현재가 (KIS/Toss 자동 폴백) — 국내 6자리/해외 티커, `source: primary/fallback` |
+| `broker_chart` | 차트·지표 (KIS/Toss 자동 폴백) — D(폴백)/W·M(KIS 전용)/1d·1m(Toss) |
+
+## 브로커 폴백 (시세·차트만)
+
+- 등록된 키가 있는 브로커만 후보 — 둘 다 있으면 KIS 우선 (KIS가 주봉/월봉 보유), 하나만 있으면 그 브로커로 동작.
+- 첫 브로커 실패/데이터 없음 → 상대 브로커 재시도 (응답 `source: "fallback"` 표시).
+- **계좌·주문·자산은 폴백 불가** — 증권사별 계좌에 묶여 있으므로 `kis_*`/`toss_*` 툴로 브로커를 명시적으로 선택해야 한다.
 
 ## 아키텍처 (에이전트 통합 친화적 3계층)
 
@@ -65,6 +73,7 @@ src/
     generated/       apis.json(338개) / aliases.json / ws-tr-ids.json
   roles/             — 도메인 역할 (core를 typed wrapper로 확장) — 에이전트가 직접 import
     market.ts        현재가·52주 요약(getDomesticQuoteSummary)·차트·실시간 재수출
+    broker.ts        브로커 중립 퍼사드 — 시세·차트 KIS/Toss 자동 폴백 (keysRegistered로 후보 선별)
     portfolio.ts     잔고/체결/미체결 조회
     research.ts      재무제표(income/ratios)·뉴스·애널리스트 컨센서스
     indicators.ts    기술적 지표 (MA/RSI/ATR/볼린저/지지저항/추세 — 순수 계산)
@@ -74,8 +83,8 @@ src/
   core/toss/         토스증권 transport (OAuth 클라이언트 + 그룹별 레이트리밋)
   agent/             — pi 통합
     extension.ts     registerExtension (마이그레이션 + tools/commands 등록)
-    tools.ts         kis_* 9개 + toss_* 7개 툴 (execute는 roles/core 위임, surface 불변)
-    commands.ts      /kis-key (KIS+토스 키 등록), /kis-status
+    tools.ts         kis_* 9 + toss_* 7 + broker_* 2 툴 (execute는 roles/core 위임)
+    commands.ts      /kis-key, /toss-key, /kis-status
 ```
 
 - **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/research/indicators/trading/toss)이 v2 키·tr_id·파라미터를 캡슐화한다.

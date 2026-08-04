@@ -66,18 +66,45 @@ export function registerCommands(pi: ExtensionAPI): void {
 				if (acct && acct.trim()) keys.acctStock = acct.trim();
 			}
 
-			const wantToss = await ctx.ui.confirm("토스증권 키", "toss_* 툴(시세/자산/주문/조건주문)용 토스증권 client_id/client_secret도 등록할까요? (선택)");
-			if (wantToss) {
-				const tId = await ctx.ui.input("Toss Client ID", existing.tossClientId ? `현재: ${masked(existing.tossClientId)} — 엔터로 유지` : "");
-				if (tId && tId.trim()) keys.tossClientId = tId.trim();
-				const tSecret = await ctx.ui.input("Toss Client Secret", existing.tossClientSecret ? `현재: ${masked(existing.tossClientSecret)} — 엔터로 유지` : "");
-				if (tSecret && tSecret.trim()) keys.tossClientSecret = tSecret.trim();
-			}
-
 			await saveKeys(keys);
 			ctx.ui.notify(
 				`키 저장 완료 → ${store.backend === "keyring" ? "OS keyring (Keychain/CredMan/SecretService)" : keysPath} (${store.backend})\n` +
-				`KIS 실전: ${masked(keys.appKey)} / 모의: ${keys.paperAppKey ? masked(keys.paperAppKey) : "미등록"} / 토스: ${keys.tossClientId ? masked(keys.tossClientId) : "미등록"}`,
+				`KIS 실전: ${masked(keys.appKey)} / 모의: ${keys.paperAppKey ? masked(keys.paperAppKey) : "미등록"}`,
+				"info",
+			);
+		},
+	});
+
+	// ── /toss-key ───────────────────────────────────────────────────────
+	pi.registerCommand("toss-key", {
+		description: "토스증권 Open API 키 등록 (개발자센터 발급 client_id/client_secret → OS 키체인/0600 파일 폴백)",
+		handler: async (_args, ctx) => {
+			const existing = loadKeys();
+			const clientId = await ctx.ui.input(
+				"Toss Client ID",
+				existing.tossClientId ? `현재 값: ${masked(existing.tossClientId)} — 엔터로 유지` : "developers.tossinvest.com에서 발급받은 client_id (c_...)",
+			);
+			if (clientId === undefined) {
+				ctx.ui.notify("취소됨 — 키를 저장하지 않았습니다.", "info");
+				return;
+			}
+			const clientSecret = await ctx.ui.input(
+				"Toss Client Secret",
+				existing.tossClientSecret ? `현재 값: ${masked(existing.tossClientSecret)} — 엔터로 유지` : "client_secret (s_...)",
+			);
+			if (clientSecret === undefined) {
+				ctx.ui.notify("취소됨 — 키를 저장하지 않았습니다.", "info");
+				return;
+			}
+
+			const keys: Record<string, string> = { ...(existing as KisKeys) }; // 기존 KIS 키 보존
+			if (clientId.trim()) keys.tossClientId = clientId.trim();
+			if (clientSecret.trim()) keys.tossClientSecret = clientSecret.trim();
+
+			await saveKeys(keys);
+			ctx.ui.notify(
+				`토스 키 저장 완료 → ${store.backend === "keyring" ? "OS keyring (Keychain/CredMan/SecretService)" : keysPath} (${store.backend})\n` +
+				`Client ID: ${masked(keys.tossClientId)} (toss_* 툴 사용 가능)`,
 				"info",
 			);
 		},
@@ -97,7 +124,7 @@ export function registerCommands(pi: ExtensionAPI): void {
 				`appKey     : ${masked(keys.appKey)}`,
 				`appSecret  : ${masked(keys.appSecret)}`,
 				`paper keys : ${keys.paperAppKey ? `${masked(keys.paperAppKey)} / ${masked(keys.paperAppSecret)}` : "not set"}`,
-				`toss keys  : ${keys.tossClientId ? `${masked(keys.tossClientId)} (toss_* 툴 사용 가능)` : "not set — /kis-key"}`,
+				`toss keys  : ${keys.tossClientId ? `${masked(keys.tossClientId)} (toss_* 툴 사용 가능)` : "not set — /toss-key"}`,
 				`accounts   : ${keys.acctStock ? "1 set" : "0 set"} (주문/잔고용, 선택)`,
 				`auto env   : ${env}`,
 				`token cache: real=${tokenAge("real") !== null ? `${tokenAge("real")}s 남음` : "없음"} / paper=${tokenAge("paper") !== null ? `${tokenAge("paper")}s 남음` : "없음"}`,
@@ -106,7 +133,8 @@ export function registerCommands(pi: ExtensionAPI): void {
 				`apis       : ${stats.total}개 (REST ${stats.rest} / WEBSOCKET ${stats.websocket}) + alias ${stats.aliases}개`,
 				`사용법     : "RKLB 현재가 알려줘" → kis_overseas_price / kis_api (v2 키: kis_list_apis로 확인)`,
 				`실시간     : "삼성전자 실시간체결가" → kis_realtime { tr_id: "H0STCNT0", tr_key: "005930" }`,
-				`토스       : "RKLB 매도 타점" → toss_chart/toss_market (토스 키는 /kis-key에서 등록)`,
+				`토스       : "RKLB 매도 타점" → toss_chart/toss_market (토스 키는 /toss-key에서 등록)`,
+				`폴백      : "현재가/차트" → broker_price/broker_chart (KIS/Toss 자동 폴백)`,
 			];
 			ctx.ui.notify(lines.join("\n"), "info");
 		},

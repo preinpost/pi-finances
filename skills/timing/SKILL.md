@@ -11,17 +11,25 @@ description: 매수/매도 타점 분석 — "매수 타이밍", "타점 분석"
 ## 0. 실행 시퀀스
 
 ```
-차트·지표 수집(kis_technical) → 4층 판단(추세/모멘텀/밸류교차/리스크)
+차트·지표 수집(broker_chart — KIS/Toss 자동 폴백, 주봉/월봉은 KIS 전용) → 4층 판단(추세/모멘텀/밸류교차/리스크)
 → 결론(매수/매도/관망) → 결론에 맞는 실행 시나리오 3개(조건부 대응) → 리포트
 ```
 
 ## 1. 데이터 수집
 
 ```jsonc
-// kis_technical (차트 자동 조회 + 지표 계산)
+// broker_chart — KIS/Toss 자동 폴백 (시세·차트 폴백 구조)
+//   등록 브로커 우선, 실패 시 상대 브로커. 응답 source: primary/fallback 확인.
+//   주봉/월봉(W/M)은 KIS 전용, 1분봉(1m)은 Toss 전용.
+{ "symbol": "005930", "period": "D" }        // 국내 일봉 (KIS→Toss 폴백)
+{ "symbol": "RKLB",  "period": "W" }        // 해외 주봉 (KIS 전용)
+
+// kis_technical — KIS 전용 차트 + 지표 (지표 로직 동일)
 { "symb": "005930", "market": "domestic", "period": "D" }   // 국내 일봉
 { "symb": "RKLB",  "market": "overseas", "period": "D", "excd": "NAS" } // 해외
 ```
+
+브로커 중 하나만 키가 있어도 동작한다 (KIS만 → KIS 데이터, Toss만 → Toss 데이터, 둘 다 → KIS 우선).
 
 - `period`: D=일봉(기본)/W=주봉/M=월봉
 - **한계**: 국내 최대 100봉, 해외 최대 100행 (주봉이면 100주 = 약 2년)

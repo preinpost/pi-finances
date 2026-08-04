@@ -80,7 +80,7 @@ https://news.google.com/rss/search?q=한국콜마+주가&hl=ko&gl=KR&ceid=KR:ko
 
 ## 5b. 토스 데이터 교차 (선택 — KIS와 비겹침 보강)
 
-토스증권 키(tossClientId/tossClientSecret, `/kis-key`에서 등록)가 있으면 **KIS에 없는 데이터**로 인사이트를 보강한다:
+토스증권 키(tossClientId/tossClientSecret, `/toss-key`에서 등록)가 있으면 **KIS에 없는 데이터**로 인사이트를 보강한다:
 
 ```jsonc
 // toss_market { kind: "exchange-rate" }              // KRW↔USD 환율 (해외주식 손익 환산에 유용)

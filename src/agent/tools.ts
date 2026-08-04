@@ -54,6 +54,7 @@ import {
 	placeConditionalOrder,
 	placeOrder,
 } from "../roles/toss.ts";
+import { getCandles as brokerGetCandles, getPrice as brokerGetPrice } from "../roles/broker.ts";
 
 /** 툴 결과 공통 래퍼 — 기존 index.ts와 동일 형태. */
 export function textResult(text: string) {
@@ -409,7 +410,7 @@ export function registerTools(pi: ExtensionAPI): void {
 		description:
 			"토스증권 현재가 조회 (국내 KRX 6자리 / 해외 US 티커). symbols: 최대 200개 콤마 구분 " +
 			"(예: \"005930,000660\" 또는 \"AAPL,MSFT\"). 응답: [{ symbol, timestamp, lastPrice, currency }]. " +
-			"토스 키 등록 필요 (/kis-key에서 toss client_id/secret). 실시간 시세는 아니며 조회 시점 스냅샷입니다.",
+			"토스 키 등록 필요 (/toss-key에서 client_id/secret). 실시간 시세는 아니며 조회 시점 스냅샷입니다.",
 		parameters: Type.Object({
 			symbols: Type.String({ description: "종목 심볼 콤마 구분 (최대 200), 예: 005930,000660 또는 AAPL,MSFT" }),
 		}),
@@ -464,7 +465,7 @@ export function registerTools(pi: ExtensionAPI): void {
 			"rankings(랭킹), indicator-prices(국내 지수·국채), investor-trading(코스피/코스닥 투자자별 매매대금), " +
 			"stock-info(종목 기본정보), warnings(매수 유의사항: 정리매매/과열/투자경고/VI). " +
 			"rankings는 type(거래대금/거래량/상승·하락률)+marketCountry(KR/US)+duration(기간) 필수. " +
-			"토스 키 등록 필요 (/kis-key).",
+			"토스 키 등록 필요 (/toss-key).",
 		parameters: Type.Object({
 			kind: Type.Union(
 				[
@@ -562,7 +563,7 @@ export function registerTools(pi: ExtensionAPI): void {
 		label: "토스 자산 종합",
 		description:
 			"토스증권 자산 종합 조회 — 계좌 목록 + 보유종목(평가금액·손익) + 매수 가능 금액(KRW·USD) + 매매 수수료. " +
-			"KIS와 비겹침 데이터(수수료율 등) 포함. accountSeq 미지정 시 첫 계좌 사용. 토스 키 등록 필요 (/kis-key).",
+			"KIS와 비겹침 데이터(수수료율 등) 포함. accountSeq 미지정 시 첫 계좌 사용. 토스 키 등록 필요 (/toss-key).",
 		parameters: Type.Object({
 			accountSeq: Type.Optional(Type.Number({ description: "계좌 식별 키 (미지정 시 첫 계좌 자동)" })),
 		}),
@@ -761,6 +762,64 @@ export function registerTools(pi: ExtensionAPI): void {
 						return jsonResult({ ok: true, action: params.action, cancelled: params.conditionalOrderId });
 				}
 				return jsonResult({ ok: false, error: `알 수 없는 action: ${params.action}` });
+			} catch (e) {
+				return jsonResult({ ok: false, error: (e as Error).message });
+			}
+		},
+	});
+
+	// ── broker: KIS/Toss 자동 폴백 (시세·차트만) ────────────────────────
+	pi.registerTool({
+		name: "broker_price",
+		label: "현재가 (KIS/Toss 자동 폴백)",
+		description:
+			"현재가 조회 — KIS/Toss 자동 폴백 (등록된 브로커 우선, 실패 시 상대 브로커). " +
+			"국내 6자리(005930) 또는 해외 티커(RKLB) 모두 지원. 응답에 source: primary/fallback 표시. " +
+			"시세 전용 — 계좌·주문은 각 브로커 툴(kis_*/toss_*)을 명시적으로 사용하세요. " +
+			"KIS/Toss 키가 모두 없으면 /kis-key 또는 /toss-key 안내.",
+		parameters: Type.Object({
+			symbol: Type.String({ description: "종목 심볼: 6자리 국내코드 또는 해외 티커, 예: 005930 / RKLB" }),
+			prefer: Type.Optional(Type.Union([Type.Literal("kis"), Type.Literal("toss")], { description: "우선 브로커 (기본: 등록된 브로커 중 KIS 우선)" })),
+			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")], {
+				description: "real(실전)/paper(모의)/auto(기본) — KIS 호출에만 적용",
+			})),
+		}),
+		async execute(_id, params) {
+			try {
+				const price = await brokerGetPrice(params.symbol, { prefer: params.prefer, env: params.env ?? "auto" });
+				return jsonResult({ ok: true, ...price });
+			} catch (e) {
+				return jsonResult({ ok: false, error: (e as Error).message });
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "broker_chart",
+		label: "차트·지표 (KIS/Toss 자동 폴백)",
+		description:
+			"차트 조회 + 기술지표 — KIS/Toss 자동 폴백. period: D=일봉(KIS→Toss 폴백), W/M=주/월봉(KIS 전용), " +
+			"1m=Toss 1분봉 (1d는 D와 동일 — KIS 등록 시 KIS가 우선). bars는 공용 지표(MA/RSI/ATR/볼린저/지지저항/추세)로 계산해 함께 반환합니다. " +
+			"참고용 분석이며 투자 결정의 책임은 사용자에게 있습니다.",
+		parameters: Type.Object({
+			symbol: Type.String({ description: "종목 심볼: 6자리 국내코드 또는 해외 티커, 예: 005930 / RKLB" }),
+			period: Type.Optional(Type.Union([Type.Literal("D"), Type.Literal("W"), Type.Literal("M"), Type.Literal("1d"), Type.Literal("1m")], { description: "봉 단위 (기본 D)" })),
+			count: Type.Optional(Type.Number({ description: "조회 봉 수 (토스, 최대 200, 기본 100)" })),
+			prefer: Type.Optional(Type.Union([Type.Literal("kis"), Type.Literal("toss")], { description: "우선 브로커 (기본: 등록된 브로커 중 KIS 우선)" })),
+			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")], {
+				description: "real(실전)/paper(모의)/auto(기본) — KIS 호출에만 적용",
+			})),
+		}),
+		async execute(_id, params) {
+			try {
+				const result = await brokerGetCandles(params.symbol, {
+					period: params.period ?? "D",
+					count: params.count,
+					prefer: params.prefer,
+					env: params.env ?? "auto",
+				});
+				const indicators = analyze(result.bars);
+				return jsonResult({ ok: true, broker: result.broker, period: result.period, source: result.source, bars: result.bars, indicators });
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
 			}
