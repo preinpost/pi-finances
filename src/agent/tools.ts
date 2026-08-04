@@ -1,5 +1,5 @@
 /**
- * src/agent/tools.ts — pi 툴 등록 (kis_* 9개 + toss_* 7개).
+ * src/agent/tools.ts — pi 툴 등록 (kis_* 10개 + toss_* 7개 + broker_* 2개).
  *
  * 툴 name/label/description/parameters/출력 형태는 변경 불가(하위 호환).
  * execute 내부만 roles/core로 위임한다:
@@ -55,6 +55,17 @@ import {
 	placeOrder,
 } from "../roles/toss.ts";
 import { getCandles as brokerGetCandles, getPrice as brokerGetPrice } from "../roles/broker.ts";
+import {
+	getDerivativesMarketTime,
+	getFuturePrice,
+	getFutureProductInfo,
+	getOptionChart,
+	getOptionGreeks,
+	getOptionPrice,
+	getOptionProductInfo,
+	getOptionQuote,
+	parseOverseasOptionCode,
+} from "../roles/derivatives.ts";
 
 /** 툴 결과 공통 래퍼 — 기존 index.ts와 동일 형태. */
 export function textResult(text: string) {
@@ -833,6 +844,81 @@ export function registerTools(pi: ExtensionAPI): void {
 				});
 				const indicators = analyze(result.bars);
 				return jsonResult({ ok: true, broker: result.broker, period: result.period, source: result.source, bars: result.bars, indicators });
+			} catch (e) {
+				return jsonResult({ ok: false, error: (e as Error).message });
+			}
+		},
+	});
+
+	// ── 해외 선물/옵션 (파생상품) ─────────────────────────────────────
+	pi.registerTool({
+		name: "kis_derivatives",
+		label: "해외 선물/옵션 (파생상품)",
+		description:
+			"해외 선물/옵션 조회 — 종목코드(SRS_CD) 단위 (해외는 월물 전광판 API 없음). " +
+			'선물 코드 예: "ESU24", "CNHU24". 옵션 코드 예: "OESU24 C5500" (O + 기초선물코드 + C/P + 행사가). ' +
+			"option-greeks: 옵션 시장가 + 기초선물가 + 행사가 + 만기(상품정보 expr_date 또는 셋째 금요일 근사)로 " +
+			"IV 역산 후 Black-Scholes 그릭스(델타/감마/세타/베가/로) 계산 — 무위험금리 기본 4% 가정(결과 notes에 명시). " +
+			"⚠️ CME/SGX 등 해외 파생 시세는 유료 구독 필요할 수 있으며(빈 응답 = 미가입 가능성), 레버리지 상품이라 주문 시 안전 점검이 필수입니다.",
+		parameters: Type.Object({
+			kind: Type.Union(
+				[
+					Type.Literal("future-price"),
+					Type.Literal("option-price"),
+					Type.Literal("option-quote"),
+					Type.Literal("option-greeks"),
+					Type.Literal("product-info"),
+					Type.Literal("chart"),
+					Type.Literal("market-time"),
+				],
+				{ description: "조회 종류" },
+			),
+			code: Type.Optional(Type.String({ description: '종목코드 — 선물 "ESU24", 옵션 "OESU24 C5500" (product-info는 codes 또는 code)' })),
+			codes: Type.Optional(Type.String({ description: "product-info용 — 콤마 구분 (예: \"ESU24,ESZ24\"). 옵션(O로 시작)이면 옵션 상품정보, 아니면 선물 상품정보" })),
+			exchange: Type.Optional(Type.String({ description: "거래소 — CME(기본)/EUREX/HKEx/ICE/SGX (chart/market-time)" })),
+			gap: Type.Optional(Type.Number({ description: "chart: 분봉 간격 — 1=1분봉(기본), 5=5분봉 ..." })),
+			riskFreeRate: Type.Optional(Type.Number({ description: "option-greeks: 무위험금리 % (기본 4.0, 가정)" })),
+			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")])),
+		}),
+		async execute(_id, params) {
+			try {
+				switch (params.kind) {
+					case "future-price":
+						if (!params.code) return jsonResult({ ok: false, error: "future-price는 code 필요 (예: ESU24)" });
+						return jsonResult(await getFuturePrice(params.code, params.env ?? "auto"));
+					case "option-price":
+						if (!params.code) return jsonResult({ ok: false, error: "option-price는 code 필요 (예: OESU24 C5500)" });
+						return jsonResult(await getOptionPrice(params.code, params.env ?? "auto"));
+					case "option-quote":
+						if (!params.code) return jsonResult({ ok: false, error: "option-quote는 code 필요" });
+						return jsonResult(await getOptionQuote(params.code, params.env ?? "auto"));
+					case "option-greeks":
+						if (!params.code) return jsonResult({ ok: false, error: "option-greeks는 code 필요 (예: OESU24 C5500)" });
+						return jsonResult(
+							await getOptionGreeks(params.code, {
+								riskFreeRatePct: params.riskFreeRate,
+								env: params.env ?? "auto",
+							}),
+						);
+					case "product-info": {
+						const list = (params.codes ?? params.code ?? "")
+							.split(",")
+							.map((s) => s.trim())
+							.filter(Boolean);
+						if (list.length === 0) return jsonResult({ ok: false, error: "product-info는 codes 또는 code 필요" });
+						// 옵션 판별: parseOverseasOptionCode로 정확히 ("O" 시작 = 옵션이 아님 — OJ(냉동오렌지) 선물 등)
+						const isOption = !!parseOverseasOptionCode(list[0]);
+						return jsonResult(isOption ? await getOptionProductInfo(list, params.env ?? "auto") : await getFutureProductInfo(list, params.env ?? "auto"));
+					}
+					case "chart":
+						if (!params.code) return jsonResult({ ok: false, error: "chart는 code 필요 (옵션 분봉, 예: OESU24 C5500)" });
+						return jsonResult(
+							await getOptionChart(params.code, { exchange: params.exchange ?? "CME", gap: params.gap, count: 120 }, params.env ?? "auto"),
+						);
+					case "market-time":
+						return jsonResult(await getDerivativesMarketTime({ exchange: params.exchange, optionOnly: undefined }, params.env ?? "auto"));
+				}
+				return jsonResult({ ok: false, error: `알 수 없는 kind: ${params.kind}` });
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
 			}

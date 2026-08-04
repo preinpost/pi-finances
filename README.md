@@ -45,6 +45,7 @@ pi install git:github.com/preinpost/pi-kis
 | `kis_domestic_chart` | 국내주식 기간별시세 (`domestic_stock.v1_국내주식-016`, FHKST03010100) |
 | `kis_research` | 주식 리서치 — 재무제표/뉴스/컨센서스 (`kind: income\|ratios\|news\|consensus`, `symb`) |
 | `kis_technical` | 기술적 분석(타점) — MA/RSI/ATR/볼린저/지지저항/추세 (`market`, `symb`, `period`) |
+| `kis_derivatives` | 해외 선물/옵션 — 종목코드(SRS_CD) 단위 시세/상품정보/분봉/장운영시간 + **option-greeks**(IV 역산 → Black-Scholes 델타/감마/세타/베가/로) |
 | `toss_price` | 토스 현재가 — 복수 종목 (KRX 6자리 / US 티커, 콤마 구분 최대 200) |
 | `toss_chart` | 토스 캔들·지표 — 일봉(1d)/1분봉(1m), kis_technical과 동일 지표 로직 |
 | `toss_market` | 토스 전용 시장 데이터 (환율·장운영시간·랭킹·투자자별 매매대금·종목경고 — KIS 비겹침) |
@@ -78,13 +79,15 @@ src/
     portfolio.ts     잔고/체결/미체결 조회
     research.ts      재무제표(income/ratios)·뉴스·애널리스트 컨센서스
     indicators.ts    기술적 지표 (MA/RSI/ATR/볼린저/지지저항/추세 — 순수 계산)
+    greeks.ts        Black-Scholes 그릭스 + IV 역산 (순수 계산 — 해외옵션용)
+    derivatives.ts   해외 선물/옵션 파이프라인 (SRS_CD 파싱·시세·상품정보·만기·option-greeks)
     trading.ts       주문/정정/취소 — prepare/send 2단계 + 검증 API(안전 가드)
     toss.ts          토스증권 역할 (시세·자산·주문·조건주문)
     types.ts         공용 타입 (PreparedOrder/PreparedCancel 등)
   core/toss/         토스증권 transport (OAuth 클라이언트 + 그룹별 레이트리밋)
   agent/             — pi 통합
     extension.ts     registerExtension (마이그레이션 + tools/commands 등록)
-    tools.ts         kis_* 9 + toss_* 7 + broker_* 2 툴 (execute는 roles/core 위임)
+    tools.ts         kis_* 10 + toss_* 7 + broker_* 2 툴 (execute는 roles/core 위임)
     commands.ts      /kis-key, /toss-key, /kis-status
 ```
 
@@ -187,6 +190,16 @@ python3 scripts/parse-portal-excel.py /tmp/kis_api_collection.xlsx src/core/gene
 주문은 다중 TR_ID — `tr_id` 필수 (hashkey 자동 적용):
 - 국내 주식주문(현금): `domestic_stock.v1_국내주식-001` (TTTC0011U/TTTC0012U)
 - 해외주식 주문: `overseas_stock.v1_해외주식-001` (TTTT1002U 미국 매수 등 12종 — tr_id 미지정 시 목록이 에러로 표시)
+
+## 해외 선물/옵션 (파생상품)
+
+해외는 **월물 전광판 API가 없어 종목코드(SRS_CD) 단위**로 조회한다 (`kis_derivatives` 툴 또는 `roles/derivatives.ts`):
+
+- 선물 코드: `ESU24`, `CNHU24`, `6EU24` (제품 + 월코드 F=1월...Z=12월 + 연도 2자리)
+- 옵션 코드: `OESU24 C5500` = O + 기초선물코드 + **C(콜)/P(풋)** + 행사가
+- **option-greeks**: 옵션 시장가 + 기초선물가 + 행사가 + 만기(상품정보 `expr_date` 우선, 없으면 셋째 금요일 근사)로 IV를 역산하고 Black-Scholes 델타/감마/세타/베가/로를 계산 (무위험금리 기본 4% 가정, `notes`에 명시)
+- 국내(KOSPI200 등)는 옵션 전광판이 **그릭스·IV를 직접 제공** — `domestic_futureoption.국내선물-022` 조회로 충분 (계산 불필요)
+- ⚠️ **CME/SGX 등 해외 파생 시세는 유료 구독** 필요할 수 있으며, 레버리지 상품이라 주문 시 안전 점검 필수
 
 ## 주의사항
 
