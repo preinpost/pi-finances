@@ -16,6 +16,7 @@ import { specStats } from "../core/client.ts";
 import { approvalAge } from "../core/ws.ts";
 import { hasPlaintextFiles, migrateSecretsToKeyring, store } from "../core/secret.ts";
 import type { KisKeys } from "../core/secret.ts";
+import { createWatcher, hasSessionWatcher, parseArgs as parseWatchArgs, setSessionWatcher, stopSessionWatcher } from "../watch.ts";
 
 const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
 
@@ -148,9 +149,11 @@ export function registerCommands(pi: ExtensionAPI): void {
 		description:
 			"실시간 가격 감시 (헤드리스 워치) — start/stop/status. 조건 충족 시 알림(선택: 사전 승인 주문). subagent 불필요.",
 		handler: async (args, ctx) => {
-			const sub = (args[0] ?? "").toLowerCase();
+			// pi 커맨드 args는 공백 구분 단일 문자열 — 토큰화 ("start --symbols ...")
+			const tokens = args.trim().split(/\s+/).filter(Boolean);
+			const sub = (tokens[0] ?? "").toLowerCase();
 			const statePath = join(process.env.PI_CODING_AGENT_DIR ?? agentDir, "kis-watch.json");
-			const readState = (): { pid?: unknown; startedAt?: unknown; stoppedAt?: unknown; lastError?: unknown; symbols?: unknown; order?: unknown } | null => {
+			const readState = (): { pid?: unknown; mode?: unknown; startedAt?: unknown; stoppedAt?: unknown; lastError?: unknown; symbols?: unknown; order?: unknown } | null => {
 				try {
 					return JSON.parse(readFileSync(statePath, "utf8"));
 				} catch {
@@ -159,7 +162,17 @@ export function registerCommands(pi: ExtensionAPI): void {
 			};
 			try {
 			if (sub === "stop") {
+					if (hasSessionWatcher()) {
+						stopSessionWatcher();
+						ctx.ui.notify("세션 내 워치를 종료했습니다.", "info");
+						return;
+					}
 					const st = readState();
+					if (st?.mode === "session") {
+						// 세션 워치 기록이 남아있지만 현재 세션에 없음 (pi 재시작 등) — 상태만 정리
+						ctx.ui.notify("세션 워치는 이 세션에 없습니다 (pi 재시작으로 종료됨).", "info");
+						return;
+					}
 					const pid = st && typeof st.pid === "number" ? st.pid : null;
 					if (pid === null || (st && typeof st.stoppedAt === "string" && st.stoppedAt)) {
 						ctx.ui.notify("실행 중인 워치가 없습니다.", "info");
@@ -202,20 +215,25 @@ export function registerCommands(pi: ExtensionAPI): void {
 					return;
 				}
 				// start (기본)
-				const forward = sub === "start" ? args.slice(1) : args;
+				const forward = sub === "start" ? tokens.slice(1) : tokens;
 				if (!forward.includes("--symbols")) {
 					ctx.ui.notify(
 						'사용법: /kis-watch start --symbols "DNYSORCL,below,144.5;DNASOLED,above,90" ' +
-							'[--ref "DNYSORCL,150"] [--interval 55] [--once] [--max-minutes N] ' +
-							'[--order "DNYSORCL,SELL,2"]\n조건: above(이상 도달)/below(이하 도달)/chgPct(±%, --ref로 기준가). ' +
+							"[--ref \"DNYSORCL,150\"] [--interval 55] [--once] [--max-minutes N] " +
+							"[--order \"DNYSORCL,SELL,2\"] [--detach]\n조건: above(이상 도달)/below(이하 도달)/chgPct(±%, --ref로 기준가). " +
+							"기본은 이 세션에서 백그라운드로 동작하고 알림이 여기 뜹니다. --detach는 독립 프로세스(OS 알림/로그). " +
 							"--order는 사전 승인 주문 — 트리거 시 자동 실행되니 신중히 설정하세요.",
 							"warning",
 					);
 					return;
 				}
+				if (hasSessionWatcher()) {
+					ctx.ui.notify("이미 이 세션에서 워치가 실행 중입니다 — /kis-watch stop 후 재시작하세요.", "warning");
+					return;
+				}
 				const running = readState();
-				if (running && typeof running.pid === "number" && !running.stoppedAt) {
-					ctx.ui.notify(`이미 워치가 실행 중입니다 (pid ${running.pid}) — /kis-watch stop 후 재시작하세요.`, "warning");
+				if (running && running.mode === "detached" && typeof running.pid === "number" && !running.stoppedAt) {
+					ctx.ui.notify(`독립 워치가 실행 중입니다 (pid ${running.pid}) — /kis-watch stop 후 재시작하세요.`, "warning");
 					return;
 				}
 				if (forward.includes("--order")) {
@@ -228,19 +246,43 @@ export function registerCommands(pi: ExtensionAPI): void {
 						return;
 					}
 				}
-				const watchPath = fileURLToPath(new URL("../watch.ts", import.meta.url));
-				const cwd = fileURLToPath(new URL("../../", import.meta.url)); // 패키지 루트
-				const child = spawn(process.execPath, ["--experimental-transform-types", watchPath, ...forward], {
-					detached: true,
-					stdio: "ignore",
-					cwd,
-				});
-				child.unref();
-				ctx.ui.notify(
-					`워치 시작 (pid ${child.pid ?? "?"}) — 상태: ${statePath}.\n` +
-						"/kis-watch status로 확인, /kis-watch stop으로 종료. pi 세션과 독립 — 세션을 닫아도 계속 동작합니다.",
-					"info",
-				);
+				if (forward.includes("--detach")) {
+					// 독립 프로세스 모드 — pi 세션과 무관하게 동작 (OS 알림/로그)
+					const watchPath = fileURLToPath(new URL("../watch.ts", import.meta.url));
+					const cwd = fileURLToPath(new URL("../../", import.meta.url)); // 패키지 루트
+					const child = spawn(process.execPath, ["--experimental-transform-types", watchPath, ...forward], {
+						detached: true,
+						stdio: "ignore",
+						cwd,
+					});
+					child.unref();
+					ctx.ui.notify(
+						`워치 시작 (pid ${child.pid ?? "?"}, 독립 프로세스) — 상태: ${statePath}.\n` +
+							"/kis-watch status로 확인, /kis-watch stop으로 종료. 세션을 닫아도 계속 동작합니다.",
+						"info",
+					);
+					return;
+				}
+				// 세션 내 백그라운드 워치 — 알림은 ctx.ui.notify로 이 세션(에이전트)에 전달
+				try {
+					const watchArgs = parseWatchArgs(forward);
+					const handle = createWatcher(watchArgs, {
+						mode: "session",
+						notifyFn: (title, body) => ctx.ui.notify(`${title}\n${body}`, "info"),
+					});
+					setSessionWatcher(handle);
+					handle.promise.catch((e) => {
+						ctx.ui.notify(`워치 오류: ${(e as Error).message}`, "error");
+						setSessionWatcher(null);
+					});
+					ctx.ui.notify(
+						`워치 시작 (세션 내) — 조건 충족 시 이 세션으로 알림이 옵니다. /kis-watch stop으로 종료.\n` +
+							`pi 세션을 닫으면 함께 종료됩니다 (독립 실행은 --detach). 상태: ${statePath}`,
+						"info",
+					);
+				} catch (e) {
+					ctx.ui.notify(`워치 시작 오류: ${(e as Error).message}`, "error");
+				}
 			} catch (e) {
 				ctx.ui.notify(`워치 오류: ${(e as Error).message}`, "error");
 			}

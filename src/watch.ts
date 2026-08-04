@@ -9,12 +9,12 @@
  *  - kis_realtime(subscribeRealtime)을 종목별로 연속 재구독 (일회성 10~60초 한계를
  *    재구독 루프로 극복 — 이 세션에서 실측: 체결 틱 수신 정상)
  *  - 수신 체결가로 조건 평가: above(이상 도달)/below(이하 도달)/chgPct(기준가 대비 ±%)
- *  - 충족 시 macOS 알림(osascript) + 상태파일 기록 (+ --order 설정 시 사전 승인 주문 1회)
+ *  - 충족 시 플랫폼별 알림(macOS osascript / Linux notify-send / 그 외 log) + 상태파일 기록 (+ --order 설정 시 사전 승인 주문 1회)
  *  - 상태파일: ~/.pi/agent/kis-watch.json — pi 에이전트(/kis-watch status)가 읽을 수 있음
  *
  * CLI: node --experimental-transform-types src/watch.ts \
  *        --symbols "DNYSORCL,below,144.5;DNASOLED,above,90" \
- *        [--ref "DNYSORCL,150"] [--interval 55] [--notify macos|log] \
+ *        [--ref "DNYSORCL,150"] [--interval 55] [--notify auto|macos|linux|windows|log] \
  *        [--state ~/.pi/agent/kis-watch.json] [--order "DNYSORCL,SELL,2"] \
  *        [--once] [--max-minutes N]
  */
@@ -60,7 +60,7 @@ export interface WatchOrder {
 export interface WatchArgs {
 	symbols: WatchSymbol[];
 	intervalSec: number;
-	notifyMode: "macos" | "log";
+	notifyMode: "auto" | "macos" | "linux" | "windows" | "log";
 	statePath: string;
 	order?: WatchOrder;
 	once: boolean;
@@ -69,6 +69,8 @@ export interface WatchArgs {
 
 export interface WatchState {
 	pid?: number;
+	/** detached(독립 프로세스) / session(pi 세션 내 백그라운드). */
+	mode?: "detached" | "session";
 	startedAt?: string;
 	stoppedAt?: string;
 	symbols: WatchSymbol[];
@@ -120,7 +122,8 @@ export function parseArgs(argv: string[]): WatchArgs {
 	}
 
 	const intervalSec = Math.min(60, Math.max(5, Number(get("--interval") ?? 55) || 55));
-	const notifyRaw = (get("--notify") ?? "macos").toLowerCase();
+	const notifyRaw = (get("--notify") ?? "auto").toLowerCase();
+	const notifyMode = (["auto", "macos", "linux", "windows", "log"].includes(notifyRaw) ? notifyRaw : "auto") as WatchArgs["notifyMode"];
 	const statePath =
 		get("--state") ?? join(process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent"), "kis-watch.json");
 
@@ -140,7 +143,7 @@ export function parseArgs(argv: string[]): WatchArgs {
 	return {
 		symbols,
 		intervalSec,
-		notifyMode: notifyRaw === "log" ? "log" : "macos",
+		notifyMode,
 		statePath,
 		order,
 		once: has("--once"),
@@ -209,13 +212,39 @@ function notifyMacos(title: string, body: string): Promise<boolean> {
 	});
 }
 
+/** Linux 데스크톱 알림 (libnotify — notify-send). 없으면 false → 로그 폴백. */
+function notifyLinux(title: string, body: string): Promise<boolean> {
+	return new Promise((resolve) => {
+		try {
+			execFile("notify-send", [title, body], (err) => resolve(!err));
+		} catch {
+			resolve(false);
+		}
+	});
+}
+
+/** 실행 플랫폼에 맞는 기본 알림 모드. */
+export function defaultNotifyMode(): "macos" | "linux" | "windows" | "log" {
+	if (process.platform === "darwin") return "macos";
+	if (process.platform === "linux") return "linux";
+	if (process.platform === "win32") return "windows";
+	return "log";
+}
+
 export async function notify(args: WatchArgs, title: string, body: string): Promise<void> {
-	if (args.notifyMode === "macos") {
+	const mode = args.notifyMode === "auto" ? defaultNotifyMode() : args.notifyMode;
+	if (mode === "macos") {
 		const ok = await notifyMacos(title, body);
 		if (!ok) console.log(`[WATCH] ${title}: ${body}`); // osascript 실패 → 로그 폴백
-	} else {
-		console.log(`[WATCH] ${title}: ${body}`);
+		return;
 	}
+	if (mode === "linux") {
+		const ok = await notifyLinux(title, body);
+		if (!ok) console.log(`[WATCH] ${title}: ${body}`); // notify-send 없으면 로그 폴백
+		return;
+	}
+	// windows / log: 데스크톱 토스트는 외부 의존(BurntToast 등) 필요 — 로그 + 상태파일로 동작
+	console.log(`[WATCH] ${title}: ${body}`);
 }
 
 // ── 주문 (사전 승인 — --order가 명시적으로 설정된 경우에만 실행) ───────────
@@ -261,9 +290,28 @@ function extractLast(trId: string, out1: Record<string, unknown> | null): number
 	return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-export async function runWatch(args: WatchArgs): Promise<void> {
+export interface WatcherOptions {
+	/** 알림 콜백 — 기본은 플랫폼별 데스크톱 알림(notify). pi 세션 내에서는 ctx.ui.notify를 주입한다. */
+	notifyFn?: (title: string, body: string) => Promise<void> | void;
+	/** 실행 모드 — detached(독립 프로세스, 기본) / session(pi 세션 내 백그라운드). 상태파일 mode에 기록. */
+	mode?: "detached" | "session";
+}
+
+export interface WatchHandle {
+	stop(): void;
+	state: WatchState;
+	promise: Promise<void>;
+}
+
+/**
+ * 워치 생성 — 구독 루프를 백그라운드로 시작하고 stop 핸들을 반환.
+ * CLI(main)는 runWatch로, pi 세션 내(/kis-watch start)는 이 함수에 ctx.ui.notify를 주입해 사용한다.
+ */
+export function createWatcher(args: WatchArgs, opts?: WatcherOptions): WatchHandle {
+	const notifyFn = opts?.notifyFn ?? ((title: string, body: string) => notify(args, title, body));
 	const state: WatchState = {
 		pid: process.pid,
+		mode: opts?.mode ?? "detached",
 		startedAt: new Date().toISOString(),
 		symbols: args.symbols,
 		order: args.order ?? null,
@@ -271,71 +319,110 @@ export async function runWatch(args: WatchArgs): Promise<void> {
 	writeStateFile(args.statePath, state);
 	const startTime = Date.now();
 	let stop = false;
+
+	const loop = (async () => {
+		try {
+			while (!stop) {
+				if (args.maxMinutes > 0 && (Date.now() - startTime) / 60_000 >= args.maxMinutes) break;
+				for (const sym of args.symbols) {
+					if (stop) break;
+					try {
+						const res = await subscribeRealtime({
+							trId: sym.trId,
+							trKey: sym.trKey,
+							durationMs: args.intervalSec * 1000,
+							maxMessages: 1000,
+						});
+						for (const msg of res.messages) {
+							if (stop) break; // stop 후 잔여 메시지로 알림/주문 실행 방지
+							const last = extractLast(sym.trId, msg.output1);
+							if (last === null) continue;
+							sym.last = last;
+							sym.lastAt = new Date().toISOString();
+							// 기준가 자동 설정 (chgPct/음수 조건, --ref 미지정 시 첫 수신가)
+							if (sym.ref === undefined && (sym.condition === "chgPct" || sym.value < 0)) {
+								sym.ref = last;
+								sym.refAuto = true;
+							}
+							if (!sym.triggered && evaluateCondition(sym, last)) {
+								sym.triggered = true;
+								sym.notified = true;
+								const desc = `${sym.trKey} ${sym.condition}(${sym.value}) — 현재가 ${last}`;
+								await notifyFn(`[KIS 워치] ${sym.symbol} 조건 충족`, desc);
+								// 사전 승인 주문 (트리거된 종목과 일치할 때만, 1회)
+								if (args.order && !args.order.done && args.order.trKey === sym.trKey) {
+									try {
+										const r = await placeWatchOrder(args.order);
+										args.order.done = true;
+										args.order.result = `주문 성공: ${r}`;
+										await notifyFn("[KIS 워치] 주문 실행", `${args.order.trKey} ${args.order.side} ${args.order.qty}주`);
+									} catch (e) {
+										args.order.result = `주문 실패: ${(e as Error).message}`;
+									}
+								}
+								if (args.once) stop = true;
+							}
+						}
+						state.lastError = undefined;
+					} catch (e) {
+						state.lastError = (e as Error).message;
+						writeStateFile(args.statePath, state);
+						await sleep(3000); // 재연결 백오프
+					}
+					writeStateFile(args.statePath, state);
+					await sleep(500); // 재구독 사이 짧은 간격
+				}
+			}
+		} finally {
+			state.stoppedAt = new Date().toISOString();
+			writeStateFile(args.statePath, state);
+		}
+	})();
+
+	return {
+		stop: () => {
+			stop = true;
+			writeStateFile(args.statePath, state); // 즉시 상태 저장
+		},
+		state,
+		promise: loop,
+	};
+}
+
+/** CLI 전용 — 시그널 처리와 함께 워치 실행 (독립 프로세스). */
+export async function runWatch(args: WatchArgs): Promise<void> {
+	const h = createWatcher(args, { mode: "detached" });
 	const onSignal = (): void => {
-		stop = true;
-		writeStateFile(args.statePath, state); // 즉시 상태 저장
+		h.stop();
 		// 진행 중인 구독(최대 60s)을 기다리지 않고 종료 — 잔여 메시지로 알림/주문 실행 방지
 		setTimeout(() => process.exit(0), 500);
 	};
 	process.on("SIGINT", onSignal);
 	process.on("SIGTERM", onSignal);
+	await h.promise;
+}
 
-	try {
-		while (!stop) {
-			if (args.maxMinutes > 0 && (Date.now() - startTime) / 60_000 >= args.maxMinutes) break;
-			for (const sym of args.symbols) {
-				if (stop) break;
-				try {
-					const res = await subscribeRealtime({
-						trId: sym.trId,
-						trKey: sym.trKey,
-						durationMs: args.intervalSec * 1000,
-						maxMessages: 1000,
-					});
-					for (const msg of res.messages) {
-						if (stop) break; // SIGINT/SIGTERM 후 잔여 메시지로 알림/주문 실행 방지
-						const last = extractLast(sym.trId, msg.output1);
-						if (last === null) continue;
-						sym.last = last;
-						sym.lastAt = new Date().toISOString();
-						// 기준가 자동 설정 (chgPct/음수 조건, --ref 미지정 시 첫 수신가)
-						if (sym.ref === undefined && (sym.condition === "chgPct" || sym.value < 0)) {
-							sym.ref = last;
-							sym.refAuto = true;
-						}
-						if (!sym.triggered && evaluateCondition(sym, last)) {
-							sym.triggered = true;
-							sym.notified = true;
-							const desc = `${sym.trKey} ${sym.condition}(${sym.value}) — 현재가 ${last}`;
-							await notify(args, `[KIS 워치] ${sym.symbol} 조건 충족`, desc);
-							// 사전 승인 주문 (트리거된 종목과 일치할 때만, 1회)
-							if (args.order && !args.order.done && args.order.trKey === sym.trKey) {
-								try {
-									const r = await placeWatchOrder(args.order);
-									args.order.done = true;
-									args.order.result = `주문 성공: ${r}`;
-									await notify(args, "[KIS 워치] 주문 실행", `${args.order.trKey} ${args.order.side} ${args.order.qty}주`);
-								} catch (e) {
-									args.order.result = `주문 실패: ${(e as Error).message}`;
-								}
-							}
-							if (args.once) stop = true;
-						}
-					}
-					state.lastError = undefined;
-				} catch (e) {
-					state.lastError = (e as Error).message;
-					writeStateFile(args.statePath, state);
-					await sleep(3000); // 재연결 백오프
-				}
-				writeStateFile(args.statePath, state);
-				await sleep(500); // 재구독 사이 짧은 간격
-			}
-		}
-	} finally {
-		state.stoppedAt = new Date().toISOString();
-		writeStateFile(args.statePath, state);
+// ── 세션 내 워치 레지스트리 (pi 확장용) ─────────────────────────────────────
+
+let sessionWatcher: WatchHandle | null = null;
+
+/** pi 세션 내 워치 등록 (이전 워치는 자동 중지). */
+export function setSessionWatcher(h: WatchHandle | null): void {
+	if (sessionWatcher && sessionWatcher !== h) sessionWatcher.stop();
+	sessionWatcher = h;
+}
+
+/** pi 세션 내 워치 중지 (session_shutdown 시에도 호출). */
+export function stopSessionWatcher(): void {
+	if (sessionWatcher) {
+		sessionWatcher.stop();
+		sessionWatcher = null;
 	}
+}
+
+/** 현재 세션 워치 여부. */
+export function hasSessionWatcher(): boolean {
+	return sessionWatcher !== null;
 }
 
 // ── CLI 엔트리 ─────────────────────────────────────────────────────────────

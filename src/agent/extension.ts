@@ -11,6 +11,7 @@ import { loadKeys } from "../core/auth.ts";
 import { migrateSecretsToKeyring } from "../core/secret.ts";
 import { registerTools } from "./tools.ts";
 import { registerCommands } from "./commands.ts";
+import { stopSessionWatcher } from "../watch.ts";
 
 /** pi 확장 등록 — 키 마이그레이션 후 툴·커맨드 등록. */
 export default async function registerExtension(pi: ExtensionAPI): Promise<void> {
@@ -18,6 +19,11 @@ export default async function registerExtension(pi: ExtensionAPI): Promise<void>
 	await migrateSecretsToKeyring();
 	registerTools(pi);
 	registerCommands(pi);
+
+	// 세션 내 워치(/kis-watch start)는 세션 종료 시 함께 정리
+	pi.on("session_shutdown", () => {
+		stopSessionWatcher();
+	});
 
 	if (!loadKeys().appKey) {
 		console.warn("[pi-kis] KIS API keys not registered — run /kis-key (stored in ~/.pi/agent/kis-keys.json).");
