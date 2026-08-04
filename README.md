@@ -28,7 +28,7 @@ pi install git:github.com/preinpost/pi-kis
 "삼성전자 매수 타이밍"            # kis_technical (MA/RSI/ATR/볼린저/지지저항/추세)
 "화장품 섹터 종목 분석 리포트"      # sector-research 스킬 (섹터 파이프라인)
 "삼성전자 리서치 딥다이브"          # stock-research 스킬 (단일 종목 리포트)
-"삼성전자 매수/매도 타점"          # timing 스킬 (타점 분석 파이프라인)
+"삼성전자 매수/매도 타점"          # timing 스킬 (타점 분석 + 결론별 실행 시나리오)
 ```
 
 ## 도구
