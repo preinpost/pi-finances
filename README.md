@@ -75,7 +75,7 @@ pi install /Users/ms/dev/pi/pi-kis-trading
 - **의존성**: `@napi-rs/keyring`은 패키지 의존성. npm/git 소스 설치 시 pi가 자동 설치, 로컬 경로 설치 시 패키지 루트에서 `npm install` 1회 실행 필요.
 - 키: `/kis-key`로 입력 (입력 다이얼로그). 셸 env(`KIS_APP_KEY` 등)도 fallback.
 - 실전 키만으로 시세/차트 조회 가능. 모의 키는 `env: "paper"` 또는 `auto`(모의 키 우선)에 사용.
-- 주문/잔고 API는 계좌 정보(htsId, acctStock) 필요 — `/kis-key`에서 선택 등록.
+- 주문/잔고 API는 계좌 정보(htsId, acctStock) 필요 — `/kis-key`에서 선택 등록. 계좌번호는 `12345678-01` 형식도 그대로 입력 가능 (`-01` 상품코드는 자동 분리, `ACNT_PRDT_CD` 기본 `01`).
 - 토큰: 키체인/파일에 캐시, 만료(~24h) 시에만 재발급. **토큰 발급 시 알림톡(SMS)이 발송**되므로 캐시를 재사용합니다. 401/토큰 만료 시 자동 재발급 후 1회 재시도.
 
 ## API 정의 재생성 (선택)

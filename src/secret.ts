@@ -35,8 +35,12 @@ export interface KisKeys {
 	paperAppSecret?: string;
 	htsId?: string;
 	acctStock?: string;
+	/** 실전 계좌 상품코드 (ACNT_PRDT_CD, 보통 "01") — "12345678-01" 입력 시 자동 분리. */
+	acctStockPrdtCd?: string;
 	acctFuture?: string;
 	paperStock?: string;
+	/** 모의 계좌 상품코드 (ACNT_PRDT_CD, 보통 "01"). */
+	paperStockPrdtCd?: string;
 	paperFuture?: string;
 }
 

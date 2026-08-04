@@ -355,7 +355,7 @@ export default async function (pi: ExtensionAPI) {
 			if (wantAcct) {
 				const hts = await ctx.ui.input("HTS ID", existing.htsId ? `현재: ${masked(existing.htsId)} — 엔터로 유지` : "");
 				if (hts && hts.trim()) keys.htsId = hts.trim();
-				const acct = await ctx.ui.input("실전 계좌번호 (8자리)", existing.acctStock ? `현재: ${masked(existing.acctStock)} — 엔터로 유지` : "");
+				const acct = await ctx.ui.input("실전 계좌번호 (예: 12345678-01 — -01 자동 분리)", existing.acctStock ? `현재: ${masked(existing.acctStock)} — 엔터로 유지` : "");
 				if (acct && acct.trim()) keys.acctStock = acct.trim();
 			}
 

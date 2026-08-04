@@ -24,19 +24,36 @@ export function baseUrl(env: KisEnv): string {
 	return env === "paper" ? PAPER_BASE : REAL_BASE;
 }
 
+/**
+ * 계좌번호를 KIS 포맷(CANO 8자리 + ACNT_PRDT_CD 2자리)으로 파싱.
+ * 입력은 "12345678-01", "12345678", "1234-5678-01" 등 모두 허용 —
+ * 구분자(-, 공백) 제거 후 앞 8자리가 CANO, 나머지 2자리가 상품코드(기본 01).
+ */
+export function parseAccount(raw: string | undefined): { cano?: string; prdtCd?: string } {
+	if (!raw) return {};
+	const digits = String(raw).replace(/[\s-]/g, "");
+	const m = digits.match(/^(\d{8})(\d{2})?$/);
+	if (m) return { cano: m[1], prdtCd: m[2] ?? "01" };
+	return { cano: String(raw).trim() }; // 형식 불명 — 원본 유지 (API 단계에서 실패)
+}
+
 /** Load keys: active secret store first, shell env as fallback per field. */
 export function loadKeys(): KisKeys {
 	const file = store.getKeys();
 	const env = process.env;
+	const real = parseAccount(file.acctStock ?? env.KIS_ACCT_STOCK);
+	const paper = parseAccount(file.paperStock ?? env.KIS_PAPER_STOCK);
 	return {
 		appKey: file.appKey ?? env.KIS_APP_KEY,
 		appSecret: file.appSecret ?? env.KIS_APP_SECRET,
 		paperAppKey: file.paperAppKey ?? env.KIS_PAPER_APP_KEY,
 		paperAppSecret: file.paperAppSecret ?? env.KIS_PAPER_APP_SECRET,
 		htsId: file.htsId ?? env.KIS_HTS_ID,
-		acctStock: file.acctStock ?? env.KIS_ACCT_STOCK,
+		acctStock: real.cano,
+		acctStockPrdtCd: real.prdtCd,
 		acctFuture: file.acctFuture ?? env.KIS_ACCT_FUTURE,
-		paperStock: file.paperStock ?? env.KIS_PAPER_STOCK,
+		paperStock: paper.cano,
+		paperStockPrdtCd: paper.prdtCd,
 		paperFuture: file.paperFuture ?? env.KIS_PAPER_FUTURE,
 	};
 }

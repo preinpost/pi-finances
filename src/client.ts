@@ -242,7 +242,7 @@ export function buildParams(def: ApiDef, userParams: Record<string, unknown>, en
 			if (key === "AUTH") value = ""; // GET 시세 AUTH (레거시 필드, "" 고정)
 			else if (key.startsWith("CTX_AREA_")) value = ""; // 연속조회 키 (첫 요청은 "", 이후 페이지에서 에코)
 			else if (key === "CANO") value = env === "paper" ? keys.paperStock : keys.acctStock;
-			else if (key === "ACNT_PRDT_CD") value = "01";
+			else if (key === "ACNT_PRDT_CD") value = env === "paper" ? (keys.paperStockPrdtCd ?? "01") : (keys.acctStockPrdtCd ?? "01");
 		}
 		if (value === undefined || value === null) {
 			if (field.required) missing.push(key);
