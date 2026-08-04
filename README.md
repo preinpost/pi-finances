@@ -6,7 +6,7 @@ MCP 서버 프로세스도, GitHub에서 코드를 내려받아 실행하는 방
 ## 설치
 
 ```bash
-pi install github.com/preinpost/pi-kis
+pi install git:github.com/preinpost/pi-kis
 # pi 재시작
 ```
 
