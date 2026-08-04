@@ -33,7 +33,7 @@ pi install /Users/ms/dev/pi/pi-kis-trading
 |---|---|
 | `kis_api` | 범용 디스패치 — `api`(v2 키), `params`, `env`, `tr_id`(다중 TR_ID API), `pages`(연속조회) |
 | `kis_list_apis` | 사용 가능한 API 목록 (카테고리 필터, v2 키 + 웹소켓 tr_id 확인) |
-| `kis_realtime` | 실시간 시세 (WebSocket) — `tr_id` + `tr_key` 구독 (예: H0GSCNI0/005930, HDFSCNT0/DNASRKLB) |
+| `kis_realtime` | 실시간 시세 (WebSocket) — `tr_id` + `tr_key` 구독 (예: H0STCNT0/005930, HDFSCNT0/DNASRKLB) |
 | `kis_overseas_price` | 해외주식 현재체결가 (`overseas_stock.v1_해외주식-009`, HHDFS00000300) |
 | `kis_overseas_chart` | 해외주식 기간별시세 (`overseas_stock.v1_해외주식-010`, HHDFS76240000) |
 | `kis_domestic_price` | 국내주식 현재가 (`domestic_stock.v1_국내주식-008`, FHKST01010100) |
@@ -124,11 +124,11 @@ python3 scripts/parse-portal-excel.py /tmp/kis_api_collection.xlsx src/core/gene
 
 - 별도 접속키: `POST {base}/oauth2/Approval` → approval key (24h, 키체인/파일 캐시 — REST 토큰과 별개).
 - 접속: `ws://ops.koreainvestment.com:21000` (실전) / `ws://ops.koreainvestment.com:31000` (모의)
-- **60개 실시간 API** (`kis_list_apis` → WEBSOCKET kind)의 tr_id는 `src/core/generated/ws-tr-ids.json` (예: H0GSCNI0 국내주식 실시간체결가, HDFSCNT0 해외 실시간체결가, H0STCNT0 국내주식 실시간호가).
+- **60개 실시간 API** (`kis_list_apis` → WEBSOCKET kind)의 tr_id는 `src/core/generated/ws-tr-ids.json` (예: H0STCNT0 국내주식 실시간체결가, HDFSCNT0 해외 실시간체결가, H0STASP0 국내주식 실시간호가).
 - 데이터는 암호화 전송(encrypt=1) — AES-CBC 복호화 내장.
 
 ```
-"삼성전자 실시간체결가" → kis_realtime { tr_id: "H0GSCNI0", tr_key: "005930" }
+"삼성전자 실시간체결가" → kis_realtime { tr_id: "H0STCNT0", tr_key: "005930" }
 "RKLB 실시간체결가"     → kis_realtime { tr_id: "HDFSCNT0", tr_key: "DNASRKLB" }
 ```
 
