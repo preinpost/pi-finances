@@ -16,6 +16,7 @@ import {
 	getOverseasChart,
 	getOverseasPrice,
 } from "../roles/market.ts";
+import { analyze, normalizeDomesticChart, normalizeOverseasChart } from "../roles/indicators.ts";
 import {
 	getAnalystConsensus,
 	getFinancialRatios,
@@ -295,6 +296,62 @@ export function registerTools(pi: ExtensionAPI): void {
 					: params.kind === "news" ? await getNews(params.symb, env)
 					: await getAnalystConsensus(params.symb, env);
 				return jsonResult(result);
+			} catch (e) {
+				return jsonResult({ ok: false, error: (e as Error).message });
+			}
+		},
+	});
+
+	// ── technical: 기술적 분석 (타점) ───────────────────────────────────
+	pi.registerTool({
+		name: "kis_technical",
+		label: "기술적 분석 (타점)",
+		description:
+			"매수/매도 타점용 기술적 지표 계산 — 차트(국내 v1_국내주식-016 / 해외 v1_해외주식-010)를 조회해 " +
+			"MA5/20/60, RSI(14), ATR(14), 볼린저(20,2), 지지/저항(최근 20봉), 추세(정배열/역배열)를 계산하고 " +
+			"신호 라벨(골든크로스, RSI 과매수/과매도, 저항 돌파, 볼린저 터치 등)을 반환합니다. " +
+			"국내는 최대 100봉, 해외는 최대 100행 한계 — 장기(200일 MA 등) 지표가 필요하면 기간을 나눠 여러 번 호출해 합산하세요. " +
+			"참고용 분석이며 투자 결정의 책임은 사용자에게 있습니다.",
+		parameters: Type.Object({
+			symb: Type.String({ description: "6자리 국내 종목코드(예: 005930) 또는 해외 티커(예: RKLB)" }),
+			market: Type.Union([Type.Literal("domestic"), Type.Literal("overseas")], { description: "domestic=국내, overseas=해외" }),
+			period: Type.Optional(Type.Union([Type.Literal("D"), Type.Literal("W"), Type.Literal("M")], { description: "D=일봉(기본), W=주봉, M=월봉" })),
+			excd: Type.Optional(Type.String({ description: "해외 거래소: NAS(기본)/NYS/AMS (market=overseas일 때 사용)" })),
+			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")], {
+				description: "real(실전)/paper(모의)/auto(기본: 모의 키 있으면 모의)",
+			})),
+		}),
+		async execute(_id, params) {
+			try {
+				const env = params.env ?? "auto";
+				const period = params.period ?? "D";
+				if (params.market === "domestic") {
+					const res = await getDomesticChart(params.symb, {
+						period,
+						date1: dateStr(250),
+						date2: dateStr(),
+						env,
+					});
+					const out = res.data as Record<string, unknown>;
+					const rows = (Array.isArray(out.output1) ? out.output1 : Array.isArray(out.output2) ? out.output2 : []) as Record<string, unknown>[];
+					const bars = normalizeDomesticChart(rows);
+					if (bars.length === 0) {
+						return jsonResult({ ok: false, error: "차트 데이터 없음 — 종목코드/기간을 확인하거나 장 마감 후 재시도하세요." });
+					}
+					return jsonResult({ ok: true, market: "domestic", symb: params.symb, period, ...analyze(bars) });
+				}
+				const res = await getOverseasChart(params.excd ?? "NAS", params.symb, {
+					gubn: period === "D" ? "0" : period === "W" ? "1" : "2",
+					bymd: dateStr(),
+					env,
+				});
+				const out = res.data as Record<string, unknown>;
+				const rows = (Array.isArray(out.output2) ? out.output2 : Array.isArray(out.output1) ? out.output1 : []) as Record<string, unknown>[];
+				const bars = normalizeOverseasChart(rows);
+				if (bars.length === 0) {
+					return jsonResult({ ok: false, error: "차트 데이터 없음 — 티커/거래소(excd)를 확인하거나 장 마감 후 재시도하세요." });
+				}
+				return jsonResult({ ok: true, market: "overseas", symb: params.symb, excd: params.excd ?? "NAS", period, ...analyze(bars) });
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
 			}

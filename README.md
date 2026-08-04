@@ -23,8 +23,10 @@ pi install git:github.com/preinpost/pi-kis
 "삼성전자 현재가"                  # kis_domestic_price
 "삼성전자 최근 3개월 일봉"          # kis_domestic_chart
 "삼성전자 재무제표 + 컨센서스"      # kis_research (재무/뉴스/컨센서스)
+"삼성전자 매수 타이밍"            # kis_technical (MA/RSI/ATR/볼린저/지지저항/추세)
 "화장품 섹터 종목 분석 리포트"      # sector-research 스킬 (섹터 파이프라인)
 "삼성전자 리서치 딥다이브"          # stock-research 스킬 (단일 종목 리포트)
+"삼성전자 매수/매도 타점"          # timing 스킬 (타점 분석 파이프라인)
 ```
 
 ## 도구
@@ -39,6 +41,7 @@ pi install git:github.com/preinpost/pi-kis
 | `kis_domestic_price` | 국내주식 현재가 (`domestic_stock.v1_국내주식-008`, FHKST01010100) |
 | `kis_domestic_chart` | 국내주식 기간별시세 (`domestic_stock.v1_국내주식-016`, FHKST03010100) |
 | `kis_research` | 주식 리서치 — 재무제표/뉴스/컨센서스 (`kind: income\|ratios\|news\|consensus`, `symb`) |
+| `kis_technical` | 기술적 분석(타점) — MA/RSI/ATR/볼린저/지지저항/추세 (`market`, `symb`, `period`) |
 
 ## 아키텍처 (에이전트 통합 친화적 3계층)
 
@@ -55,15 +58,16 @@ src/
     market.ts        현재가·52주 요약(getDomesticQuoteSummary)·차트·실시간 재수출
     portfolio.ts     잔고/체결/미체결 조회
     research.ts      재무제표(income/ratios)·뉴스·애널리스트 컨센서스
+    indicators.ts    기술적 지표 (MA/RSI/ATR/볼린저/지지저항/추세 — 순수 계산)
     trading.ts       주문/정정/취소 — prepare/send 2단계 + 검증 API(안전 가드)
     types.ts         공용 타입 (PreparedOrder/PreparedCancel 등)
   agent/             — pi 통합
     extension.ts     registerExtension (마이그레이션 + tools/commands 등록)
-    tools.ts         kis_* 8개 툴 (execute는 roles/core 위임, surface 불변)
+    tools.ts         kis_* 9개 툴 (execute는 roles/core 위임, surface 불변)
     commands.ts      /kis-key, /kis-status
 ```
 
-- **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/research/trading)이 v2 키·tr_id·파라미터를 캡슐화한다.
+- **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/research/indicators/trading)이 v2 키·tr_id·파라미터를 캡슐화한다.
   자동매매 에이전트는 `roles/trading.ts`를 직접 import해 `prepare*`(요약+검증) → 사용자 확인 → `send*`(실행) 흐름으로 사용한다.
 - 주문은 원샷 함수가 아니라 **prepare/send 2단계** — 실전 주문은 사용자 확인 후 `send*`로만 실행한다.
 
