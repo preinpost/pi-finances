@@ -82,9 +82,10 @@ export const keysPath = process.env.KIS_KEYS_FILE ?? join(agentDir, "kis-keys.js
 export const tokenPath = join(agentDir, "kis-token.json");
 export const approvalPath = join(agentDir, "kis-approval.json");
 
-// 키체인 서비스 이름 — 패키지 리네임(pi-kis)과 무관하게 유지.
-// 기존 사용자의 키체인 항목이 이 이름으로 저장되어 있어 바꾸면 기존 키를 못 찾는다.
-const SERVICE = "pi-kis-trading";
+// 키체인 서비스 이름. 구버전(pi-kis-trading)으로 저장된 항목은
+// migrateSecretsToKeyring()에서 새 이름으로 1회 이관 후 삭제된다.
+const SERVICE = "pi-kis";
+const LEGACY_SERVICE = "pi-kis-trading";
 
 function loadKeyring(): KeyringLib | null {
 	if (process.env.KIS_SECRET_STORE === "file") return null;
@@ -238,7 +239,7 @@ class AdaptiveStore implements SecretStore {
 			this.keyring = null;
 			this.backend = "file";
 			console.warn(
-				"[pi-kis-trading] OS keyring 사용 불가 → file 백엔드로 전환 (" +
+				"[pi-kis] OS keyring 사용 불가 → file 백엔드로 전환 (" + +
 					keysPath + ", 0600). SSH/헤드리스에서는 키체인 접근이 거부될 수 있습니다. " +
 					"KIS_SECRET_STORE=file 로 강제 지정할 수도 있습니다.",
 			);
@@ -380,6 +381,47 @@ export async function migrateSecretsToKeyring(): Promise<void> {
 	if (fileTok && Object.keys(fileTok).length > 0 && Object.keys(krTok).length === 0) {
 		await store.saveTokenCache(fileTok as TokenCache);
 		changed = true;
+	}
+
+	// ── 구 서비스명(pi-kis-trading) 키체인 항목 → 새 서비스명(pi-kis) 1회 이관 ──
+	const lib = loadKeyring();
+	if (lib) {
+		const readLegacy = (account: string): SecretBlob => {
+			try {
+				const raw = new lib.Entry(LEGACY_SERVICE, account).getPassword();
+				return raw ? (JSON.parse(raw) as SecretBlob) : null;
+			} catch {
+				return null;
+			}
+		};
+		const hasData = (b: SecretBlob): boolean => !!b && Object.keys(b).length > 0;
+		let legacyChanged = false;
+
+		const legacyKeys = readLegacy("keys");
+		if (hasData(legacyKeys) && !store.getKeys().appKey) {
+			await store.saveKeys(legacyKeys as KisKeys);
+			legacyChanged = true;
+		}
+		const legacyTok = readLegacy("token");
+		if (hasData(legacyTok) && Object.keys(store.getTokenCache()).length === 0) {
+			await store.saveTokenCache(legacyTok as TokenCache);
+			legacyChanged = true;
+		}
+		const legacyAppr = readLegacy("approval");
+		if (hasData(legacyAppr) && Object.keys(store.getApprovalCache()).length === 0) {
+			await store.saveApprovalCache(legacyAppr as ApprovalCache);
+			legacyChanged = true;
+		}
+
+		if (legacyChanged) {
+			for (const acct of ["keys", "token", "approval", "__probe__"]) {
+				try {
+					new lib.Entry(LEGACY_SERVICE, acct).deleteCredential();
+				} catch {
+					/* ignore */
+				}
+			}
+		}
 	}
 
 	if (changed) {

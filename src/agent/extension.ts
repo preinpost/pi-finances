@@ -20,6 +20,6 @@ export default async function registerExtension(pi: ExtensionAPI): Promise<void>
 	registerCommands(pi);
 
 	if (!loadKeys().appKey) {
-		console.warn("[pi-kis-trading] KIS API keys not registered — run /kis-key (stored in ~/.pi/agent/kis-keys.json).");
+		console.warn("[pi-kis] KIS API keys not registered — run /kis-key (stored in ~/.pi/agent/kis-keys.json).");
 	}
 }
