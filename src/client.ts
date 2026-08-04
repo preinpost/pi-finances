@@ -254,9 +254,17 @@ export function buildParams(def: ApiDef, userParams: Record<string, unknown>, en
 		const acctHint = missing.includes("CANO") || missing.includes("ACNT_PRDT_CD")
 			? " (계좌번호 미등록 시 /kis-key에서 계좌 정보 등록 필요)"
 			: "";
+		const detail = missing
+			.map((k) => {
+				const f = spec[k];
+				const len = f?.length ? `최대 ${f.length}자` : "";
+				const desc = f?.desc ? f.desc.replace(/\r?\n/g, " ").trim().slice(0, 100) : "(스펙 설명 없음)";
+				return `  - ${k}${len ? ` (${len})` : ""}: ${desc}`;
+			})
+			.join("\n");
 		throw new Error(
-			`KIS API "${def.name}" requires parameter(s): ${missing.join(", ")}${acctHint}. ` +
-				`Provide them via the tool's params argument.`,
+			`KIS API "${def.name}" requires parameter(s): ${missing.join(", ")}${acctHint}.\n` +
+				`필수 파라미터를 params로 전달하세요 (스펙 참고):\n${detail}`,
 		);
 	}
 	return out;
@@ -346,11 +354,28 @@ async function parseResponse(res: Response, def: ApiDef): Promise<Record<string,
 	const rtCd = String(json.rt_cd ?? "");
 	const rtMsg = String(json.rt_msg ?? json.msg1 ?? "");
 	if (rtCd !== "0" && rtCd !== "") {
-		throw Object.assign(new Error(`KIS API error [${def.name}] rt_cd=${rtCd} rt_msg=${rtMsg}`), {
+		const hint = fieldErrorHint(def, rtMsg);
+		throw Object.assign(new Error(`KIS API error [${def.name}] rt_cd=${rtCd} rt_msg=${rtMsg}${hint}`), {
 			kis: { rt_cd: rtCd, rt_msg: rtMsg, status: res.status },
 		});
 	}
 	return json;
+}
+
+/**
+ * KIS 에러 메시지에서 실패한 파라미터를 찾아 스펙의 형식 설명을 붙여준다.
+ * 예: `ERROR INVALID INPUT_FILED_SIZE [FID_ETC_CLS_CODE] [6]` →
+ *     파라미터 FID_ETC_CLS_CODE 형식 오류. 스펙: "1" 입력
+ */
+function fieldErrorHint(def: ApiDef, rtMsg: string): string {
+	const m = /INPUT_FILED_SIZE\s*\[([^\]]+)\]/.exec(rtMsg);
+	if (!m) return "";
+	const field = m[1];
+	const spec = def.method === "GET" ? def.query : def.body;
+	const f = spec[field];
+	if (!f) return ` → 파라미터 "${field}" 값 형식이 잘못됐습니다 (스펙에 해당 필드 없음).`;
+	const desc = f.desc ? f.desc.replace(/\r?\n/g, " ").trim().slice(0, 100) : "";
+	return ` → 파라미터 ${field} 값 형식 오류. 스펙: ${desc || "길이/형식 확인 필요"}${f.length ? ` (최대 ${f.length}자)` : ""}`;
 }
 
 function isAuthError(status: number, rtCd: string, rtMsg: string): boolean {
