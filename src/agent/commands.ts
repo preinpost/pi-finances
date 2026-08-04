@@ -62,9 +62,7 @@ export function registerCommands(pi: ExtensionAPI): void {
 
 			const wantAcct = await ctx.ui.confirm("계좌 정보", "주문/잔고 API용 계좌 정보도 등록할까요? (시세 조회엔 불필요)");
 			if (wantAcct) {
-				const hts = await ctx.ui.input("HTS ID", existing.htsId ? `현재: ${masked(existing.htsId)} — 엔터로 유지` : "");
-				if (hts && hts.trim()) keys.htsId = hts.trim();
-				const acct = await ctx.ui.input("실전 계좌번호 (예: 12345678-01 — -01 자동 분리)", existing.acctStock ? `현재: ${masked(existing.acctStock)} — 엔터로 유지` : "");
+				const acct = await ctx.ui.input("실전 계좌번호", existing.acctStock ? `현재: ${masked(existing.acctStock)} — 엔터로 유지` : "");
 				if (acct && acct.trim()) keys.acctStock = acct.trim();
 			}
 
@@ -91,7 +89,7 @@ export function registerCommands(pi: ExtensionAPI): void {
 				`appKey     : ${masked(keys.appKey)}`,
 				`appSecret  : ${masked(keys.appSecret)}`,
 				`paper keys : ${keys.paperAppKey ? `${masked(keys.paperAppKey)} / ${masked(keys.paperAppSecret)}` : "not set"}`,
-				`accounts   : ${[keys.htsId, keys.acctStock].filter(Boolean).length}/2 set (주문/잔고용, 선택)`,
+				`accounts   : ${keys.acctStock ? "1 set" : "0 set"} (주문/잔고용, 선택)`,
 				`auto env   : ${env}`,
 				`token cache: real=${tokenAge("real") !== null ? `${tokenAge("real")}s 남음` : "없음"} / paper=${tokenAge("paper") !== null ? `${tokenAge("paper")}s 남음` : "없음"}`,
 				`approval   : real=${approvalAge("real") !== null ? `${approvalAge("real")}s 남음` : "없음"} / paper=${approvalAge("paper") !== null ? `${approvalAge("paper")}s 남음` : "없음"} (웹소켓 전용, REST 토큰과 별개)`,
