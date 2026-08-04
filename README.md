@@ -23,7 +23,8 @@ pi install /Users/ms/dev/pi/pi-kis-trading
 "삼성전자 현재가"                  # kis_domestic_price
 "삼성전자 최근 3개월 일봉"          # kis_domestic_chart
 "삼성전자 재무제표 + 컨센서스"      # kis_research (재무/뉴스/컨센서스)
-"화장품 섹터 종목 분석 리포트"      # research 스킬 (섹터 파이프라인)
+"화장품 섹터 종목 분석 리포트"      # sector-research 스킬 (섹터 파이프라인)
+"삼성전자 리서치 딥다이브"          # stock-research 스킬 (단일 종목 리포트)
 ```
 
 ## 도구
