@@ -179,6 +179,23 @@ python3 scripts/parse-portal-excel.py /tmp/kis_api_collection.xlsx src/core/gene
 
 주의: 해외주식 실시간 시세는 유료 구독일 수 있습니다. 구독은 `duration_sec`(기본 10, 최대 60) 후 자동 해제·종료됩니다.
 
+## 실시간 감시 (워치) — subagent 불필요
+
+`kis_realtime`은 일회성(최대 60초)이라 지속 감시가 안 되므로, 패키지에 **헤드리스 워치 프로세스**(`src/watch.ts`)를 내장했습니다. pi 세션과 무관하게 백그라운드로 돌며 실시간 체결가를 계속 listen → 조건 충족 시 알림(선택: 사전 승인 주문)을 보냅니다.
+
+```bash
+# pi 안에서:
+/kis-watch start --symbols "DNYSORCL,below,144.5;DNASOLED,above,90" [--once] [--max-minutes 480]
+/kis-watch status        # pid/종목별 last·트리거 상태
+/kis-watch stop
+```
+
+- **조건**: `above`(이상 도달) / `below`(이하 도달) / `chgPct`(기준가 대비 ±% — `--ref "DNYSORCL,150"`로 기준가, 미지정 시 첫 수신가 자동)
+- **종목 형식**: 해외 `D+시장3자리+종목`(예: `DNYSORCL`, `DNASOLED`), 국내 6자리(예: `005930`)
+- **알림**: macOS 알림(osascript) + 상태파일 `~/.pi/agent/kis-watch.json` 기록. `--notify log`면 로그만
+- **사전 승인 주문(선택)**: `--order "DNYSORCL,SELL,2"` — 조건 충족 시 KIS 해외 시장가 주문 1회 실행 (시작 시 사용자 확인 필수, `SLL_TYPE`/tr_id 자동, 멱등)
+- **한계**: 워치는 프로세스라 재부팅/재시작 시 다시 시작해야 합니다. 국내/해외 실시간 시세는 각각 유료 구독일 수 있습니다.
+
 ## 주문 API 패턴
 
 주문 전 **가능여부 검증** (모두 GET, 계좌 자동 주입):
