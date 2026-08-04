@@ -16,6 +16,12 @@ import {
 	getOverseasChart,
 	getOverseasPrice,
 } from "../roles/market.ts";
+import {
+	getAnalystConsensus,
+	getFinancialRatios,
+	getIncomeStatement,
+	getNews,
+} from "../roles/research.ts";
 
 /** 툴 결과 공통 래퍼 — 기존 index.ts와 동일 형태. */
 export function textResult(text: string) {
@@ -255,6 +261,39 @@ export function registerTools(pi: ExtensionAPI): void {
 					date2: params.date2 ?? dateStr(),
 					env: params.env ?? "auto",
 				});
+				return jsonResult(result);
+			} catch (e) {
+				return jsonResult({ ok: false, error: (e as Error).message });
+			}
+		},
+	});
+
+	// ── research: 재무/뉴스/컨센서스 ──────────────────────────────────
+	pi.registerTool({
+		name: "kis_research",
+		label: "주식 리서치 (재무/뉴스/컨센서스)",
+		description:
+			"국내주식 리서치 데이터 조회 — 재무제표(손익계산서 v1_국내주식-079/FHKST66430200, 재무비율 v1_국내주식-080/FHKST66430300), " +
+			"뉴스(국내주식-141/FHKST01011800), 애널리스트 컨센서스(국내주식-187/HHKST668300C0). " +
+			"분기 데이터는 연단위 누적합산 기준이며, 컨센서스는 한국투자 리서치 커버 약 160개 기업 한정(빈 응답 가능 — '커버 안 됨' 표기).",
+		parameters: Type.Object({
+			kind: Type.Union(
+				[Type.Literal("income"), Type.Literal("ratios"), Type.Literal("news"), Type.Literal("consensus")],
+				{ description: "income=손익계산서, ratios=재무비율, news=뉴스, consensus=애널리스트 컨센서스" },
+			),
+			symb: Type.String({ description: "6자리 종목코드, 예: 005930" }),
+			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")], {
+				description: "real(실전)/paper(모의)/auto(기본: 모의 키 있으면 모의)",
+			})),
+		}),
+		async execute(_id, params) {
+			try {
+				const env = params.env ?? "auto";
+				const result =
+					params.kind === "income" ? await getIncomeStatement(params.symb, env)
+					: params.kind === "ratios" ? await getFinancialRatios(params.symb, env)
+					: params.kind === "news" ? await getNews(params.symb, env)
+					: await getAnalystConsensus(params.symb, env);
 				return jsonResult(result);
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });

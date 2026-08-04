@@ -20,6 +20,46 @@ export function getDomesticPrice(symb: string, env?: EnvArg): Promise<CallResult
 	);
 }
 
+/** 현재가 응답(output)에서 추출하는 시세·52주·밸류 필드. */
+const QUOTE_KEYS = [
+	"stck_prpr", // 현재가
+	"w52_hgpr", // 52주 최고가
+	"w52_lwpr", // 52주 최저가
+	"w52_hgpr_date", // 52주 최고가 기록일
+	"w52_lwpr_date", // 52주 최저가 기록일
+	"w52_hgpr_vrss_prpr_ctrt", // 고점대비 등락률(%)
+	"per",
+	"pbr",
+	"eps",
+	"bps",
+	"hts_avls", // 시가총액(억)
+	"d250_hgpr", // 250일(1년) 최고가 — 자본조정 교차 확인용
+	"d250_lwpr", // 250일 최저가
+] as const;
+
+export type DomesticQuote = Partial<Record<(typeof QUOTE_KEYS)[number], string>>;
+
+export interface QuoteResult extends CallResult {
+	/** data.output에서 추출한 시세·52주·밸류 요약. */
+	quote: DomesticQuote;
+}
+
+/**
+ * 국내주식 현재가 + 52주 고저/밸류 요약 (domestic_stock.v1_국내주식-008).
+ * ⚠️ 자본조정(감자/주가조정) 종목(예: 본느 226340, 한국화장품제조 003350)은
+ * w52 수치가 왜곡될 수 있음 → d250_hgpr/d250_lwpr과 교차 확인 필요.
+ */
+export async function getDomesticQuoteSummary(symb: string, env?: EnvArg): Promise<QuoteResult> {
+	const raw = await getDomesticPrice(symb, env);
+	const out = (raw.data.output ?? raw.data.output1 ?? raw.data) as Record<string, unknown> | undefined;
+	const quote: DomesticQuote = {};
+	for (const k of QUOTE_KEYS) {
+		const v = out?.[k];
+		if (typeof v === "string" || typeof v === "number") quote[k] = String(v);
+	}
+	return { ...raw, quote };
+}
+
 /**
  * 해외주식 현재체결가 (overseas_stock.v1_해외주식-009, HHDFS00000300).
  * excd: NAS/NYS/AMS, symb: 종목코드(예: RKLB). 실시간 시세는 유료 구독일 수 있다.
