@@ -8,6 +8,11 @@
  *   2. File fallback — ~/.pi/agent/kis-keys.json / kis-token.json (0600) for
  *      headless environments without a keyring daemon.
  *
+ * Adaptive: keyring read/write가 실패하면(예: SSH/헤드리스에서 키체인 접근이
+ * 'User interaction is not allowed' 등으로 거부) 자동으로 file 백엔드로 전환하고
+ * 키체인에 이미 있던 데이터를 파일로 이관한다. macOS + SSH 세션은 기본적으로
+ * file 백엔드를 선택한다.
+ *
  * Env controls:
  *   - KIS_SECRET_STORE=file  → force file mode (headless/containers)
  *   - KIS_SECRET_STORE=keyring → force keyring mode (errors if unavailable)
@@ -94,12 +99,9 @@ class KeyringStore implements SecretStore {
 	constructor(private readonly lib: KeyringLib) {}
 
 	private read(account: string): SecretBlob {
-		try {
-			const raw = new this.lib.Entry(SERVICE, account).getPassword();
-			return raw ? (JSON.parse(raw) as SecretBlob) : null;
-		} catch {
-			return null;
-		}
+		// 오류를 삼키지 않는다 — AdaptiveStore가 받아서 file 백엔드로 전환한다.
+		const raw = new this.lib.Entry(SERVICE, account).getPassword();
+		return raw ? (JSON.parse(raw) as SecretBlob) : null;
 	}
 
 	private write(account: string, data: SecretBlob): void {
@@ -182,25 +184,162 @@ class FileStore implements SecretStore {
 	}
 }
 
+/**
+ * 키체인에 실제로 쓸 수 있는지 왕복 검사(쓰기→읽기→삭제).
+ * 읽기만 검사하면 SSH처럼 쓰기가 거부되는 환경(키체인 잠김 / errSecInteractionNotAllowed)을
+ * 놓치므로, 실제 쓰기를 수행해 검증한다. 실패하면 키체인을 사용하지 않는다.
+ */
+function probeKeyring(lib: KeyringLib): boolean {
+	const entry = new lib.Entry(SERVICE, "__probe__");
+	try {
+		entry.setPassword(JSON.stringify({ probe: true }));
+		const ok = entry.getPassword() !== null;
+		entry.deleteCredential();
+		return ok;
+	} catch {
+		try {
+			entry.deleteCredential(); // best-effort 정리
+		} catch {
+			/* ignore */
+		}
+		return false;
+	}
+}
+
+/** SSH 세션 여부 (SSH_CONNECTION/SSH_TTY). */
+function isSshSession(): boolean {
+	return Boolean(process.env.SSH_CONNECTION || process.env.SSH_TTY);
+}
+
+/**
+ * keyring을 시도하되, 어느 작업이든 실패하면 그 시점부터 file 백엔드로
+ * 영구 전환(degrade)하는 적응형 스토어. 전환 시 키체인에 이미 저장돼 있던
+ * 키/토큰 데이터를 파일로 이관한다(가능한 경우).
+ */
+class AdaptiveStore implements SecretStore {
+	backend: "keyring" | "file";
+	private keyring: KeyringStore | null;
+	private readonly file: FileStore;
+
+	constructor(keyring: KeyringStore | null) {
+		this.keyring = keyring;
+		this.file = new FileStore();
+		this.backend = keyring ? "keyring" : "file";
+	}
+
+	private degrade(): FileStore {
+		if (this.keyring) {
+			this.keyring = null;
+			this.backend = "file";
+			console.warn(
+				"[pi-kis-trading] OS keyring 사용 불가 → file 백엔드로 전환 (" +
+					keysPath + ", 0600). SSH/헤드리스에서는 키체인 접근이 거부될 수 있습니다. " +
+					"KIS_SECRET_STORE=file 로 강제 지정할 수도 있습니다.",
+			);
+		}
+		return this.file;
+	}
+
+	/** 키체인에 이미 저장된 데이터를 파일로 이관 (best-effort). */
+	private async carryOverFrom(k: KeyringStore): Promise<void> {
+		try {
+			const keys = k.getKeys();
+			if (keys && Object.keys(keys).length > 0) await this.file.saveKeys(keys);
+			const tok = k.getTokenCache();
+			if (tok && Object.keys(tok).length > 0) await this.file.saveTokenCache(tok);
+			const appr = k.getApprovalCache();
+			if (appr && Object.keys(appr).length > 0) await this.file.saveApprovalCache(appr);
+		} catch {
+			/* best-effort */
+		}
+	}
+
+	getKeys(): KisKeys {
+		if (!this.keyring) return this.file.getKeys();
+		try {
+			return this.keyring.getKeys();
+		} catch {
+			return this.degrade().getKeys();
+		}
+	}
+
+	async saveKeys(keys: KisKeys): Promise<void> {
+		if (!this.keyring) return this.file.saveKeys(keys);
+		try {
+			await this.keyring.saveKeys(keys);
+		} catch {
+			const k = this.keyring;
+			this.degrade();
+			await this.carryOverFrom(k);
+			await this.file.saveKeys(keys);
+		}
+	}
+
+	getTokenCache(): TokenCache {
+		if (!this.keyring) return this.file.getTokenCache();
+		try {
+			return this.keyring.getTokenCache();
+		} catch {
+			return this.degrade().getTokenCache();
+		}
+	}
+
+	async saveTokenCache(cache: TokenCache): Promise<void> {
+		if (!this.keyring) return this.file.saveTokenCache(cache);
+		try {
+			await this.keyring.saveTokenCache(cache);
+		} catch {
+			const k = this.keyring;
+			this.degrade();
+			await this.carryOverFrom(k);
+			await this.file.saveTokenCache(cache);
+		}
+	}
+
+	getApprovalCache(): ApprovalCache {
+		if (!this.keyring) return this.file.getApprovalCache();
+		try {
+			return this.keyring.getApprovalCache();
+		} catch {
+			return this.degrade().getApprovalCache();
+		}
+	}
+
+	async saveApprovalCache(cache: ApprovalCache): Promise<void> {
+		if (!this.keyring) return this.file.saveApprovalCache(cache);
+		try {
+			await this.keyring.saveApprovalCache(cache);
+		} catch {
+			const k = this.keyring;
+			this.degrade();
+			await this.carryOverFrom(k);
+			await this.file.saveApprovalCache(cache);
+		}
+	}
+}
+
 function initStore(): SecretStore {
 	const forced = process.env.KIS_SECRET_STORE;
 	const lib = loadKeyring();
 	if (lib) {
-		try {
-			// Probe the backend — construction/get can throw when no keyring
-			// daemon is available (e.g. headless Linux without Secret Service).
-			new lib.Entry(SERVICE, "__probe__").getPassword();
-			return new KeyringStore(lib);
-		} catch {
-			if (forced === "keyring") {
-				throw new Error("KIS_SECRET_STORE=keyring but OS keyring is unavailable on this machine.");
+		const probeOk = probeKeyring(lib);
+		if (probeOk && forced !== "file") {
+			// macOS + SSH 세션: 키체인 쓰기가 GUI 승인 없이는 거부되므로 기본 file.
+			// KIS_SECRET_STORE=keyring 으로 명시 강제하면 키체인을 사용한다.
+			if (forced === "keyring" || !(process.platform === "darwin" && isSshSession())) {
+				return new AdaptiveStore(new KeyringStore(lib));
 			}
+		} else if (forced === "keyring") {
+			throw new Error(
+				"KIS_SECRET_STORE=keyring but OS keyring is unavailable on this machine " +
+					"(keychain locked or no interactive GUI session, e.g. over SSH).",
+			);
 		}
 	}
 	if (forced === "keyring") {
 		throw new Error("KIS_SECRET_STORE=keyring but @napi-rs/keyring is not installed. Run `npm install` in the package root.");
 	}
-	return new FileStore();
+	return new AdaptiveStore(null);
 }
 
 /** Active secret store (singleton). */

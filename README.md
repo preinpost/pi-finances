@@ -70,7 +70,8 @@ pi install /Users/ms/dev/pi/pi-kis-trading
 | 파일 (0600) | 전 OS (헤드리스 폴백) | `~/.pi/agent/kis-keys.json` / `kis-token.json` |
 
 - **마이그레이션**: 키체인 활성 시 기존 평문 파일을 자동으로 키체인으로 옮기고 삭제합니다 (확장 로드 시 1회).
-- **강제 지정**: `KIS_SECRET_STORE=file` (헤드리스/컨테이너) 또는 `KIS_SECRET_STORE=keyring`
+- **적응형 폴백**: 키체인 쓰기가 거부되면(대표: SSH/헤드리스 macOS에서 `Platform failure: User interaction is not allowed` — `errSecInteractionNotAllowed`) 자동으로 0600 파일 백엔드로 전환하고, 키체인에 있던 데이터를 파일로 이관합니다. macOS + SSH 세션은 기본적으로 파일 백엔드를 사용합니다.
+- **강제 지정**: `KIS_SECRET_STORE=file` (헤드리스/컨테이너) 또는 `KIS_SECRET_STORE=keyring` (키체인 강제 — 사용 불가 시 에러)
 - **의존성**: `@napi-rs/keyring`은 패키지 의존성. npm/git 소스 설치 시 pi가 자동 설치, 로컬 경로 설치 시 패키지 루트에서 `npm install` 1회 실행 필요.
 - 키: `/kis-key`로 입력 (입력 다이얼로그). 셸 env(`KIS_APP_KEY` 등)도 fallback.
 - 실전 키만으로 시세/차트 조회 가능. 모의 키는 `env: "paper"` 또는 `auto`(모의 키 우선)에 사용.
