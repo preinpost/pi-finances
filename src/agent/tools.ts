@@ -213,15 +213,28 @@ export function registerTools(pi: ExtensionAPI): void {
 		description:
 			"해외주식(미국 등) 현재체결가 조회 (v2 키: overseas_stock.v1_해외주식-009, tr_id HHDFS00000300). " +
 			"excd: NAS(나스닥)/NYS(뉴욕)/AMS(아멕스), symb: 종목코드(예: RKLB, AAPL). " +
-			"rt_cd=0이면 성공이며 output에 현재가/전일대비 등이 담깁니다. 실시간 시세는 유료 구독일 수 있습니다.",
+			"rt_cd=0이면 성공이며 output에 현재가/전일대비 등이 담깁니다. " +
+			"⚠️ 종목이 실제 상장된 거래소 코드로만 데이터가 반환됩니다 (ORCL=NYS, AAPL=NAS) — 빈 응답이면 excd 재확인. " +
+			"실시간 시세는 유료 구독일 수 있습니다. broker_price는 NAS→NYS→AMS 자동 폴백.",
 		parameters: Type.Object({
-			excd: Type.String({ description: "거래소: NAS(나스닥)/NYS(뉴욕)/AMS(아멕스)" }),
+			excd: Type.String({ description: "거래소: NAS(나스닥)/NYS(뉴욕)/AMS(아멕스) — 종목 상장 거래소로 지정 (ORCL=NYS)" }),
 			symb: Type.String({ description: "종목코드, 예: RKLB, AAPL" }),
 			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")])),
 		}),
 		async execute(_id, params) {
 			try {
 				const result = await getOverseasPrice(params.excd, params.symb, params.env ?? "auto");
+				const out = (result.data as { output?: Record<string, unknown> })?.output ?? {};
+				const values = Object.values(out).filter((v) => v !== "" && v !== null && v !== undefined);
+				if (values.length === 0) {
+					return jsonResult({
+						ok: false,
+						error:
+							`KIS 해외 현재가 빈 응답 (${params.symb} @ ${params.excd}) — 상장 거래소를 확인하세요. ` +
+							`예: ORCL=NYS(뉴욕), AAPL=NAS(나스닥), RKLB=NAS. broker_price로 NAS→NYS→AMS 자동 폴백 가능. ` +
+							`올바른 거래소로도 빈 응답이면 해외 실시간 시세 유료 구독 미가입일 수 있습니다.`,
+					});
+				}
 				return jsonResult(result);
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });

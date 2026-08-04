@@ -208,6 +208,8 @@ export interface WsResult {
 	messages: WsMessage[];
 	/** 구독/해제 응답 등 시스템 메시지. */
 	system: WsSystemEvent[];
+	/** 데이터 0건일 때의 원인 힌트 (있을 때만). */
+	note?: string;
 	approval: { cached: boolean };
 	closedBy: "timeout" | "max_messages" | "server" | "error";
 }
@@ -449,6 +451,12 @@ export async function subscribeRealtime(opts: SubscribeOptions): Promise<WsResul
 			continue;
 		}
 		if (res.failed) throw new Error(res.error ?? "웹소켓 구독 실패");
+		const note =
+			res.messages.length === 0 && opts.trId.startsWith("HDF")
+				? "해외 실시간 체결가 0건 — ① tr_key의 시장코드 확인 (예: ORCL=DNYSORCL, AAPL=DNASAPPL, D+3자리 시장+종목코드) ② 해외 실시간 시세 유료 구독 미가입일 수 있음 ③ 장 마감이면 정상. REST(broker_price/toss_price)로 대체 가능."
+				: res.messages.length === 0
+					? "실시간 데이터 0건 — 장 마감이면 정상이며, 장중이면 구독 조건(tr_id/tr_key) 또는 유료 구독 여부를 확인하세요."
+					: undefined;
 		return {
 			ok: true,
 			env,
@@ -460,6 +468,7 @@ export async function subscribeRealtime(opts: SubscribeOptions): Promise<WsResul
 			system: res.system,
 			approval: { cached },
 			closedBy: res.closedBy,
+			note,
 		};
 	}
 	throw new Error("웹소켓 재연결 실패 (approval key 재발급 후에도 구독 오류)");
