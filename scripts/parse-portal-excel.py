@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-parse-portal-excel.py — generate src/generated/apis.json from the official
+parse-portal-excel.py — generate src/core/generated/apis.json from the official
 KIS Open API portal Excel spec (전체 API 문서).
 
 Source: https://apiportal.koreainvestment.com/files/download/apiCollection/API_COLLECTION
@@ -30,7 +30,7 @@ from datetime import datetime, timezone
 import openpyxl
 
 XLSX = sys.argv[1] if len(sys.argv) > 1 else "/tmp/kis_api_collection.xlsx"
-OUT = sys.argv[2] if len(sys.argv) > 2 else "src/generated/apis.json"
+OUT = sys.argv[2] if len(sys.argv) > 2 else "src/core/generated/apis.json"
 
 # 메뉴 위치(카테고리) → API 키 카테고리 슬러그
 CATEGORY_MAP = [

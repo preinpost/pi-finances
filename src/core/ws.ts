@@ -10,7 +10,7 @@
  *  - 시스템 메시지(구독 응답 등): JSON {"header":{"tr_id":...},"body":{"rt_cd":"0",
  *    "msg1":"SUBSCRIBE SUCCESS","output":{"key":...,"iv":...}}}
  *    - "PINGPONG" 수신 시 동일 텍스트를 그대로 에코
- *  - tr_id별 필드 정의: src/generated/apis.json의 response 테이블
+ *  - tr_id별 필드 정의: src/core/generated/apis.json의 response 테이블
  *    (ws-tr-ids.json에 field_count 기록 — 다건 프레임 청크 분할에 사용)
  *
  * 인증 흐름:
@@ -105,7 +105,7 @@ export function approvalAge(env: KisEnv): number | null {
 	return Math.round((cached.expiresAt - Date.now()) / 1000);
 }
 
-// ── WS tr_id 맵 (src/generated/ws-tr-ids.json) ─────────────────────────────
+// ── WS tr_id 맵 (src/core/generated/ws-tr-ids.json) ───────────────────────
 
 export interface WsTrIdEntry {
 	tr_id: string;

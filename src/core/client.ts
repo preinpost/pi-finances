@@ -1,7 +1,7 @@
 /**
  * src/client.ts — config-driven KIS Open API executor (v2, 공식 포털 스펙).
  *
- * API definitions come from src/generated/apis.json (338 APIs parsed from the
+ * API definitions come from src/core/generated/apis.json (338 APIs parsed from the
  * official apiportal.koreainvestment.com API_COLLECTION Excel by
  * scripts/parse-portal-excel.py):
  *   { name, category, api_id, kind: REST|WEBSOCKET, method, api_path,
@@ -9,7 +9,7 @@
  *     response{}, example_request }
  * Key format: "<category>.<api_id>" (예: "overseas_stock.v1_해외주식-009").
  *
- * src/generated/aliases.json maps legacy keys (164개, 구버전 예제코드 파싱
+ * src/core/generated/aliases.json maps legacy keys (164개, 구버전 예제코드 파싱
  * 스펙) to v2 keys by (method + api_path) for backward compatibility.
  *
  * v2 동작 요약:
@@ -405,7 +405,7 @@ async function rawCall(
 				(trId
 					? `실시간 데이터는 kis_realtime 도구로 구독하세요 (tr_id: ${trId}, tr_key: 종목코드). `
 					: "실시간 데이터는 kis_realtime 도구로 구독하세요. ") +
-				`전체 WS tr_id 목록: kis_list_apis 결과의 websocket_tr_ids (또는 src/generated/ws-tr-ids.json) 참고.`,
+				`전체 WS tr_id 목록: kis_list_apis 결과의 websocket_tr_ids (또는 src/core/generated/ws-tr-ids.json) 참고.`,
 		);
 	}
 	const { appKey, appSecret } = keysFor(env);

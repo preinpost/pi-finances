@@ -1,7 +1,7 @@
 # pi-kis-trading
 
 한국투자증권 [OPEN API](https://apiportal.koreainvestment.com/)를 **REST로 직접 호출**하는 pi 패키지입니다.
-MCP 서버 프로세스도, GitHub에서 코드를 내려받아 실행하는 방식도 없습니다 — 패키지에 포함된 API 정의(`src/generated/apis.json`, 공식 포털 전체 규격 기반 **338개**)와 순수 TypeScript 클라이언트로 동작합니다.
+MCP 서버 프로세스도, GitHub에서 코드를 내려받아 실행하는 방식도 없습니다 — 패키지에 포함된 API 정의(`src/core/generated/apis.json`, 공식 포털 전체 규격 기반 **338개**)와 순수 TypeScript 클라이언트로 동작합니다.
 
 ## 설치
 
@@ -36,15 +36,41 @@ pi install /Users/ms/dev/pi/pi-kis-trading
 | `kis_domestic_price` | 국내주식 현재가 (`domestic_stock.v1_국내주식-008`, FHKST01010100) |
 | `kis_domestic_chart` | 국내주식 기간별시세 (`domestic_stock.v1_국내주식-016`, FHKST03010100) |
 
+## 아키텍처 (에이전트 통합 친화적 3계층)
+
+```
+index.ts             — thin entry: export default registerExtension (src/agent/extension.ts)
+src/
+  core/              — transport/protocol (REST·WS·인증·시크릿, 338개 API 스펙)
+    client.ts        callApi/buildParams/tr_id/hashkey/페이지네이션
+    auth.ts          키·env·토큰 캐시 (parseAccount로 계좌번호 정규화)
+    secret.ts        OS 키체인 → 0600 파일 적응형 폴백
+    ws.ts            WebSocket 실시간 구독 (approval key 캐시)
+    generated/       apis.json(338개) / aliases.json / ws-tr-ids.json
+  roles/             — 도메인 역할 (core를 typed wrapper로 확장) — 에이전트가 직접 import
+    market.ts        현재가·차트·52주 집계(fetchOverseasChartFull)·실시간 재수출
+    portfolio.ts     잔고/체결/미체결 조회
+    trading.ts       주문/정정/취소 — prepare/send 2단계 + 검증 API(안전 가드)
+    types.ts         공용 타입 (PreparedOrder/PreparedCancel 등)
+  agent/             — pi 통합
+    extension.ts     registerExtension (마이그레이션 + tools/commands 등록)
+    tools.ts         kis_* 6개 툴 (execute는 roles/core 위임, surface 불변)
+    commands.ts      /kis-key, /kis-status
+```
+
+- **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/trading)이 v2 키·tr_id·파라미터를 캡슐화한다.
+  자동매매 에이전트는 `roles/trading.ts`를 직접 import해 `prepare*`(요약+검증) → 사용자 확인 → `send*`(실행) 흐름으로 사용한다.
+- 주문은 원샷 함수가 아니라 **prepare/send 2단계** — 실전 주문은 사용자 확인 후 `send*`로만 실행한다.
+
 ## API 키 체계 (v2)
 
 - 키 형식: `category.api_id` (예: `overseas_stock.v1_해외주식-009`, `domestic_stock.v1_국내주식-001`). 공식 포털
   [API_COLLECTION](https://apiportal.koreainvestment.com/files/download/apiCollection/API_COLLECTION) Excel에서
-  `scripts/parse-portal-excel.py`로 생성 (`src/generated/apis.json`).
+  `scripts/parse-portal-excel.py`로 생성 (`src/core/generated/apis.json`).
 - **구버전 키 호환**: 예전 예제코드 파싱 스펙(164개)의 키(`overseas_stock.price` 등) → v2 키 매핑은
-  `src/generated/aliases.json` (method + api_path 동일 매칭). `lookupApi`는 v2 키 먼저, 없으면 alias.
+  `src/core/generated/aliases.json` (method + api_path 동일 매칭). `lookupApi`는 v2 키 먼저, 없으면 alias.
 
-## v2 클라이언트 동작 (`src/client.ts`)
+## v2 클라이언트 동작 (`src/core/client.ts`)
 
 - **tr_id 선택**: env에 따라 `tr_id_real[0]`/`tr_id_paper[0]` 자동 선택. **다중 TR_ID API**(배열 길이>1 또는
   `headers.tr_id.desc`에 라벨 목록 존재 — 해외주식 주문은 12개 라벨)는 `tr_id` 파라미터 필수. desc의
@@ -62,7 +88,7 @@ pi install /Users/ms/dev/pi/pi-kis-trading
 
 ## 키 & 토큰 (시크릿 저장소)
 
-**우선순위: OS 키체인 → 0600 파일 폴백** (`src/secret.ts`)
+**우선순위: OS 키체인 → 0600 파일 폴백** (`src/core/secret.ts`)
 
 | 백엔드 | 대상 OS | 비고 |
 |---|---|---|
@@ -84,16 +110,16 @@ pi install /Users/ms/dev/pi/pi-kis-trading
 # 공식 포털 전체 API 규격 Excel 다운로드:
 curl -L -o /tmp/kis_api_collection.xlsx https://apiportal.koreainvestment.com/files/download/apiCollection/API_COLLECTION
 cd pi-kis-trading
-python3 scripts/parse-portal-excel.py /tmp/kis_api_collection.xlsx src/generated/apis.json
+python3 scripts/parse-portal-excel.py /tmp/kis_api_collection.xlsx src/core/generated/apis.json
 ```
 
-`src/generated/aliases.json`은 구버전 스펙(예제코드 파싱)의 키→v2 키 정적 매핑입니다 (재생성 불필요).
+`src/core/generated/aliases.json`은 구버전 스펙(예제코드 파싱)의 키→v2 키 정적 매핑입니다 (재생성 불필요).
 
 ## 실시간 시세 (WebSocket)
 
 - 별도 접속키: `POST {base}/oauth2/Approval` → approval key (24h, 키체인/파일 캐시 — REST 토큰과 별개).
 - 접속: `ws://ops.koreainvestment.com:21000` (실전) / `ws://ops.koreainvestment.com:31000` (모의)
-- **60개 실시간 API** (`kis_list_apis` → WEBSOCKET kind)의 tr_id는 `src/generated/ws-tr-ids.json` (예: H0GSCNI0 국내주식 실시간체결가, HDFSCNT0 해외 실시간체결가, H0STCNT0 국내주식 실시간호가).
+- **60개 실시간 API** (`kis_list_apis` → WEBSOCKET kind)의 tr_id는 `src/core/generated/ws-tr-ids.json` (예: H0GSCNI0 국내주식 실시간체결가, HDFSCNT0 해외 실시간체결가, H0STCNT0 국내주식 실시간호가).
 - 데이터는 암호화 전송(encrypt=1) — AES-CBC 복호화 내장.
 
 ```
