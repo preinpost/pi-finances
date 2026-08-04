@@ -33,6 +33,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { baseUrl, clearTokenCache, getToken, keysFor, loadKeys, resolveEnv, type EnvArg, type KisEnv } from "./auth.ts";
+import { withRateLimit } from "./ratelimit.ts";
 
 export type { EnvArg, KisEnv } from "./auth.ts";
 
@@ -385,6 +386,34 @@ function isAuthError(status: number, rtCd: string, rtMsg: string): boolean {
 	return /(token|토큰).*(expire|만료|유효)/i.test(rtMsg);
 }
 
+/** 레이트 리밋(초당/분당 호출 제한) 에러 판정 — EGW00013 등. */
+function isRateLimitError(err: Error & { kis?: { rt_cd: string; rt_msg: string; status: number } }): boolean {
+	const k = err.kis;
+	if (k) {
+		if (k.status === 429) return true;
+		if (k.rt_cd === "EGW00013" || /^EGW0001[23]$/.test(k.rt_cd)) return true;
+		if (/초당|거래건수|traffic|rate.?limit|too many/i.test(k.rt_msg)) return true;
+	}
+	return /too many requests|http 429|rate limit|초당 거래건수/i.test(err.message);
+}
+
+/**
+ * 레이트 에러 자동 재시도 여부 — 조회(GET/주문 외)만 재시도한다.
+ * 주문(POST /trading/, hashkey 대상)은 중복 주문 위험이 있어 재시도하지 않고
+ * 에러를 그대로 전달한다.
+ */
+function shouldRetryRateLimit(def: ApiDef): boolean {
+	return !needsHashkey(def);
+}
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** 레이트 에러 백오프 재시도 횟수/간격. */
+const RATE_LIMIT_MAX_RETRIES = 2;
+const RATE_LIMIT_BACKOFF_MS = 800;
+
 interface RawResult {
 	data: Record<string, unknown>;
 	pages: number;
@@ -414,8 +443,9 @@ async function rawCall(
 	const nPages = Math.min(Math.max(1, Math.floor(pages)), 10);
 
 	const body = buildParams(def, params, env);
+	const isOrder = needsHashkey(def);
 	let hashkey: string | undefined;
-	if (needsHashkey(def)) {
+	if (isOrder) {
 		hashkey = await getHashkey(baseUrl(env), appKey, appSecret, body);
 	}
 
@@ -436,10 +466,15 @@ async function rawCall(
 	for (let i = 0; i < nPages; i++) {
 		const headers = { ...baseHeaders, tr_cont: i === 0 ? "" : "N" };
 		const query = buildParams(def, { ...params, ...ctx }, env);
-		const res =
-			def.method === "POST"
-				? await fetch(url, { method: "POST", headers, body: JSON.stringify(body) })
-				: await fetch(`${url}?${new URLSearchParams(query)}`, { method: "GET", headers });
+		// 전역 레이트 리밋: env(real/paper)별 최소 간격 보장 (주문은 더 보수적)
+		const res = await withRateLimit(
+			env,
+			{ isOrder },
+			() =>
+				def.method === "POST"
+					? fetch(url, { method: "POST", headers, body: JSON.stringify(body) })
+					: fetch(`${url}?${new URLSearchParams(query)}`, { method: "GET", headers }),
+		);
 		const json = await parseResponse(res, def);
 		merged = merged ? mergeResponses(merged, json) : json;
 		pagesDone++;
@@ -488,15 +523,45 @@ export async function callApi(
 	const key = resolveApiKey(api);
 	const def = lookupApi(key);
 	const pages = Number.isFinite(options?.pages) ? Math.max(1, Math.floor(options?.pages as number)) : 1;
-	try {
+
+	const executeRaw = async (): Promise<CallResult> => {
 		const { data, pages: pagesDone, trId } = await rawCall(def, params, envResolved, options?.trId, pages);
 		return { ok: true, api: key, env: envResolved, tr_id: trId, pages: pagesDone, data };
+	};
+
+	try {
+		return await executeRaw();
 	} catch (e) {
 		const err = e as Error & { kis?: { rt_cd: string; rt_msg: string; status: number } };
 		if (err.kis && isAuthError(err.kis.status, err.kis.rt_cd, err.kis.rt_msg)) {
 			await clearTokenCache(envResolved);
-			const { data, pages: pagesDone, trId } = await rawCall(def, params, envResolved, options?.trId, pages);
-			return { ok: true, api: key, env: envResolved, tr_id: trId, pages: pagesDone, data };
+			return executeRaw(); // 토큰 재발급 후 1회 재시도 (기존 동작)
+		}
+		if (err.kis && isRateLimitError(err)) {
+			if (!shouldRetryRateLimit(def)) {
+				// 주문 등 민감 호출: 자동 재시도 금지 — 힌트만 추가해 전달
+				throw Object.assign(
+					new Error(`${err.message} — 일시적 호출 제한(초당 건수 초과)입니다. 잠시 후 다시 시도하세요.`),
+					{ kis: err.kis },
+				);
+			}
+			// 조회 계열: 백오프(800ms→1.6s) 후 최대 2회 재시도
+			let lastErr: unknown = err;
+			for (let attempt = 1; attempt <= RATE_LIMIT_MAX_RETRIES; attempt++) {
+				await sleep(RATE_LIMIT_BACKOFF_MS * attempt);
+				try {
+					return await executeRaw();
+				} catch (e2) {
+					lastErr = e2;
+					const err2 = e2 as Error & { kis?: { rt_cd: string; rt_msg: string; status: number } };
+					if (err2.kis && isAuthError(err2.kis.status, err2.kis.rt_cd, err2.kis.rt_msg)) {
+						await clearTokenCache(envResolved); // 재시도 중 토큰 만료 → 다음 호출에서 재발급
+						break;
+					}
+					if (!(err2.kis && isRateLimitError(err2))) break; // 다른 에러면 중단
+				}
+			}
+			throw lastErr;
 		}
 		throw e;
 	}
