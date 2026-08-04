@@ -82,6 +82,8 @@ export const keysPath = process.env.KIS_KEYS_FILE ?? join(agentDir, "kis-keys.js
 export const tokenPath = join(agentDir, "kis-token.json");
 export const approvalPath = join(agentDir, "kis-approval.json");
 
+// 키체인 서비스 이름 — 패키지 리네임(pi-kis)과 무관하게 유지.
+// 기존 사용자의 키체인 항목이 이 이름으로 저장되어 있어 바꾸면 기존 키를 못 찾는다.
 const SERVICE = "pi-kis-trading";
 
 function loadKeyring(): KeyringLib | null {

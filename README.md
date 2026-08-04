@@ -1,4 +1,4 @@
-# pi-kis-trading
+# pi-kis
 
 한국투자증권 [OPEN API](https://apiportal.koreainvestment.com/)를 **REST로 직접 호출**하는 pi 패키지입니다.
 MCP 서버 프로세스도, GitHub에서 코드를 내려받아 실행하는 방식도 없습니다 — 패키지에 포함된 API 정의(`src/core/generated/apis.json`, 공식 포털 전체 규격 기반 **338개**)와 순수 TypeScript 클라이언트로 동작합니다.
@@ -6,7 +6,7 @@ MCP 서버 프로세스도, GitHub에서 코드를 내려받아 실행하는 방
 ## 설치
 
 ```bash
-pi install /Users/ms/dev/pi/pi-kis-trading
+pi install github.com/preinpost/pi-kis
 # pi 재시작
 ```
 
@@ -115,7 +115,7 @@ src/
 ```bash
 # 공식 포털 전체 API 규격 Excel 다운로드:
 curl -L -o /tmp/kis_api_collection.xlsx https://apiportal.koreainvestment.com/files/download/apiCollection/API_COLLECTION
-cd pi-kis-trading
+cd pi-kis
 python3 scripts/parse-portal-excel.py /tmp/kis_api_collection.xlsx src/core/generated/apis.json
 ```
 

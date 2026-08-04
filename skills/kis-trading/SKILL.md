@@ -1,9 +1,9 @@
 ---
 name: kis-trading
-description: 한국투자증권 OPEN API로 국내외 주식 데이터를 조회·주문하는 방법. pi-kis-trading 패키지가 설치되어 있고 사용자가 "주가", "현재가", "차트", "시세", "52주 고점", "거래량 순위", "실시간체결가", "주문" 등 국내외 주식 요청 시, 이 스킬의 지침대로 kis_* 도구를 사용한다. 키 미등록 시 /kis-key 안내.
+description: 한국투자증권 OPEN API로 국내외 주식 데이터를 조회·주문하는 방법. pi-kis 패키지가 설치되어 있고 사용자가 "주가", "현재가", "차트", "시세", "52주 고점", "거래량 순위", "실시간체결가", "주문" 등 국내외 주식 요청 시, 이 스킬의 지침대로 kis_* 도구를 사용한다. 키 미등록 시 /kis-key 안내.
 ---
 
-# KIS Trading (pi-kis-trading)
+# KIS Trading (pi-kis)
 
 한국투자증권 OPEN API를 REST/WebSocket으로 직접 호출합니다 (MCP 서버 불필요).
 도구별 인자·파라미터 규칙(v2 키, params, tr_id, env, pages, hashkey 등)은 각

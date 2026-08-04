@@ -1,5 +1,5 @@
 /**
- * pi-kis-trading
+ * pi-kis
  * ==============
  * Korea Investment (KIS) Open API client for pi — direct REST calls, no MCP
  * server, no dynamic code download.
