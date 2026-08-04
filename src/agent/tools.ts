@@ -16,7 +16,7 @@ import {
 	getOverseasChart,
 	getOverseasPrice,
 } from "../roles/market.ts";
-import { analyze, normalizeDomesticChart, normalizeOverseasChart } from "../roles/indicators.ts";
+import { analyze, normalizeDomesticChart, normalizeOverseasChart, type Bar } from "../roles/indicators.ts";
 import {
 	getAnalystConsensus,
 	getFinancialRatios,
@@ -27,6 +27,21 @@ import {
 /** 툴 결과 공통 래퍼 — 기존 index.ts와 동일 형태. */
 export function textResult(text: string) {
 	return { content: [{ type: "text" as const, text }], details: {} };
+}
+
+/**
+ * 차트 응답에서 output2/output1 후보를 각각 정규화해 bar가 더 많은 쪽을 선택.
+ * (output1이 1행 요약 배열인 경우 등 응답 구조 차이에 강건)
+ */
+function pickChartBars(out: Record<string, unknown>, normalize: (rows: Record<string, unknown>[]) => Bar[]): Bar[] {
+	let best: Bar[] = [];
+	for (const key of ["output2", "output1"] as const) {
+		const rows = out[key];
+		if (!Array.isArray(rows)) continue;
+		const bars = normalize(rows as Record<string, unknown>[]);
+		if (bars.length > best.length) best = bars;
+	}
+	return best;
 }
 
 /** 오늘 기준 YYYYMMDD (daysAgo일 전). */
@@ -333,8 +348,7 @@ export function registerTools(pi: ExtensionAPI): void {
 						env,
 					});
 					const out = res.data as Record<string, unknown>;
-					const rows = (Array.isArray(out.output1) ? out.output1 : Array.isArray(out.output2) ? out.output2 : []) as Record<string, unknown>[];
-					const bars = normalizeDomesticChart(rows);
+					const bars = pickChartBars(out, normalizeDomesticChart);
 					if (bars.length === 0) {
 						return jsonResult({ ok: false, error: "차트 데이터 없음 — 종목코드/기간을 확인하거나 장 마감 후 재시도하세요." });
 					}
@@ -346,8 +360,7 @@ export function registerTools(pi: ExtensionAPI): void {
 					env,
 				});
 				const out = res.data as Record<string, unknown>;
-				const rows = (Array.isArray(out.output2) ? out.output2 : Array.isArray(out.output1) ? out.output1 : []) as Record<string, unknown>[];
-				const bars = normalizeOverseasChart(rows);
+				const bars = pickChartBars(out, normalizeOverseasChart);
 				if (bars.length === 0) {
 					return jsonResult({ ok: false, error: "차트 데이터 없음 — 티커/거래소(excd)를 확인하거나 장 마감 후 재시도하세요." });
 				}

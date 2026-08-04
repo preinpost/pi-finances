@@ -52,14 +52,13 @@ export function normalizeDomesticChart(output1: Record<string, unknown>[]): Bar[
 }
 
 /**
- * 해외 기간별시세(v1_해외주식-010, HHDFS76240000) output2 행 → Bar[] (날짜 오름차순).
- * 필드: xymd/open/high/low/close/vol.
+ * 해외 기간별시세(v1_해외주식-010, HHDFS76240000) 행 → Bar[] (날짜 오름차순).
+ * 필드: xymd/open/high/low/clos/tvol (KIS 실응답 — clos, tvol). 구버전 close/vol도 허용.
  */
-export function normalizeOverseasChart(output2: Record<string, unknown>[]): Bar[] {
-	const rows = Array.isArray(output2) ? output2 : [];
+export function normalizeOverseasChart(rows: Record<string, unknown>[]): Bar[] {
 	const bars: Bar[] = [];
 	for (const r of rows) {
-		const b = buildBar(r.xymd, r.open, r.high, r.low, r.close, r.vol);
+		const b = buildBar(r.xymd, r.open, r.high, r.low, r.clos ?? r.close, r.tvol ?? r.vol);
 		if (b) bars.push(b);
 	}
 	bars.sort((a, b) => a.date.localeCompare(b.date));
