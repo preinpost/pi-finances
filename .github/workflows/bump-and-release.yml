@@ -1,8 +1,8 @@
 # Bump & Release
 #
 # main 브랜치에 push/merge 되면 커밋 메시지를 보고 버전을 자동으로 올리고
-# (feat → minor, fix → patch, BREAKING/MAJOR → major), 태그 + GitHub Release를 만들고
-# npm에 publish 합니다.
+# (feat → minor, fix → patch, BREAKING/! → major), 태그 + GitHub Release를 만들고
+# npm에 publish 합니다. 외부 버전 범프 액션 의존 없이 자체 구현.
 #
 # 준비사항 (1회):
 #   - GitHub Secrets 에 `NPM_TOKEN` 추가 (npmjs.org access token, publish 권한)
@@ -47,7 +47,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 버전 범프 액션이 이전 태그 사이 커밋 메시지를 읽기 위해 전체 히스토리 필요
+          fetch-depth: 0 # 마지막 태그 이후 커밋 메시지를 읽기 위해 전체 히스토리 필요
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -58,28 +58,47 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Determine bump type
+        id: bump-type
+        env:
+          BUMP_INPUT: ${{ inputs.bump }}
+        run: |
+          # workflow_dispatch로 명시한 버전 타입이 있으면 그대로 사용
+          if [ "$BUMP_INPUT" != "auto" ] && [ -n "$BUMP_INPUT" ]; then
+            BUMP="$BUMP_INPUT"
+          else
+            # 마지막 태그 이후 커밋 메시지로 판단 (태그가 없으면 전체 커밋 기준)
+            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+            if [ -n "$LAST_TAG" ]; then
+              COMMITS=$(git log "$LAST_TAG"..HEAD --format=%s 2>/dev/null)
+            else
+              COMMITS=$(git log --format=%s 2>/dev/null)
+            fi
+            if echo "$COMMITS" | grep -qiE 'BREAKING CHANGE|!:|major'; then
+              BUMP=major
+            elif echo "$COMMITS" | grep -qiE '^feat|^feature|minor'; then
+              BUMP=minor
+            else
+              BUMP=patch
+            fi
+          fi
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "Detected bump type: $BUMP"
+
       - name: Configure git identity
-        # 버전 범프 액션의 커밋이 실패하지 않도록 안전장치 (checkout이 이미 설정하지만 명시)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Automated Version Bump
-        id: bump
-        uses: phips28/gh-action-bump-version@v11
-        with:
-          tag-prefix: 'v'
-          minor-wording: 'feat,minor,feature'
-          major-wording: 'MAJOR,breaking,BREAKING CHANGE'
-          patch-wording: 'fix,fixes,patch,bug,perf,refactor,chore,docs,style,ci,test'
-          rc-wording: 'RELEASE,alpha,beta,rc,pre'
-          # workflow_dispatch에서 명시한 버전 타입 (auto면 빈 값 → 커밋 메시지 기반 감지)
-          # package.json + package-lock.json을 함께 갱신해 커밋·태그·push까지 수행
-          version-type: ${{ inputs.bump == 'auto' && '' || inputs.bump }}
-          # [skip ci]로 이 워크플로우가 버전 커밋에 다시 실행되는 것을 방지
-          commit-message: 'chore(release): bump version to {{version}} [skip ci]'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Bump version, commit & tag
+        run: |
+          npm version "${{ steps.bump-type.outputs.bump }}" --git-tag-version=false --force
+          VERSION=$(node -p "require('./package.json').version")
+          git add package.json package-lock.json
+          git commit -m "chore(release): v${VERSION} [skip ci]"
+          git tag "v${VERSION}"
+          git push origin HEAD:main --tags
+          echo "Tagged v${VERSION}"
 
       - name: Read package version
         id: version
