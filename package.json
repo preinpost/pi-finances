@@ -5,6 +5,20 @@
   "type": "module",
   "license": "MIT",
   "author": "minsoo.lee <preinpost@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/preinpost/pi-kis.git"
+  },
+  "bugs": {
+    "url": "https://github.com/preinpost/pi-kis/issues"
+  },
+  "homepage": "https://github.com/preinpost/pi-kis#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "pi-package",
     "pi",
