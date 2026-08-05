@@ -6,8 +6,21 @@ MCP 서버 프로세스도, GitHub에서 코드를 내려받아 실행하는 방
 ## 설치
 
 ```bash
+# npm 레지스트리 (권장) — 배포 버전
+pi install npm:pi-kis
+# 버전 고정: pi install npm:pi-kis@0.2.0
+
+# 또는 GitHub 소스 직접 설치 (최신 커밋 기준)
 pi install git:github.com/preinpost/pi-kis
+
 # pi 재시작
+```
+
+이후 업데이트/제거:
+
+```bash
+pi update npm:pi-kis    # 최신 배포 버전으로 업데이트
+pi remove npm:pi-kis    # 제거
 ```
 
 ## 사용
