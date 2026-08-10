@@ -11,7 +11,7 @@ pi-finances 모노레포의 공용 라이브러리 — 브로커(KIS/토스 등)
 |---|---|
 | `src/store.ts` | 범용 시크릿 스토어 — OS keyring(우선) / 파일(폴백) 적응형, 네임스페이스 스코프. `mergeWrite`로 타 패키지 필드 보존 |
 | `src/indicators.ts` | 기술적 지표 — `Bar`, MA/RSI/ATR/볼린저/지지저항/추세 (`analyze`) |
-| `skills/timing` | 공용 스킬 — 매수/매도 타점 분석 (차트 툴은 설치된 브로커 기준: kis_technical/toss_chart) |
+| `skills/kis-timing` | 공용 스킬 — 매수/매도 타점 분석 (차트 툴은 설치된 브로커 기준: kis_technical/toss_chart) |
 
 ## 스킬 번들링 (중요)
 

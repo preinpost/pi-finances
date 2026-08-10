@@ -16,7 +16,7 @@ pi install npm:pi-toss
 > 두 패키지는 같은 키 저장소(OS 키체인 `pi-kis` SERVICE / `~/.pi/agent/kis-keys.json`)를 공유합니다.
 > `pi install npm:pi-kis`와 `pi install npm:pi-toss`는 설치 순서 무관.
 
-> **타점 분석(`timing`) 스킬은 pi-kis가 단독 제공**합니다. 두 패키지가 같은 번들 스킬을
+> **타점 분석(`kis-timing`) 스킬은 pi-kis가 단독 제공**합니다. 두 패키지가 같은 번들 스킬을
 > 동시에 등록하면 pi가 이름 충돌 경고(`[Skill conflicts]`)를 내므로, 공용 스킬 등록은
 > pi-kis만 담당합니다. pi-kis 없이 pi-toss만 쓰는 경우에는 `toss_chart`로 직접 분석하세요
 > (예: "005930 일봉 RSI 알려줘").

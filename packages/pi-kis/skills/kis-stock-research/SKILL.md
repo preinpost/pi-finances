@@ -1,5 +1,5 @@
 ---
-name: stock-research
+name: kis-stock-research
 description: 특정 종목 리서치 — "삼성전자 리서치", "○○ 딥다이브", "○○ 재무제표·컨센서스 리포트", "○○ 52주 고저 분석" 등 단일 종목 요청 시, kis_* 도구(kis_research 포함) 지침대로 시세·재무·뉴스·컨센서스를 조사해 종목 리포트를 작성. 키 미등록 시 /kis-key 안내.
 ---
 

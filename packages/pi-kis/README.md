@@ -44,9 +44,9 @@ pi remove npm:pi-kis    # 제거
 "삼성전자 최근 3개월 일봉"          # kis_domestic_chart
 "삼성전자 재무제표 + 컨센서스"      # kis_research (재무/뉴스/컨센서스)
 "삼성전자 매수 타이밍"            # kis_technical (MA/RSI/ATR/볼린저/지지저항/추세)
-"화장품 섹터 종목 분석 리포트"      # sector-research 스킬 (섹터 파이프라인)
-"삼성전자 리서치 딥다이브"          # stock-research 스킬 (단일 종목 리포트)
-"삼성전자 매수/매도 타점"          # timing 스킬 (pi-finance-core 제공 — 공용 차트분석)
+"화장품 섹터 종목 분석 리포트"      # kis-sector-research 스킬 (섹터 파이프라인)
+"삼성전자 리서치 딥다이브"          # kis-stock-research 스킬 (단일 종목 리포트)
+"삼성전자 매수/매도 타점"          # kis-timing 스킬 (pi-finance-core 제공 — 공용 차트분석)
 ```
 
 ## 도구
@@ -103,7 +103,7 @@ src/
     commands.ts      /kis-key, /kis-status
 ```
 
-- **공용 모듈·스킬**: 기술적 지표/시크릿 스토어와 `timing` 스킬(차트분석·타점 — 브로커 중립)은
+- **공용 모듈·스킬**: 기술적 지표/시크릿 스토어와 `kis-timing` 스킬(차트분석·타점 — 브로커 중립)은
   [pi-finance-core](https://github.com/preinpost/pi-finances/tree/main/packages/pi-finance-core) 패키지에 있다.
   core는 **번들 의존성**(`bundledDependencies`)으로 tarball에 포함되고, 스킬은
   `node_modules/pi-finance-core/skills` 경로로 로드된다 — 사용자가 직접 설치할 필요 없음.

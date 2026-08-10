@@ -10,7 +10,8 @@
 - src/roles/ — market/portfolio/trading/research/derivatives/greeks(→KIS), toss(→토스), broker(중립 퍼사드+폴백), indicators(공용), types(공용)
 - src/agent/ — extension.ts + tools.ts (kis_* 10 + toss_* 7 + broker_* 2) + commands.ts (/kis-key /toss-key /kis-status /kis-watch)
 - src/watch.ts — /kis-watch 엔진 (KIS 실시간)
-- skills/ — kis-trading, stock-research, sector-research, timing, stock-html(범용 리포트 HTML)
+- skills/ — kis-trading, kis-stock-research, kis-sector-research, kis-timing, stock-html(범용 리포트 HTML)
+  (스킬 네이밍 룰: `{패키지}-{기능}` prefix 필수 — 패키지별 같은 기능 이름 공존 가능)
 - release: .github/workflows/bump-and-release.yml (커밋메시지 기반 버전 + npm publish, 단일 패키지 전제, npm ci 사용)
 
 ## 제안 구조
@@ -28,7 +29,7 @@ pi-finances/ (pnpm workspace, packages/*)
    (a) pi-kis가 pi-toss를 optionalDependency로 갖고 동적 import (모노레포 dev에선 workspace:*, 배포판에선 npm 의존)
    (b) 퍼사드 폐기 — 에이전트가 kis_*/toss_* 중 키 있는 쪽을 골라 호출 (실패 시 다른 브로커 재시도)
 3. **공용 키 저장**: secret.ts가 appKey + tossClientId를 한 파일에 보관 중 → core에 범용 keyring 스토어 API를 두고 각 패키지가 자체 키 스키마 정의
-4. **skills 소유권**: kis-trading/stock-research/sector-research → pi-kis, timing → pi-kis(toss_market warnings 참조는 조건부), stock-html → pi-finance-core(범용)
+4. **skills 소유권**: kis-trading/kis-stock-research/kis-sector-research → pi-kis, kis-timing → pi-kis(toss_market warnings 참조는 조건부), stock-html → pi-finance-core(범용)
 5. **릴리스**: 기존 bump-and-release 커스텀 워크플로를 변경된 packages/* 감지(pnpm -r publish --filter)로 확장 vs changesets 도입
 6. **git 히스토리**: git subtree로 이관(히스토리 보존) vs 새로 시작
 7. **로컬 dev**: 사용자 ~/.pi/agent의 npm:pi-kis를 로컬 경로 설치(pi install ./packages/pi-kis)로 교체

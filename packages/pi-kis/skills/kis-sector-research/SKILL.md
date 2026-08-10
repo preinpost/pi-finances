@@ -1,5 +1,5 @@
 ---
-name: sector-research
+name: kis-sector-research
 description: 섹터 종목 분석 — "섹터 분석", "○○ 섹터 종목 리포트", "섹터 종목 Top N", "52주 고저 스크리닝" 등 섹터 단위 리서치 요청 시, kis_* 도구(kis_research 포함) 지침대로 섹터 리스트 확보 → 스크리닝 → Top N → 종목별 재무·뉴스·컨센서스 → 섹터 리포트를 수행. 키 미등록 시 /kis-key 안내.
 ---
 
