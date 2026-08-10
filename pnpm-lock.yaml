@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@napi-rs/keyring':
+        specifier: ^1.3.0
+        version: 1.3.0
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0
@@ -15,17 +18,16 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/pi-finance-core:
-    dependencies:
-      '@napi-rs/keyring':
-        specifier: ^1.3.0
-        version: 1.3.0
+  packages/pi-finance-core: {}
 
   packages/pi-kis:
     dependencies:
       '@earendil-works/pi-coding-agent':
         specifier: '*'
         version: 0.84.1(ws@8.21.3)(zod@4.4.3)
+      '@napi-rs/keyring':
+        specifier: ^1.3.0
+        version: 1.3.0
       pi-finance-core:
         specifier: workspace:*
         version: link:../pi-finance-core
@@ -38,6 +40,9 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: '*'
         version: 0.84.1(ws@8.21.3)(zod@4.4.3)
+      '@napi-rs/keyring':
+        specifier: ^1.3.0
+        version: 1.3.0
       pi-finance-core:
         specifier: workspace:*
         version: link:../pi-finance-core

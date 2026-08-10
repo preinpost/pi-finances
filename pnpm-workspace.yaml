@@ -1,7 +1,7 @@
 packages:
   - packages/*
 
-# bundledDependencies(pi 패키지 리소스 번들)를 pack/publish 하려면 hoisted 링커 필요
+# 번들(bundledDependencies) pack/publish에 hoisted 링커 필요
 nodeLinker: hoisted
 
 # pnpm v11: 의존성 빌드 스크립트 허용 목록 (피어로 따라오는 pi-ai 의존성)
