@@ -1,10 +1,7 @@
 packages:
   - packages/*
 
+# pnpm v11: 의존성 빌드 스크립트 허용 목록 (피어로 따라오는 pi-ai 의존성)
 allowBuilds:
-  '@google/genai': set this to true or false
-  protobufjs: set this to true or false
-
-onlyBuiltDependencies:
-  - '@google/genai'
-  - protobufjs
+  '@google/genai': true
+  protobufjs: true
