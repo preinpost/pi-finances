@@ -45,11 +45,28 @@ pi install /absolute/path/to/packages/pi-toss
   GitHub Actions는 루트 `.github/workflows/`만 읽으므로 패키지별 CI는 잡 단위로 구성.
 - 스모크 테스트: `packages/*/scripts/smoke.mjs` (`node --experimental-transform-types`)
 
-## 릴리스
+## 릴리스 (패키지별 자동)
 
-main push/merge 시 커밋 메시지 기반(`BREAKING`/`feat`/`fix`)으로 **변경된 패키지만**
-버전을 올리고 npm에 publish한다 (`pi-kis@x`, `pi-toss@y`, `pi-finance-core@z` 태그,
-topological order: core → toss → kis). 워크플로: [bump-and-release.yml](.github/workflows/bump-and-release.yml).
+각 패키지가 자기만의 release 워크플로를 가진다 (`packages/<pkg>/**` 변경 시 해당
+패키지만 자동 릴리스, Actions 탭에서 수동 dispatch도 가능):
+
+| 워크플로 | 동작 |
+|---|---|
+| [release-pi-kis.yml](.github/workflows/release-pi-kis.yml) | typecheck → 스모크 → 범프 → `pi-kis@V` 태그 → npm publish → GitHub Release |
+| [release-pi-toss.yml](.github/workflows/release-pi-toss.yml) | 동일 (pi-toss) |
+| [release-pi-finance-core.yml](.github/workflows/release-pi-finance-core.yml) | 동일 (core — 스모크 없음) |
+
+- **버전 규칙**: 커밋 메시지 기반(`BREAKING`/`!: `→ major, `feat`→minor, `fix`→patch),
+  패키지 태그(`pi-kis@*`) 이후 해당 패키지를 건드린 커밋만 본다.
+- **첫 릴리스**: 패키지 태그가 없으면 현재 package.json 버전을 그대로 publish
+  (범프 없음). 단, pi-kis는 0.2.1이 이미 npm에 있으므로 **0.3.0으로 올린 뒤**
+  첫 push해야 한다 (수동 수정 + `[skip ci]` 커밋, 또는 dispatch에서 bump=minor).
+- **순서**: 워크스페이스 의존(pi-finance-core)이 이미 npm에 있어야 kis/toss가
+  설치 가능 — core를 먼저 릴리스한다 (core 변경 없이 kis만 릴리스해도 core@0.1.0이
+  npm에 있으면 정상). 병렬 릴리스는 `git pull --rebase`로 직렬화, pnpm-lock.yaml은
+  워크스페이스 버전을 기록하지 않아 충돌 없음.
+- **publish**: 반드시 `pnpm publish` (`npm publish`는 workspace:* 미치환).
+  이미 게시된 버전은 스킵되므로 재실행 안전.
 
 > ⚠️ 모노레포 루트는 `pi` manifest가 없으므로 `pi install git:github.com/preinpost/pi-finances`는
 > 동작하지 않는다 — 반드시 npm 레지스트리에서 설치할 것.

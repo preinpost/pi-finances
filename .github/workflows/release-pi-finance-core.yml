@@ -1,0 +1,133 @@
+# Release pi-finance-core — 패키지별 bump & publish
+#
+# packages/pi-finance-core/** 변경 시 (또는 수동 dispatch) 해당 패키지만:
+#   typecheck → (스모크) → 버전 범프(커밋 메시지 기반) → 태그 pi-finance-core@V → npm publish → GitHub Release
+#
+# GitHub Actions는 루트 .github/workflows/만 로드하므로 "패키지별 CI"는
+# 파일별로 분리해 구성한다. 병렬 실행 안전:
+#   - 버전 범프는 패키지 자체 package.json만 수정 (pnpm-lock.yaml 불변 —
+#     워크스페이스 의존은 link: 으로 기록되어 버전 미포함)
+#   - push 전 git pull --rebase 로 동시 릴리스 직렬화
+#
+# 첫 릴리스 규칙: 패키지 태그(pi-finance-core@*)가 없으면 package.json 버전을 그대로
+# publish (범프 없음). dispatch로 bump를 명시하면 우선 적용.
+#
+# 준비: GitHub Secrets에 NPM_TOKEN (publish 권한). provenance 필요 시
+#   publish에 --provenance 추가 + job permissions에 id-token: write.
+
+name: Release pi-finance-core
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/pi-finance-core/**'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: '버전 타입 (auto = 커밋 메시지 기반 자동 감지)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-pi-finance-core
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Bump & Publish pi-finance-core
+    runs-on: ubuntu-latest
+    # 버전 범프 커밋("[skip ci]")에 의한 재트리거 방지
+    if: "!contains(github.event.head_commit.message || '', '[skip ci]')"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 패키지 태그 이후 커밋 메시지를 읽기 위해 전체 히스토리 필요
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter pi-finance-core typecheck
+
+      - name: Determine bump type
+        id: bump
+        env:
+          BUMP_INPUT: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          PKG=pi-finance-core
+          DIR=packages/pi-finance-core
+          if [ "$BUMP_INPUT" != "auto" ] && [ -n "$BUMP_INPUT" ]; then
+            BUMP="$BUMP_INPUT"
+          else
+            LAST_TAG=$(git tag -l "${{PKG}}@*" --sort=-version:refname | head -1 || true)
+            if [ -z "$LAST_TAG" ]; then
+              # 첫 릴리스 — package.json 버전 그대로 publish
+              echo "first=1" >> "$GITHUB_OUTPUT"
+              echo "version=$(node -p "require('./$DIR/package.json').version")" >> "$GITHUB_OUTPUT"
+              echo "첫 릴리스 — 현재 버전 그대로 publish"
+              exit 0
+            fi
+            COMMITS=$(git log "$LAST_TAG"..HEAD --format=%s -- "$DIR" 2>/dev/null)
+            if echo "$COMMITS" | grep -qiE 'BREAKING CHANGE|!:|major'; then
+              BUMP=major
+            elif echo "$COMMITS" | grep -qiE '^feat|^feature|minor'; then
+              BUMP=minor
+            else
+              BUMP=patch
+            fi
+          fi
+          pnpm --filter "$PKG" exec npm version "$BUMP" --no-git-tag-version --force
+          VERSION=$(node -p "require('./$DIR/package.json').version")
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected: pi-finance-core $BUMP → $VERSION"
+
+      - name: Commit & tag
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/pi-finance-core/package.json
+          git diff --cached --quiet || git commit -m "chore(release): pi-finance-core@${{VERSION}} [skip ci]"
+          # 동시 릴리스(타 패키지) 직렬화 — rebase 후 태그 → push
+          git pull --rebase origin main --autostash
+          git tag "pi-finance-core@${{VERSION}}"
+          git push origin HEAD:main --tags
+          echo "Tagged pi-finance-core@${{VERSION}}"
+
+      - name: Publish to npm
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          pnpm publish -r --filter pi-finance-core --no-git-checks --access public
+          echo "Published pi-finance-core@${{VERSION}}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: gh release create "pi-finance-core@${{VERSION}}" --generate-notes
