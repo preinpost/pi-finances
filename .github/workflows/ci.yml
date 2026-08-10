@@ -19,6 +19,7 @@ on:
     branches: [main]
     paths:
       - 'packages/**'
+  workflow_dispatch: # 수동 실행 (워크플로 수정 직후 검증용)
 
 jobs:
   check:
