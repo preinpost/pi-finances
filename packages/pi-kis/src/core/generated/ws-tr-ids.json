@@ -1,0 +1,365 @@
+{
+ "generated": "auto-generated from src/generated/apis.json (WEBSOCKET kind, api_path /tryitout/<TR_ID>). Do not edit by hand.",
+ "tr_ids": {
+  "domestic_bond.실시간-052": {
+   "tr_id": "H0BJCNT0",
+   "name": "일반채권 실시간체결가",
+   "tr_key_desc": "채권 종목코드 (ex. KR103502GA34)",
+   "field_count": 19
+  },
+  "domestic_bond.실시간-053": {
+   "tr_id": "H0BJASP0",
+   "name": "일반채권 실시간호가",
+   "tr_key_desc": "채권 종목코드 (ex. KR103502GA34)",
+   "field_count": 34
+  },
+  "domestic_bond.실시간-060": {
+   "tr_id": "H0BICNT0",
+   "name": "채권지수 실시간체결가",
+   "tr_key_desc": "채권 종목코드 (ex. KR103502GA34)",
+   "field_count": 20
+  },
+  "domestic_futureoption.실시간-010": {
+   "tr_id": "H0IFCNT0",
+   "name": "지수선물 실시간체결가",
+   "tr_key_desc": "예:101S12",
+   "field_count": 50
+  },
+  "domestic_futureoption.실시간-011": {
+   "tr_id": "H0IFASP0",
+   "name": "지수선물 실시간호가",
+   "tr_key_desc": "예:101S12",
+   "field_count": 38
+  },
+  "domestic_futureoption.실시간-012": {
+   "tr_id": "H0IFCNI0",
+   "name": "선물옵션 실시간체결통보",
+   "tr_key_desc": "예:101S12",
+   "field_count": 22
+  },
+  "domestic_futureoption.실시간-014": {
+   "tr_id": "H0IOCNT0",
+   "name": "지수옵션  실시간체결가",
+   "tr_key_desc": "예:201S11305",
+   "field_count": 58
+  },
+  "domestic_futureoption.실시간-015": {
+   "tr_id": "H0IOASP0",
+   "name": "지수옵션 실시간호가",
+   "tr_key_desc": "예:201S11305",
+   "field_count": 38
+  },
+  "domestic_futureoption.실시간-022": {
+   "tr_id": "H0CFCNT0",
+   "name": "상품선물 실시간체결가",
+   "tr_key_desc": "종목코드",
+   "field_count": 50
+  },
+  "domestic_futureoption.실시간-023": {
+   "tr_id": "H0CFASP0",
+   "name": "상품선물 실시간호가",
+   "tr_key_desc": "종목코드",
+   "field_count": 38
+  },
+  "domestic_futureoption.실시간-029": {
+   "tr_id": "H0ZFCNT0",
+   "name": "주식선물 실시간체결가",
+   "tr_key_desc": "종목코드",
+   "field_count": 49
+  },
+  "domestic_futureoption.실시간-030": {
+   "tr_id": "H0ZFASP0",
+   "name": "주식선물 실시간호가",
+   "tr_key_desc": "종목코드",
+   "field_count": 68
+  },
+  "domestic_futureoption.실시간-031": {
+   "tr_id": "H0ZFANC0",
+   "name": "주식선물 실시간예상체결",
+   "tr_key_desc": "주식선물 종목코드",
+   "field_count": 8
+  },
+  "domestic_futureoption.실시간-032": {
+   "tr_id": "H0EUCNT0",
+   "name": "KRX야간옵션 실시간체결가",
+   "tr_key_desc": "야간옵션 종목코드",
+   "field_count": 56
+  },
+  "domestic_futureoption.실시간-033": {
+   "tr_id": "H0EUASP0",
+   "name": "KRX야간옵션 실시간호가",
+   "tr_key_desc": "야간옵션 종목코드",
+   "field_count": 38
+  },
+  "domestic_futureoption.실시간-034": {
+   "tr_id": "H0EUANC0",
+   "name": "KRX야간옵션실시간예상체결",
+   "tr_key_desc": "야간옵션 종목코드",
+   "field_count": 8
+  },
+  "domestic_futureoption.실시간-044": {
+   "tr_id": "H0ZOCNT0",
+   "name": "주식옵션 실시간체결가",
+   "tr_key_desc": "종목코드",
+   "field_count": 53
+  },
+  "domestic_futureoption.실시간-045": {
+   "tr_id": "H0ZOASP0",
+   "name": "주식옵션 실시간호가",
+   "tr_key_desc": "종목코드",
+   "field_count": 68
+  },
+  "domestic_futureoption.실시간-046": {
+   "tr_id": "H0ZOANC0",
+   "name": "주식옵션 실시간예상체결",
+   "tr_key_desc": "주식옵션 종목코드",
+   "field_count": 7
+  },
+  "domestic_futureoption.실시간-064": {
+   "tr_id": "H0MFCNT0",
+   "name": "KRX야간선물 실시간종목체결",
+   "tr_key_desc": "야간선물 종목코드",
+   "field_count": 49
+  },
+  "domestic_futureoption.실시간-065": {
+   "tr_id": "H0MFASP0",
+   "name": "KRX야간선물 실시간호가",
+   "tr_key_desc": "야간선물 종목코드",
+   "field_count": 38
+  },
+  "domestic_futureoption.실시간-066": {
+   "tr_id": "H0MFCNI0",
+   "name": "KRX야간선물 실시간체결통보",
+   "tr_key_desc": "HTS ID",
+   "field_count": 19
+  },
+  "domestic_futureoption.실시간-067": {
+   "tr_id": "H0EUCNI0",
+   "name": "KRX야간옵션실시간체결통보",
+   "tr_key_desc": "HTS ID",
+   "field_count": 19
+  },
+  "domestic_stock.국내주식_실시간예상체결__통합_": {
+   "tr_id": "H0UNANC0",
+   "name": "국내주식 실시간예상체결 (통합)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 47
+  },
+  "domestic_stock.국내주식_실시간예상체결__NXT_": {
+   "tr_id": "H0NXANC0",
+   "name": "국내주식 실시간예상체결 (NXT)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 47
+  },
+  "domestic_stock.국내주식_실시간체결가__통합_": {
+   "tr_id": "H0UNCNT0",
+   "name": "국내주식 실시간체결가 (통합)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 46
+  },
+  "domestic_stock.국내주식_실시간체결가__NXT_": {
+   "tr_id": "H0NXCNT0",
+   "name": "국내주식 실시간체결가 (NXT)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 46
+  },
+  "domestic_stock.국내주식_실시간프로그램매매__통합_": {
+   "tr_id": "H0UNPGM0",
+   "name": "국내주식 실시간프로그램매매 (통합)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 11
+  },
+  "domestic_stock.국내주식_실시간프로그램매매__NXT_": {
+   "tr_id": "H0NXPGM0",
+   "name": "국내주식 실시간프로그램매매 (NXT)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 11
+  },
+  "domestic_stock.국내주식_실시간호가__통합_": {
+   "tr_id": "H0UNASP0",
+   "name": "국내주식 실시간호가 (통합)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 65
+  },
+  "domestic_stock.국내주식_실시간호가__NXT_": {
+   "tr_id": "H0NXASP0",
+   "name": "국내주식 실시간호가 (NXT)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 62
+  },
+  "domestic_stock.국내주식_실시간회원사__통합_": {
+   "tr_id": "H0UNMBC0",
+   "name": "국내주식 실시간회원사 (통합)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 78
+  },
+  "domestic_stock.국내주식_실시간회원사__NXT_": {
+   "tr_id": "H0NXMBC0",
+   "name": "국내주식 실시간회원사 (NXT)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 78
+  },
+  "domestic_stock.실시간-003": {
+   "tr_id": "H0STCNT0",
+   "name": "국내주식 실시간체결가 (KRX)",
+   "tr_key_desc": "종목번호 (6자리)\r\nETN의 경우, Q로 시작 (EX. Q500001)",
+   "field_count": 46
+  },
+  "domestic_stock.실시간-004": {
+   "tr_id": "H0STASP0",
+   "name": "국내주식 실시간호가 (KRX)",
+   "tr_key_desc": "종목번호 (6자리)\r\nETN의 경우, Q로 시작 (EX. Q500001)",
+   "field_count": 62
+  },
+  "domestic_stock.실시간-005": {
+   "tr_id": "H0STCNI0",
+   "name": "국내주식 실시간체결통보",
+   "tr_key_desc": "HTS ID",
+   "field_count": 26
+  },
+  "domestic_stock.실시간-024": {
+   "tr_id": "H0STOAC0",
+   "name": "국내주식 시간외 실시간예상체결 (KRX)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 43
+  },
+  "domestic_stock.실시간-025": {
+   "tr_id": "H0STOAA0",
+   "name": "국내주식 시간외 실시간호가 (KRX)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 54
+  },
+  "domestic_stock.실시간-026": {
+   "tr_id": "H0UPCNT0",
+   "name": "국내지수 실시간체결",
+   "tr_key_desc": "업종구분코드",
+   "field_count": 30
+  },
+  "domestic_stock.실시간-027": {
+   "tr_id": "H0UPANC0",
+   "name": "국내지수 실시간예상체결",
+   "tr_key_desc": "업종구분코드",
+   "field_count": 30
+  },
+  "domestic_stock.실시간-028": {
+   "tr_id": "H0UPPGM0",
+   "name": "국내지수 실시간프로그램매매",
+   "tr_key_desc": "업종구분코드",
+   "field_count": 88
+  },
+  "domestic_stock.실시간-041": {
+   "tr_id": "H0STANC0",
+   "name": "국내주식 실시간예상체결 (KRX)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 46
+  },
+  "domestic_stock.실시간-042": {
+   "tr_id": "H0STOUP0",
+   "name": "국내주식 시간외 실시간체결가 (KRX)",
+   "tr_key_desc": "종목코드 (ex 005930 삼성전자)",
+   "field_count": 43
+  },
+  "domestic_stock.실시간-047": {
+   "tr_id": "H0STMBC0",
+   "name": "국내주식 실시간회원사 (KRX)",
+   "tr_key_desc": "종목코드",
+   "field_count": 78
+  },
+  "domestic_stock.실시간-048": {
+   "tr_id": "H0STPGM0",
+   "name": "국내주식 실시간프로그램매매 (KRX)",
+   "tr_key_desc": "종목코드",
+   "field_count": 11
+  },
+  "domestic_stock.실시간-049": {
+   "tr_id": "H0STMKO0",
+   "name": "국내주식 장운영정보 (KRX)",
+   "tr_key_desc": "종목코드",
+   "field_count": 11
+  },
+  "domestic_stock.실시간-051": {
+   "tr_id": "H0STNAV0",
+   "name": "국내ETF NAV추이",
+   "tr_key_desc": "종목코드 (ex. 005930 삼성전자)",
+   "field_count": 8
+  },
+  "domestic_stock.실시간-061": {
+   "tr_id": "H0EWCNT0",
+   "name": "ELW 실시간체결가",
+   "tr_key_desc": "ELW 종목코드(ex. 57LA24)",
+   "field_count": 63
+  },
+  "domestic_stock.실시간-062": {
+   "tr_id": "H0EWASP0",
+   "name": "ELW 실시간호가",
+   "tr_key_desc": "ELW 종목코드(ex. 57LA24)",
+   "field_count": 73
+  },
+  "domestic_stock.실시간-063": {
+   "tr_id": "H0EWANC0",
+   "name": "ELW 실시간예상체결",
+   "tr_key_desc": "ELW 종목코드(ex. 57LA24)",
+   "field_count": 59
+  },
+  "overseas_futureoption.실시간-017": {
+   "tr_id": "HDFFF020",
+   "name": "해외선물옵션 실시간체결가",
+   "tr_key_desc": "종목코드\r\n\r\n※ CME, SGX 실시간시세 유료시세 신청 필수 \r\n\"포럼 > FAQ > 해외선물옵션 API 유료시세 신청방법(CME, SGX 거래소)\"",
+   "field_count": 25
+  },
+  "overseas_futureoption.실시간-018": {
+   "tr_id": "HDFFF010",
+   "name": "해외선물옵션 실시간호가",
+   "tr_key_desc": "종목코드\r\n\r\n※ CME, SGX 실시간시세 유료시세 신청 필수 \r\n\"포럼 > FAQ > 해외선물옵션 API 유료시세 신청방법(CME, SGX 거래소)\"",
+   "field_count": 35
+  },
+  "overseas_futureoption.실시간-019": {
+   "tr_id": "HDFFF1C0",
+   "name": "해외선물옵션 실시간주문내역통보",
+   "tr_key_desc": "HTSID",
+   "field_count": 33
+  },
+  "overseas_futureoption.실시간-020": {
+   "tr_id": "HDFFF2C0",
+   "name": "해외선물옵션 실시간체결내역통보",
+   "tr_key_desc": "HTSID",
+   "field_count": 33
+  },
+  "overseas_stock.실시간-007": {
+   "tr_id": "HDFSCNT0",
+   "name": "해외주식 실시간지연체결가",
+   "tr_key_desc": "<미국 야간거래/아시아 주간거래 - 무료시세>\r\nD+시장구분(3자리)+종목코드\r\n예) DNASAAPL : D+NAS(나스닥)+AAPL(애플)\r\n[시장구분]\r\nNYS : 뉴욕, NAS : 나스닥, AMS : 아멕스 ,\r\nTSE : 도쿄, HKS : 홍콩,\r\nSHS : 상해, SZS : 심천\r\nHSX : 호치민, HNX : 하노이\r\n\r\n<미국 야간거래/아시아 주간거래 - 유료시세>\r\n※ 유료시세 신청시에만 유료시세 수신가능\r\n\"포럼 > FAQ > 해외주식 유료시세 신청방법\" 참고\r\nR+시장구분(3자리)+종목코드\r\n예) RNASAAPL : R+NAS(나스닥)+AAPL(애플)\r\n[시장구분]\r\nNYS : 뉴욕, NAS : 나스닥, AMS : 아멕스 ,\r\nTSE : 도쿄, HKS : 홍콩,\r\nSHS : 상해, SZS : 심천\r\nHSX : 호치민, HNX : 하노이\r\n\r\n<미국 주간거래>\r\nR+시장구분(3자리)+종목코드\r\n예) RBAQAAPL : R+BAQ(나스닥)+AAPL(애플)\r\n[시장구분]\r\nBAY : 뉴욕(주간), BAQ : 나스닥(주간). BAA : 아멕스(주간)",
+   "field_count": 26
+  },
+  "overseas_stock.실시간-008": {
+   "tr_id": "HDFSASP1",
+   "name": "해외주식 지연호가(아시아)",
+   "tr_key_desc": "<아시아국가 - 무료시세>\r\nD+시장구분(3자리)+종목코드\r\n예) DHKS00003 : D+HKS(홍콩)+00003(홍콩중화가스)\r\n[시장구분]\r\nTSE : 도쿄, HKS : 홍콩,\r\nSHS : 상해, SZS : 심천\r\nHSX : 호치민, HNX : 하노이",
+   "field_count": 17
+  },
+  "overseas_stock.실시간-009": {
+   "tr_id": "H0GSCNI0",
+   "name": "해외주식 실시간체결통보",
+   "tr_key_desc": "HTSID",
+   "field_count": 25
+  },
+  "overseas_stock.실시간-021": {
+   "tr_id": "HDFSASP0",
+   "name": "해외주식 실시간호가",
+   "tr_key_desc": "<미국 야간거래 - 무료시세>\r\nD+시장구분(3자리)+종목코드\r\n예) DNASAAPL : D+NAS(나스닥)+AAPL(애플)\r\n[시장구분]\r\nNYS : 뉴욕, NAS : 나스닥, AMS : 아멕스\r\n\r\n<미국 주간거래>\r\nR+시장구분(3자리)+종목코드\r\n예) RBAQAAPL : R+BAQ(나스닥)+AAPL(애플)\r\n[시장구분]\r\nBAY : 뉴욕(주간), BAQ : 나스닥(주간). BAA : 아멕스(주간)\r\n\r\n<아시아국가 - 유료시세>\r\n※ 유료시세 신청시에만 유료시세 수신가능\r\n\"포럼 > FAQ > 해외주식 유료시세 신청방법\" 참고\r\nR+시장구분(3자리)+종목코드\r\n예) RHKS00003 : R+HKS(홍콩)+00003(홍콩중화가스)\r\n[시장구분]\r\nTSE : 도쿄, HKS : 홍콩,\r\nSHS : 상해, SZS : 심천\r\nHSX : 호치민, HNX : 하노이",
+   "field_count": 71
+  },
+  "domestic_stock.국내주식_장운영정보__통합_": {
+   "tr_id": "H0UNMKO0",
+   "name": "국내주식 장운영정보 (통합)",
+   "tr_key_desc": "종목코드",
+   "field_count": 0
+  },
+  "domestic_stock.국내주식_장운영정보__NXT_": {
+   "tr_id": "H0NXMKO0",
+   "name": "국내주식 장운영정보 (NXT)",
+   "tr_key_desc": "종목코드",
+   "field_count": 0
+  }
+ }
+}
