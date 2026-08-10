@@ -55,9 +55,7 @@ jobs:
           fetch-depth: 0 # 패키지 태그 이후 커밋 메시지를 읽기 위해 전체 히스토리 필요
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11
+        uses: pnpm/action-setup@v4 # 버전은 루트 package.json의 packageManager 참조
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
