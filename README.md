@@ -12,7 +12,7 @@ finance용 **pi packages 모노레포** (pnpm workspace). 한국 투자·시장 
 | [pi-twelve-data](packages/pi-twelve-data) | Twelve Data (공식 API) — 전 세계 주식·지수·외환·암호 시세·차트·검색·환율 (무료 키) | `pi install npm:pi-twelve-data` |
 | [pi-finnhub](packages/pi-finnhub) | Finnhub (공식 API) — 미국 주식 시세·차트·뉴스·펀더멘털·컨센서스 (무료 키) | `pi install npm:pi-finnhub` |
 | [pi-coingecko](packages/pi-coingecko) | CoinGecko (공식 API) — 암호화폐 시세·차트·시장 랭킹·코인 상세·검색 (무료 키) | `pi install npm:pi-coingecko` |
-| [pi-naver-news](packages/pi-naver-news) | 네이버 검색 API (공식 오픈API) — 한국 증권·종목 뉴스 검색 (무료 하루 25,000회) | `pi install npm:pi-naver-news` |
+| [pi-naver-news](packages/pi-naver-news) | 네이버 검색 API (NAVER API HUB) — 한국 증권·종목 뉴스 검색 (무료·월 775,000건) | `pi install npm:pi-naver-news` |
 | [pi-finance-core](packages/pi-finance-core) | 공용 라이브러리(기술적 지표·시크릿 스토어) + **공용 스킬**(kis-timing — 차트분석·타점). pi-kis/pi-toss가 번들(bundledDependencies)로 포함 | 직접 설치 불필요 (자동 의존) |
 
 - **pi-kis v0.3.0부터 토스증권이 pi-toss로 분리** — 두 브로커를 모두 쓰려면 두 패키지를

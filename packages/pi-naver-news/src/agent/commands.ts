@@ -6,7 +6,7 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { groupIntervalMs, todayCalls } from "../ratelimit.ts";
-import { getKeys, keysPath, saveKeys, store, type NaverNewsMode } from "../secret.ts";
+import { getKeys, keysPath, saveKeys, store } from "../secret.ts";
 
 function masked(v: string | undefined): string {
 	return v ? `${v.slice(0, 4)}***${v.length > 8 ? `(${v.length})` : ""}` : "—";
@@ -16,51 +16,33 @@ export function registerCommands(pi: ExtensionAPI): void {
 	// ── /naver-news-key ─────────────────────────────────────────────────
 	pi.registerCommand("naver-news-key", {
 		description:
-			"네이버 뉴스 검색 API 키 등록 — 기본은 NAVER API HUB (NCP 콘솔 → NAVER API HUB 구독 → Application 생성 → API Key ID/Secret). " +
-			"기존 개발자센터 키 보유 시 모드에 'legacy' 입력 (2027-06-30까지). 빈 값 입력 시 해당 키 삭제.",
+			"네이버 뉴스 검색 API 키 등록 — NCP 콘솔 (console.ncloud.com/naver-api-hub/subscription 구독) → Application 생성 → API Key ID(CLIENT_ID) / API Key(CLIENT_SECRET) 입력. " +
+			"빈 값 입력 시 해당 키 삭제.",
 		handler: async (_args, ctx) => {
 			const existing = getKeys();
 
-			const modeInput = await ctx.ui.input(
-				"API 모드",
-				`현재: ${existing.mode} — 엔터로 유지 (hub=NAVER API HUB 기본, legacy=개발자센터 기존 키)`,
-			);
-			if (modeInput === undefined) {
-				ctx.ui.notify("취소됨 — 키를 저장하지 않았습니다.", "info");
-				return;
-			}
-			const mode: NaverNewsMode =
-				modeInput.trim().toLowerCase() === "legacy" ? "legacy" : "hub";
-
-			const idLabel = mode === "hub" ? "API Key ID" : "Client ID";
-			const secretLabel = mode === "hub" ? "API Key" : "Client Secret";
-			const envNote =
-				mode === "hub"
-					? "(NCP 콘솔 → Application Services → NAVER API HUB → Application 생성 → 인증키)"
-					: "(개발자센터 앱 등록 시 발급, 검색 API 활성화 필요 — 2027-06-30까지)";
-
 			const clientId = await ctx.ui.input(
-				`네이버 ${idLabel}`,
+				"네이버 CLIENT_ID",
 				existing.clientId
 					? `현재 값: ${masked(existing.clientId)} — 엔터로 유지, 빈 값 입력 시 삭제`
-					: `${idLabel} 입력 ${envNote}`,
+					: "NCP 콘솔 → NAVER API HUB 구독 → Application 생성 → API Key ID (CLIENT_ID) 입력",
 			);
 			if (clientId === undefined) {
 				ctx.ui.notify("취소됨 — 키를 저장하지 않았습니다.", "info");
 				return;
 			}
 			const clientSecret = await ctx.ui.input(
-				`네이버 ${secretLabel}`,
+				"네이버 CLIENT_SECRET",
 				existing.clientSecret
 					? `현재 값: ${masked(existing.clientSecret)} — 엔터로 유지, 빈 값 입력 시 삭제`
-					: `${secretLabel} 입력 ${envNote}`,
+					: "NCP 콘솔 → NAVER API HUB 구독 → Application 생성 → API Key (CLIENT_SECRET) 입력",
 			);
 			if (clientSecret === undefined) {
 				ctx.ui.notify("취소됨 — 키를 저장하지 않았습니다.", "info");
 				return;
 			}
 
-			const keys = { ...existing, mode };
+			const keys = { ...existing };
 			if (clientId.trim()) keys.clientId = clientId.trim();
 			else delete keys.clientId;
 			if (clientSecret.trim()) keys.clientSecret = clientSecret.trim();
@@ -69,9 +51,8 @@ export function registerCommands(pi: ExtensionAPI): void {
 			await saveKeys(keys);
 			ctx.ui.notify(
 				`네이버 키 ${keys.clientId || keys.clientSecret ? "저장" : "삭제"} 완료 → ${store.backend === "keyring" ? "OS keyring (Keychain/CredMan/SecretService)" : keysPath} (${store.backend})\n` +
-					`mode        : ${keys.mode} (${keys.mode === "hub" ? "NAVER API HUB" : "개발자센터 legacy — 2027-06-30까지"})\n` +
-					`${idLabel}   : ${keys.clientId ? masked(keys.clientId) : "미등록"}\n` +
-					`${secretLabel}: ${keys.clientSecret ? masked(keys.clientSecret) : "미등록"}`,
+					`CLIENT_ID    : ${keys.clientId ? masked(keys.clientId) : "미등록"}\n` +
+					`CLIENT_SECRET: ${keys.clientSecret ? masked(keys.clientSecret) : "미등록"}`,
 				"info",
 			);
 		},

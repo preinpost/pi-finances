@@ -1,8 +1,8 @@
 /**
  * src/roles/naver-news.ts — 네이버 검색 API(뉴스) 도메인 역할.
  *
- * 공식 오픈API (https://openapi.naver.com/v1/search/news.json) typed wrapper.
- * 인증은 X-Naver-Client-Id/Secret 헤더 (client.ts), 레이트리밋은 전 호출 공통
+ * NAVER API HUB (기본, https://naverapihub.apigw.ntruss.com — 무료·월 775,000건) typed wrapper.
+ * 인증은 X-NCP-APIGW-API-KEY-ID/Key 헤더 (client.ts), 레이트리밋은 전 호출 공통
  * (DEFAULT 300ms), TTL 캐시 60s (뉴스 freshness 유지).
  *
  * 정규화:
