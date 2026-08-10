@@ -113,9 +113,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add packages/pi-finance-core/package.json
           git diff --cached --quiet || git commit -m "chore(release): pi-finance-core@${VERSION} [skip ci]"
-          # 동시 릴리스(타 패키지) 직렬화
-          git pull --rebase origin main --autostash
-          git push origin HEAD:main
+          # 동시 릴리스(타 패키지) 직렬화 — push 레이스 재시도
+          # (병렬 워크플로가 push 사이에 커밋할 수 있어 non-fast-forward 거부 시 재시도)
+          for i in 1 2 3; do
+            git pull --rebase origin main --autostash || exit 1
+            if git push origin HEAD:main; then break; fi
+            if [ "$i" -lt 3 ]; then sleep 8; fi
+          done
           echo "Committed pi-finance-core@${VERSION}"
 
       - name: Publish to npm
