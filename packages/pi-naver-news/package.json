@@ -1,7 +1,7 @@
 {
   "name": "pi-naver-news",
   "version": "0.1.0",
-  "description": "네이버 검색 API(뉴스) 클라이언트 for pi — 한국 증권·종목 뉴스 검색 (공식 오픈API, 무료 하루 25,000회, 직접 REST, 의존성 0).",
+  "description": "네이버 뉴스 검색 API 클라이언트 for pi — 한국 증권·종목 뉴스 검색 (NAVER API HUB 공식, 무료·월 775,000건, 직접 REST, 의존성 0).",
   "type": "module",
   "license": "MIT",
   "author": "minsoo.lee <preinpost@gmail.com>",

@@ -11,6 +11,11 @@
  *  - days 옵션 — API에 날짜 필터가 없어 pubDate 기준 클라이언트 필터 제공
  *
  * 정식 스펙: https://developers.naver.com/docs/serviceapi/search/news/news.md
+ *
+ * 2026-07-31 개발자센터 신규 신청 종료 — 신규 키는 NAVER API HUB
+ * (https://api.ncloud-docs.com/docs/naver-api-hub-search-news).
+ * 응답 구조(items: title/originallink/link/description/pubDate)는 두 방식 동일이라
+ * 아래 정규화는 그대로 사용한다. 엔드포인트/헤더는 client.ts가 모드별로 처리.
  */
 import { cached, TtlCache } from "../cache.ts";
 import { naverRequest } from "../client.ts";
@@ -124,7 +129,7 @@ export async function searchNews(
 
 	const cacheKey = `search:${query}|${display}|${start}|${sort}`;
 	const raw = await cached(searchCache, cacheKey, async () => {
-		return naverRequest<NaverRawResponse>("GET", "/search/news.json", {
+		return naverRequest<NaverRawResponse>("GET", "/search/v1/news", {
 			query: { query, display, start, sort },
 		});
 	});

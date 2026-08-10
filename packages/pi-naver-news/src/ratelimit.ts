@@ -1,21 +1,24 @@
 /**
- * src/ratelimit.ts — 네이버 검색 API 레이트 리밋 (스로틀) + 일일 호출 카운터.
+ * src/ratelimit.ts — 네이버 뉴스 검색 API 레이트 리밋 (스로틀) + 호출 카운터.
  *
- * 네이버 검색 API의 공식 한도는 **하루 25,000회** (클라이언트 ID별 합산) —
- * 초당 한도는 문서에 없어 방어적으로 기본 간격 300ms (~3.3 req/s)로 직렬화한다.
+ * 공식 한도 (모드별):
+ *   - hub (NAVER API HUB, 기본): 월 775,000건 통합, 키당 50 RPS — 현재 한시 무료, 향후 유료 예정.
+ *   - legacy (개발자센터, 2027-06-30까지): 하루 25,000회 (클라이언트 ID별 합산).
+ *
+ * 초당 한도 대비 여유를 두고 기본 간격 300ms (~3.3 req/s)로 직렬화한다.
  *
  * 동작: pi-coingecko와 동일한 promise 체인(tail) 패턴 —
  * "호출 시작 시각" 기준 최소 간격, 병렬 호출자 직렬화, fn 실패와 무관하게 간격 유지.
  *
- * 일일 카운터: recordCall()이 호출 시마다 증가, 자정(로컬)에 리셋.
- * /naver-news-status 에서 오늘 사용량을 보여준다 (25,000회 한도 모니터링).
+ * 호출 카운터: recordCall()이 호출 시마다 증가, 자정(로컬)에 리셋.
+ * /naver-news-status 에서 오늘 사용량을 보여준다 (한도 모니터링용).
  *
  * 환경변수:
  *  - NAVER_NEWS_RATE_LIMIT_MULTIPLIER: 기본 간격 배율 (기본 1.0).
  *    2.0이면 간격 2배, 0이면 스로틀 해제. KIS(KIS_RATE_LIMIT_MS)/TOSS와 분리.
  */
 
-/** 네이버 그룹 → 기본 최소 간격(ms). (문서상 일일 25,000회 → 방어적 300ms) */
+/** 네이버 그룹 → 기본 최소 간격(ms). (HUB 키당 50 RPS → 방어적 300ms) */
 export const NAVER_NEWS_GROUP_INTERVALS_MS: Record<string, number> = {
 	DEFAULT: 300,
 };
@@ -76,7 +79,7 @@ export async function withGroupRateLimit<T>(group: string, fn: () => Promise<T>)
 	return fn();
 }
 
-// ── 일일 호출 카운터 (25,000회/일 한도 모니터링) ───────────────────────────
+// ── 호출 카운터 (한도 모니터링) ───────────────────────────────────────────
 
 let currentDay = localDayKey();
 let dayCalls = 0;
@@ -86,7 +89,7 @@ function localDayKey(): string {
 	return new Date().toLocaleDateString("sv");
 }
 
-/** API 호출 직전에 기록 — 일일 한도(25,000회) 추적. */
+/** API 호출 직전에 기록 — 한도 추적 (HUB: 월 775,000건 / legacy: 하루 25,000회). */
 export function recordCall(): void {
 	const today = localDayKey();
 	if (today !== currentDay) {

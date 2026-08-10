@@ -25,7 +25,7 @@ export function registerTools(pi: ExtensionAPI): void {
 			"display: 표시 개수 (기본 10, 최대 100), start: 시작 위치 (기본 1, 최대 1000), " +
 			"sort: sim=정확도순(기본)/date=최신순, days: 최근 N일 이내만 필터 (기본 7 — API에 날짜 필터가 없어 클라이언트 필터, 0=전체). " +
 			"제목/요약의 <b> 하이라이트와 HTML 엔티티는 제거되어 전달됩니다. " +
-			"키 등록은 /naver-news-key (developers.naver.com 앱 등록 → 검색 API 활성화 필수, 하루 25,000회).",
+			"키 등록은 /naver-news-key — NAVER API HUB (NCP 콘솔 console.ncloud.com/naver-api-hub/subscription 구독 → Application 생성 → API Key ID/Secret, 현재 무료·월 775,000건).",
 		parameters: Type.Object({
 			query: Type.String({ description: "검색어 — 종목명·종목코드·키워드, 예: 삼성전자 / 005930 / 코스피" }),
 			display: Type.Optional(Type.Number({ description: "표시 개수 (기본 10, 최대 100)" })),
