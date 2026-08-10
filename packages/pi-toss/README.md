@@ -52,6 +52,24 @@ pi install npm:pi-toss
 
 > ⚠️ 실전 전용 패키지입니다 (모의투자 없음). 주문·취소·정정 툴은 사용자 확인 후에만 호출하세요.
 
+## 에이전트 디버깅 가이드 (툴 발견·파라미터 확인)
+
+`toss_*` 툴은 **MCP가 아닌 네이티브 pi 툴**입니다 — `mcp({ describe / search })` 게이트웨이는
+MCP 서버 전용이라 여기서 조회되지 않습니다 ("Tool not found"). 툴은 직접 호출하고,
+파라미터·동작이 궁금하면 아래 순서로 확인하세요 (빠른 것부터).
+
+1. **세션 툴 스키마** — pi가 로드한 툴 함수 정의에 파라미터 설명·필수값이 이미 있음
+2. **`src/agent/tools.ts`** (설치본: `~/.pi/agent/npm/node_modules/pi-toss/src/agent/tools.ts`) —
+   툴 등록·입력 검증·에러 메시지 원본
+   (예: `toss_conditional` modify는 `conditionalOrderId/type/side/quantity/orderType/expireDate/triggerPrice` 필수,
+   OCO/OTO는 `secondTriggerPrice` 추가 필요)
+3. **`src/roles/toss.ts`** — 실제 API 호출 로직·기본값·제약 (예: OCO/OTO 조건주문은 LIMIT만 허용)
+
+- 실전 API는 **서버 에러 메시지가 가장 빠른 피드백** — 반복 호출하며 파라미터 교정
+  (예: "지정가 주문 시 가격을 지정해야 합니다" → orderPrice 누락, "호가 단위에 맞지 않습니다" → 소수점 자리수 조정)
+- `rg` 검색 시 glob은 `-g '*.ts'` (ripgrep에는 `--include` 플래그 없음)
+- 주문·취소·정정 계열 툴은 실전 반영 전 **사용자 확인 필수**
+
 ## 아키텍처
 
 ```

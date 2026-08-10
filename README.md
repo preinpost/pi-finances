@@ -12,6 +12,7 @@ finance용 **pi packages 모노레포** (pnpm workspace). 한국 투자·시장 
 | [pi-twelve-data](packages/pi-twelve-data) | Twelve Data (공식 API) — 전 세계 주식·지수·외환·암호 시세·차트·검색·환율 (무료 키) | `pi install npm:pi-twelve-data` |
 | [pi-finnhub](packages/pi-finnhub) | Finnhub (공식 API) — 미국 주식 시세·차트·뉴스·펀더멘털·컨센서스 (무료 키) | `pi install npm:pi-finnhub` |
 | [pi-coingecko](packages/pi-coingecko) | CoinGecko (공식 API) — 암호화폐 시세·차트·시장 랭킹·코인 상세·검색 (무료 키) | `pi install npm:pi-coingecko` |
+| [pi-naver-news](packages/pi-naver-news) | 네이버 검색 API (공식 오픈API) — 한국 증권·종목 뉴스 검색 (무료 하루 25,000회) | `pi install npm:pi-naver-news` |
 | [pi-finance-core](packages/pi-finance-core) | 공용 라이브러리(기술적 지표·시크릿 스토어) + **공용 스킬**(kis-timing — 차트분석·타점). pi-kis/pi-toss가 번들(bundledDependencies)로 포함 | 직접 설치 불필요 (자동 의존) |
 
 - **pi-kis v0.3.0부터 토스증권이 pi-toss로 분리** — 두 브로커를 모두 쓰려면 두 패키지를
@@ -34,6 +35,12 @@ packages/*           — npm 배포 단위 (각자 독립 버저닝·태그·pub
 tsconfig.base.json   — 공용 TS 설정 (Node 타입 스트리핑, 빌드 없음)
 .github/workflows/   — bump-and-release (변경 패키지 감지 → pnpm publish, topo 순서)
 ```
+
+## 에이전트 협업 — 툴 발견·디버깅
+
+`kis_*`/`toss_*`/`broker_*` 툴은 **MCP가 아닌 네이티브 pi 툴**입니다 (MCP 게이트웨이에서 조회 불가).
+파라미터 확인 순서: 세션 툴 스키마 → `packages/<pkg>/src/agent/tools.ts`(검증·에러 원본) → `src/roles/*.ts`(구현).
+자세한 가이드는 **각 패키지 README에 포함** — 설치본(`pi install npm:...`)에도 그대로 들어갑니다.
 
 ## 개발
 
