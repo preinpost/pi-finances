@@ -46,7 +46,7 @@ pi remove npm:pi-kis    # 제거
 "삼성전자 매수 타이밍"            # kis_technical (MA/RSI/ATR/볼린저/지지저항/추세)
 "화장품 섹터 종목 분석 리포트"      # sector-research 스킬 (섹터 파이프라인)
 "삼성전자 리서치 딥다이브"          # stock-research 스킬 (단일 종목 리포트)
-"삼성전자 매수/매도 타점"          # timing 스킬 (타점 분석 + 결론별 실행 시나리오)
+"삼성전자 매수/매도 타점"          # timing 스킬 (pi-finance-core 제공 — 공용 차트분석)
 ```
 
 ## 도구
@@ -103,7 +103,10 @@ src/
     commands.ts      /kis-key, /kis-status
 ```
 
-- **공용 모듈**: 기술적 지표(`indicators.ts`)와 시크릿 스토어는 [pi-finance-core](https://github.com/preinpost/pi-finances/tree/main/packages/pi-finance-core) 패키지에 있다 (pi-kis/pi-toss 공유).
+- **공용 모듈·스킬**: 기술적 지표/시크릿 스토어와 `timing` 스킬(차트분석·타점 — 브로커 중립)은
+  [pi-finance-core](https://github.com/preinpost/pi-finances/tree/main/packages/pi-finance-core) 패키지에 있다.
+  core는 **번들 의존성**(`bundledDependencies`)으로 tarball에 포함되고, 스킬은
+  `node_modules/pi-finance-core/skills` 경로로 로드된다 — 사용자가 직접 설치할 필요 없음.
 
 - **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/research/trading)이 v2 키·tr_id·파라미터를 캡슐화한다. (토스 역할은 pi-toss 패키지)
   자동매매 에이전트는 `roles/trading.ts`를 직접 import해 `prepare*`(요약+검증) → 사용자 확인 → `send*`(실행) 흐름으로 사용한다.

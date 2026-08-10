@@ -37,6 +37,9 @@
   "pi": {
     "extensions": [
       "./index.ts"
+    ],
+    "skills": [
+      "node_modules/pi-finance-core/skills"
     ]
   },
   "files": [
@@ -50,5 +53,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."
-  }
+  },
+  "bundledDependencies": [
+    "pi-finance-core"
+  ]
 }

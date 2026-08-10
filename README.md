@@ -9,10 +9,12 @@ finance용 **pi packages 모노레포** (pnpm workspace). 한국 투자·시장 
 |---|---|---|
 | [pi-kis](packages/pi-kis) | 한국투자증권 OPEN API — 시세·차트·주문·리서치·파생·실시간 (338개 API 스펙) | `pi install npm:pi-kis` |
 | [pi-toss](packages/pi-toss) | 토스증권 OPEN API — 시세·시장 데이터·자산·주문·조건주문 | `pi install npm:pi-toss` |
-| [pi-finance-core](packages/pi-finance-core) | 공용 라이브러리 — 기술적 지표 + 범용 시크릿 스토어 (확장/스킬 없음) | 직접 설치 불필요 (자동 의존) |
+| [pi-finance-core](packages/pi-finance-core) | 공용 라이브러리(기술적 지표·시크릿 스토어) + **공용 스킬**(timing — 차트분석·타점). pi-kis/pi-toss가 번들(bundledDependencies)로 포함 | 직접 설치 불필요 (자동 의존) |
 
 - **pi-kis v0.3.0부터 토스증권이 pi-toss로 분리** — 두 브로커를 모두 쓰려면 두 패키지를
   모두 설치하세요. 키 저장소는 공용이라 재등록이 필요 없습니다.
+- **공용 스킬은 core가 번들로 제공** — pi-kis/pi-toss 어느 쪽을 설치해도 timing(차트분석) 스킬이
+  따라옵니다 (core를 직접 `pi install`할 필요 없음).
 - 향후 finance 패키지(스크리너·리포트·자산관리 등)도 `packages/*`에 추가 예정.
 
 ## 구조
