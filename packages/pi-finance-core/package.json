@@ -1,6 +1,6 @@
 {
   "name": "pi-finance-core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "pi-finances 공용 라이브러리 — 브로커 중립 기술적 지표(indicators) + 범용 시크릿 스토어(keyring/file). pi-kis·pi-toss가 공유하는 순수 모듈 (확장/스킬 없음).",
   "type": "module",
   "license": "MIT",
