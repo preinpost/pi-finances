@@ -1,6 +1,6 @@
 {
   "name": "pi-toss",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Toss Invest (토스증권) Open API client for pi — 시세·시장 데이터·자산·주문·조건주문 (OAuth2, 실전 전용). pi-kis v0.3.0에서 분리된 독립 패키지.",
   "type": "module",
   "license": "MIT",
