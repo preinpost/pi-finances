@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pkg: [pi-finance-core, pi-toss, pi-kis, pi-twelve-data, pi-finnhub, pi-coingecko]
+        pkg: [pi-finance-core, pi-toss, pi-kis, pi-twelve-data, pi-finnhub, pi-coingecko, pi-naver-news]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
