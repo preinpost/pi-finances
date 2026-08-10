@@ -15,10 +15,14 @@ pi-finances 모노레포의 공용 라이브러리 — 브로커(KIS/토스 등)
 
 ## 스킬 번들링 (중요)
 
-core는 pi manifest로 `skills`를 선언한다. **직접 `pi install`하지 않고**, pi-kis/pi-toss가
+core는 pi manifest로 `skills`를 선언한다. **직접 `pi install`하지 않고**, pi-kis가
 `bundledDependencies`로 tarball에 번들해 `node_modules/pi-finance-core/skills` 경로로
-로드한다 (pi 문서의 리소스 공유 패턴). 두 패키지를 모두 설치해도 pi가 같은 파일을
-dedup하므로 중복 로드되지 않는다.
+로드한다 (pi 문서의 리소스 공유 패턴).
+
+⚠️ pi의 스킬 로더는 **경로 기준 dedup**만 한다 — 번들로 생긴 물리적으로 다른 복사본은
+내용이 같아도 같은 이름이면 충돌로 보고 `[Skill conflicts]` 경고를 낸다. 따라서 공용
+스킬 등록은 **pi-kis 단독**이 담당하고, pi-toss는 모듈 번들만 유지한 채 `pi.skills`
+등록을 하지 않는다 (pi-toss 단독 설치는 `toss_chart`로 직접 분석).
 
 ## 시크릿 스토어 (중요)
 

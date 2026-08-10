@@ -107,6 +107,7 @@ src/
   [pi-finance-core](https://github.com/preinpost/pi-finances/tree/main/packages/pi-finance-core) 패키지에 있다.
   core는 **번들 의존성**(`bundledDependencies`)으로 tarball에 포함되고, 스킬은
   `node_modules/pi-finance-core/skills` 경로로 로드된다 — 사용자가 직접 설치할 필요 없음.
+  등록은 **pi-kis 단독**이 담당한다 (pi-toss는 번들만 유지 — 양쪽이 등록하면 pi가 이름 충돌 경고).
 
 - **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/research/trading)이 v2 키·tr_id·파라미터를 캡슐화한다. (토스 역할은 pi-toss 패키지)
   자동매매 에이전트는 `roles/trading.ts`를 직접 import해 `prepare*`(요약+검증) → 사용자 확인 → `send*`(실행) 흐름으로 사용한다.

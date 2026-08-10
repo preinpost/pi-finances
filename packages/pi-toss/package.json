@@ -37,9 +37,6 @@
   "pi": {
     "extensions": [
       "./index.ts"
-    ],
-    "skills": [
-      "node_modules/pi-finance-core/skills"
     ]
   },
   "files": [
