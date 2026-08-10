@@ -1,11 +1,11 @@
 /**
- * src/agent/commands.ts — pi 커맨드 등록 (/toss-key).
+ * src/agent/commands.ts — pi 커맨드 등록 (/toss-key, /toss-status).
  *
  * 참고: pi의 ctx.ui.notify 타입은 "error"|"info"|"warning"만 허용하므로
  * 성공 알림은 "info"를 사용한다.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { getKeys, keysPath, saveKeys, store } from "../secret.ts";
+import { getKeys, getTokenCache, keysPath, saveKeys, store } from "../secret.ts";
 
 function masked(v: string | undefined): string {
 	return v ? `${v.slice(0, 4)}***${v.length > 8 ? `(${v.length})` : ""}` : "—";
@@ -46,6 +46,27 @@ export function registerCommands(pi: ExtensionAPI): void {
 					`Client ID: ${masked(keys.tossClientId)} (toss_* 툴 사용 가능)`,
 				"info",
 			);
+		},
+	});
+
+	// ── /toss-status ─────────────────────────────────────────────────────
+	pi.registerCommand("toss-status", {
+		description: "토스 연동 상태 진단 (키, 토큰 캐시, 저장 백엔드)",
+		handler: async (_args, ctx) => {
+			const keys = getKeys();
+			const token = getTokenCache().toss;
+			const lines = [
+				`backend     : ${store.backend === "keyring" ? "OS keyring (Keychain/CredMan/SecretService)" : "file (0600)"}`,
+				`keys file   : ${store.backend === "keyring" ? "(keyring 사용 — 파일 불필요)" : keysPath}`,
+				`clientId    : ${keys.tossClientId ? masked(keys.tossClientId) : "미등록 — /toss-key 실행"}`,
+				`clientSecret: ${keys.tossClientSecret ? masked(keys.tossClientSecret) : "미등록"}`,
+				`token cache : ${token && token.expiresAt > Date.now() ? `${Math.round((token.expiresAt - Date.now()) / 1000)}s 남음` : token ? "만료 — 다음 호출 시 자동 재발급" : "없음 (첫 호출 시 자동 발급)"}`,
+				`사용법      : "AAPL 현재가" → toss_price / "005930 1분봉" → toss_chart (interval: 1m)`,
+				`시장/자산   : toss_market / toss_balance (accountSeq 미지정 시 첫 계좌 자동)`,
+				`주문        : toss_order / toss_orders / toss_conditional (실전 — 사용자 확인 후)`,
+				`KIS         : KIS 툴(kis_*)은 pi-kis 패키지 제공 (pi install npm:pi-kis, 키는 /kis-key)`,
+			];
+			ctx.ui.notify(lines.join("\n"), "info");
 		},
 	});
 }

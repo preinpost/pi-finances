@@ -17,7 +17,7 @@ const EXPECTED_TOOLS = [
 	"toss_orders",
 	"toss_conditional",
 ];
-const EXPECTED_COMMANDS = ["toss-key"];
+const EXPECTED_COMMANDS = ["toss-key", "toss-status"];
 
 const registered = { tools: [], commands: [] };
 const pi = {
