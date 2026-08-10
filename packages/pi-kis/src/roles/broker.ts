@@ -9,7 +9,7 @@
  *
  * 툴 이름/파라미터 계약은 유지 (tools.ts 주석: 이름 변경 불가).
  */
-import { loadKeys, type EnvArg } from "../core/auth.ts";
+import { loadKeys, type EnvArg } from "../auth.ts";
 import { getDomesticChart, getDomesticPrice, getOverseasChart, getOverseasPrice } from "./market.ts";
 import { normalizeDomesticChart, normalizeOverseasChart, type Bar } from "pi-finance-core";
 

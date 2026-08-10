@@ -4,8 +4,8 @@
  * core(transport/protocol)의 타입을 재수출하고, 역할(시세/포트폴리오/주문)
  * 레이어에서 쓰는 도메인 타입을 정의한다.
  */
-import type { EnvArg, KisEnv } from "../core/auth.ts";
-export type { EnvArg, KisEnv } from "../core/auth.ts";
+import type { EnvArg, KisEnv } from "../auth.ts";
+export type { EnvArg, KisEnv } from "../auth.ts";
 export type {
 	ApiDef,
 	ParamField,
@@ -13,13 +13,13 @@ export type {
 	CallResult,
 	TrIdOption,
 	TrIdSelection,
-} from "../core/client.ts";
+} from "../client.ts";
 export type {
 	WsResult,
 	WsMessage,
 	WsSystemEvent,
 	SubscribeOptions,
-} from "../core/ws.ts";
+} from "../ws.ts";
 
 /** 매수/매도 구분. */
 export type OrderSide = "buy" | "sell";

@@ -1,5 +1,5 @@
 /**
- * src/core/secret.ts — 토스증권 시크릿 뷰 (pi-finance-core 공용 스토어 위).
+ * src/secret.ts — 토스증권 시크릿 뷰 (pi-finance-core 공용 스토어 위).
  *
  * pi-kis와 **하나의 공유 네임스페이스**("pi-kis")를 사용한다 — 분리 이전부터
  * 토스 키가 같은 저장소에 있었으므로, pi-kis 0.2.x에서 업그레이드한 사용자는

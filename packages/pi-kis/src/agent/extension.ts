@@ -7,8 +7,8 @@
  *   agent/  — pi 통합 (이 파일: 툴·커맨드 등록)
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { loadKeys } from "../core/auth.ts";
-import { migrateSecretsToKeyring } from "../core/secret.ts";
+import { loadKeys } from "../auth.ts";
+import { migrateSecretsToKeyring } from "../secret.ts";
 import { registerTools } from "./tools.ts";
 import { registerCommands } from "./commands.ts";
 import { stopSessionWatcher } from "../watch.ts";

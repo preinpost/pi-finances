@@ -5,7 +5,7 @@
  * 성공 알림은 "info"를 사용한다.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { getKeys, keysPath, saveKeys, store } from "../core/secret.ts";
+import { getKeys, keysPath, saveKeys, store } from "../secret.ts";
 
 function masked(v: string | undefined): string {
 	return v ? `${v.slice(0, 4)}***${v.length > 8 ? `(${v.length})` : ""}` : "—";

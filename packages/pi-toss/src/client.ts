@@ -1,5 +1,5 @@
 /**
- * src/core/toss/client.ts — 토스증권 Open API REST 클라이언트.
+ * src/client.ts — 토스증권 Open API REST 클라이언트.
  *
  * 인증: OAuth 2.0 Client Credentials — POST /oauth2/token
  *   (application/x-www-form-urlencoded: grant_type/client_id/client_secret) →
@@ -12,7 +12,7 @@
  * 응답: 모든 성공 응답은 { result: <data> } 래퍼 (OAS ApiResponse).
  * 에러: { error: { code, message, data } } → TossError (code/status 부착).
  *
- * 레이트리밋: 그룹별 최소 간격 (src/core/toss/ratelimit.ts) — 모든 호출 적용.
+ * 레이트리밋: 그룹별 최소 간격 (src/ratelimit.ts) — 모든 호출 적용.
  *  - 429: GET(조회)만 Retry-After 기반 백오프로 최대 2회 재시도.
  *    POST/DELETE(주문·조건주문·취소)는 자동 재시도 금지 (중복 방지).
  *  - 401 expired-token/invalid-token: 캐시 무효화 → 재발급 → 1회 재시도.
@@ -20,7 +20,7 @@
  * 정식 스펙: https://openapi.tossinvest.com/openapi-docs/latest/openapi.json
  * (로컬: /tmp/toss-oas.json)
  */
-import { getKeys, getTokenCache, saveTokenCache } from "../secret.ts";
+import { getKeys, getTokenCache, saveTokenCache } from "./secret.ts";
 import { withGroupRateLimit } from "./ratelimit.ts";
 
 export const TOSS_BASE = "https://openapi.tossinvest.com";

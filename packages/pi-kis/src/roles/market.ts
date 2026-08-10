@@ -5,9 +5,9 @@
  * 시세 API를 함수로 노출한다. 원시 결과(RawResult.data)는 그대로 반환하고,
  * 편의 집계(장기 차트 합산)만 여기서 제공한다.
  */
-import { callApi } from "../core/client.ts";
-import type { EnvArg } from "../core/auth.ts";
-import type { CallResult } from "../core/client.ts";
+import { callApi } from "../client.ts";
+import type { EnvArg } from "../auth.ts";
+import type { CallResult } from "../client.ts";
 
 // ── 현재가 ────────────────────────────────────────────────────────────────
 
@@ -190,5 +190,5 @@ function parseYmd(v: string): Date {
 
 // ── 실시간 (WebSocket) ────────────────────────────────────────────────────
 
-export { subscribeRealtime } from "../core/ws.ts";
-export type { SubscribeOptions, WsResult, WsMessage } from "../core/ws.ts";
+export { subscribeRealtime } from "../ws.ts";
+export type { SubscribeOptions, WsResult, WsMessage } from "../ws.ts";

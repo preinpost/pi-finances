@@ -12,9 +12,9 @@
  * ⚠️ CME/SGX 등 해외 파생 시세는 **유료 구독** 필요할 수 있다 (빈 응답 = 구독 미가입 가능성).
  * ⚠️ 선물/옵션은 레버리지 상품 — 조회는 안전하지만 주문은 별도 안전 점검 필요.
  */
-import type { CallResult } from "../core/client.ts";
-import { callApi } from "../core/client.ts";
-import type { EnvArg } from "../core/auth.ts";
+import type { CallResult } from "../client.ts";
+import { callApi } from "../client.ts";
+import type { EnvArg } from "../auth.ts";
 import { optionGreeks, type OptionGreeksResult as GreeksResult } from "./greeks.ts";
 
 /** KIS 해외 선물 월코드 → 월 (F=1월 ... Z=12월). */

@@ -3,10 +3,10 @@
  *
  * 토스증권 Open API (https://openapi.tossinvest.com, OAS v1.2.9) typed wrapper.
  * KIS와 달리 **실전 전용**(paper 없음), 인증은 OAuth2 Client Credentials
- * (core/toss/client.ts — 토큰 자동 캐시/재발급). 계좌·자산·주문 API는
+ * (client.ts — 토큰 자동 캐시/재발급). 계좌·자산·주문 API는
  * `X-Tossinvest-Account` 헤더(accountSeq, 정수) 필요 — 미지정 시 첫 계좌 자동 사용.
  *
- * 레이트리밋 그룹 (core/toss/ratelimit.ts) — 각 함수 주석에 명시:
+ * 레이트리밋 그룹 (ratelimit.ts) — 각 함수 주석에 명시:
  *   MARKET_DATA 10/s, MARKET_DATA_CHART 5/s, STOCK 5/s, MARKET_INFO 3/s,
  *   RANKING 5/s, MARKET_INDICATOR_PRICE 10/s, MARKET_INDICATOR 10/s,
  *   MARKET_INDICATOR_CHART 5/s, ACCOUNT 1/s(가장 빡빡), ASSET 5/s,
@@ -17,7 +17,7 @@
  * (https://openapi.tossinvest.com/openapi-docs/latest/openapi.json)
  */
 import { randomUUID } from "node:crypto";
-import { getDefaultAccountSeq, tossRequest } from "../core/toss/client.ts";
+import { getDefaultAccountSeq, tossRequest } from "../client.ts";
 import type { Bar } from "pi-finance-core";
 
 // ── 공통 타입 ──────────────────────────────────────────────────────────────

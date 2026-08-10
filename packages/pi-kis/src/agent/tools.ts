@@ -11,8 +11,8 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { callApi, listApis } from "../core/client.ts";
-import { subscribeRealtime, wsTrIds } from "../core/ws.ts";
+import { callApi, listApis } from "../client.ts";
+import { subscribeRealtime, wsTrIds } from "../ws.ts";
 import {
 	getDomesticChart,
 	getDomesticPrice,

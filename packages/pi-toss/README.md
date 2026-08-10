@@ -52,12 +52,11 @@ pi install npm:pi-toss
 ```
 index.ts             — thin entry: export default registerExtension
 src/
-  core/              — 토스 transport
-    toss/client.ts   OAuth2 client_credentials + 토큰 캐시 + { result } 언랩 + 재시도 정책
-    toss/ratelimit.ts 그룹별 레이트리밋 (ACCOUNT 1/s ~ MARKET_DATA 10/s, 429 백오프)
-    secret.ts        공용 키 저장소 위 토스 키 뷰 (pi-kis와 공유 — mergeWrite)
+  client.ts          토스 transport — OAuth2 client_credentials + 토큰 캐시 + { result } 언랩 + 재시도 정책
+  ratelimit.ts       그룹별 레이트리밋 (ACCOUNT 1/s ~ MARKET_DATA 10/s, 429 백오프)
+  secret.ts          공용 키 저장소 위 토스 키 뷰 (pi-kis와 공유 — mergeWrite)
   roles/             — 도메인 역할 (typed wrapper, 에이전트가 직접 import)
-    toss.ts          시세·시장·자산·주문·조건주문 (523줄, 그룹별 ratelimit 명시)
+    toss.ts          시세·시장·자산·주문·조건주문 (그룹별 ratelimit 명시)
   agent/             — pi 통합
     extension.ts     registerExtension
     tools.ts         toss_* 7 툴 (execute는 roles 위임)

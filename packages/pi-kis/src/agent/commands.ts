@@ -11,11 +11,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { keysPath, loadKeys, resolveEnv, tokenAge } from "../core/auth.ts";
-import { specStats } from "../core/client.ts";
-import { approvalAge } from "../core/ws.ts";
-import { hasPlaintextFiles, migrateSecretsToKeyring, saveKeys as saveStoredKeys, store } from "../core/secret.ts";
-import type { KisKeys } from "../core/secret.ts";
+import { keysPath, loadKeys, resolveEnv, tokenAge } from "../auth.ts";
+import { specStats } from "../client.ts";
+import { approvalAge } from "../ws.ts";
+import { hasPlaintextFiles, migrateSecretsToKeyring, saveKeys as saveStoredKeys, store } from "../secret.ts";
+import type { KisKeys } from "../secret.ts";
 import { createWatcher, hasSessionWatcher, parseArgs as parseWatchArgs, setSessionWatcher, stopSessionWatcher } from "../watch.ts";
 
 const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");

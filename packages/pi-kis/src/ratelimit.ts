@@ -1,5 +1,5 @@
 /**
- * src/core/ratelimit.ts — KIS Open API 전역 레이트 리밋 (스로틀).
+ * src/ratelimit.ts — KIS Open API 전역 레이트 리밋 (스로틀).
  *
  * KIS는 초당 호출 제한이 있으며 초과 시 rt_cd=EGW00013("초당 거래건수를
  * 초과") 등의 에러를 반환한다. core transport 계층에서 env(real/paper)별

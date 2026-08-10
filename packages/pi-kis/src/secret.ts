@@ -1,5 +1,5 @@
 /**
- * src/core/secret.ts — KIS 시크릿 스토어 (pi-finance-core의 공용 스토어 위 래퍼).
+ * src/secret.ts — KIS 시크릿 스토어 (pi-finance-core의 공용 스토어 위 래퍼).
  *
  * 실제 keyring/file 백엔드·적응형 전환은 pi-finance-core/src/store.ts가 담당한다.
  * pi-kis와 pi-toss는 **하나의 공유 네임스페이스**("pi-kis")를 쓰므로 기존

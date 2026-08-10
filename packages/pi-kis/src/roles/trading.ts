@@ -11,10 +11,10 @@
  *  - CANO/ACNT_PRDT_CD는 core buildParams가 등록 계좌로 자동 주입한다
  *    (계좌 미등록 시 명확한 에러 — /kis-key에서 등록).
  */
-import { callApi } from "../core/client.ts";
-import { resolveEnv } from "../core/auth.ts";
-import type { EnvArg, KisEnv } from "../core/auth.ts";
-import type { CallResult } from "../core/client.ts";
+import { callApi } from "../client.ts";
+import { resolveEnv } from "../auth.ts";
+import type { EnvArg, KisEnv } from "../auth.ts";
+import type { CallResult } from "../client.ts";
 import type { OrderSide, PreparedCancel, PreparedOrder } from "./types.ts";
 
 /** 실전 주문 경고 — 로그/문서용 상수. */

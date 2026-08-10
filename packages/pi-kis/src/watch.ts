@@ -23,8 +23,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { pathToFileURL } from "node:url";
-import { subscribeRealtime } from "./core/ws.ts";
-import { callApi } from "./core/client.ts";
+import { subscribeRealtime } from "./ws.ts";
+import { callApi } from "./client.ts";
 
 // ── 타입 ───────────────────────────────────────────────────────────────────
 

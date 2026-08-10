@@ -1,12 +1,12 @@
 /**
- * src/core/toss/ratelimit.ts — 토스증권 Open API 그룹별 레이트 리밋 (스로틀).
+ * src/ratelimit.ts — 토스증권 Open API 그룹별 레이트 리밋 (스로틀).
  *
  * 토스는 API 그룹별 초당 요청 한도가 다르다 (공식 문서 Rate Limits Group):
  *   ACCOUNT 1/s, MARKET_DATA 10/s, ORDER 10/s, ACCOUNT/ASSET/STOCK 등 5/s 계열.
  * core transport 계층에서 그룹별 최소 호출 간격을 보장해, 모든 경로
- * (툴 → roles → core/toss)가 동일하게 조절되게 한다.
+ * (툴 → roles → transport)가 동일하게 조절되게 한다.
  *
- * 동작: src/core/ratelimit.ts와 동일한 promise 체인(tail) 패턴 —
+ * 동작: src/ratelimit.ts와 동일한 promise 체인(tail) 패턴 —
  * "호출 시작 시각" 기준 그룹별 최소 간격, 병렬 호출자 직렬화, fn 실패와
  * 무관하게 간격 유지.
  *

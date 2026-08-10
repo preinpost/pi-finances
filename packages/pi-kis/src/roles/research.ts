@@ -8,9 +8,9 @@
  *  - 뉴스        domestic_stock.국내주식-141    (FHKST01011800)
  *  - 컨센서스    domestic_stock.국내주식-187    (HHKST668300C0)
  */
-import { callApi } from "../core/client.ts";
-import type { EnvArg } from "../core/auth.ts";
-import type { CallResult } from "../core/client.ts";
+import { callApi } from "../client.ts";
+import type { EnvArg } from "../auth.ts";
+import type { CallResult } from "../client.ts";
 
 // ── 재무제표 ─────────────────────────────────────────────────────────────
 
