@@ -105,7 +105,8 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Detected: pi-toss $BUMP → $VERSION"
 
-      - name: Commit & tag
+      # 버전 커밋만 push (태그는 publish 성공 후) — 실패 시 고아 태그 방지
+      - name: Commit & push version
         env:
           VERSION: ${{ steps.bump.outputs.version }}
         run: |
@@ -114,11 +115,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add packages/pi-toss/package.json
           git diff --cached --quiet || git commit -m "chore(release): pi-toss@${VERSION} [skip ci]"
-          # 동시 릴리스(타 패키지) 직렬화 — rebase 후 태그 → push
+          # 동시 릴리스(타 패키지) 직렬화
           git pull --rebase origin main --autostash
-          git tag "pi-toss@${VERSION}"
-          git push origin HEAD:main --tags
-          echo "Tagged pi-toss@${VERSION}"
+          git push origin HEAD:main
+          echo "Committed pi-toss@${VERSION}"
 
       - name: Publish to npm
         env:
@@ -128,8 +128,12 @@ jobs:
           pnpm publish -r --filter pi-toss --no-git-checks --access public
           echo "Published pi-toss@${VERSION}"
 
-      - name: Create GitHub Release
+      - name: Tag & GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.bump.outputs.version }}
-        run: gh release create "pi-toss@${VERSION}" --generate-notes
+        run: |
+          git tag "pi-toss@${VERSION}"
+          git push origin --tags
+          gh release create "pi-toss@${VERSION}" --generate-notes
+          echo "Released pi-toss@${VERSION}"
