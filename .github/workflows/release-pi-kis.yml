@@ -56,6 +56,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 11
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -82,7 +84,7 @@ jobs:
           if [ "$BUMP_INPUT" != "auto" ] && [ -n "$BUMP_INPUT" ]; then
             BUMP="$BUMP_INPUT"
           else
-            LAST_TAG=$(git tag -l "${{PKG}}@*" --sort=-version:refname | head -1 || true)
+            LAST_TAG=$(git tag -l "${PKG}@*" --sort=-version:refname | head -1 || true)
             if [ -z "$LAST_TAG" ]; then
               # 첫 릴리스 — package.json 버전 그대로 publish
               echo "first=1" >> "$GITHUB_OUTPUT"
@@ -113,12 +115,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add packages/pi-kis/package.json
-          git diff --cached --quiet || git commit -m "chore(release): pi-kis@${{VERSION}} [skip ci]"
+          git diff --cached --quiet || git commit -m "chore(release): pi-kis@${VERSION} [skip ci]"
           # 동시 릴리스(타 패키지) 직렬화 — rebase 후 태그 → push
           git pull --rebase origin main --autostash
-          git tag "pi-kis@${{VERSION}}"
+          git tag "pi-kis@${VERSION}"
           git push origin HEAD:main --tags
-          echo "Tagged pi-kis@${{VERSION}}"
+          echo "Tagged pi-kis@${VERSION}"
 
       - name: Publish to npm
         env:
@@ -126,10 +128,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           pnpm publish -r --filter pi-kis --no-git-checks --access public
-          echo "Published pi-kis@${{VERSION}}"
+          echo "Published pi-kis@${VERSION}"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.bump.outputs.version }}
-        run: gh release create "pi-kis@${{VERSION}}" --generate-notes
+        run: gh release create "pi-kis@${VERSION}" --generate-notes
