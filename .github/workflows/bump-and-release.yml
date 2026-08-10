@@ -1,0 +1,169 @@
+# Bump & Release (모노레포)
+#
+# main 브랜치에 push/merge 되면 **변경된 packages/* 만** 커밋 메시지 기반으로
+# 버전을 올리고( BREAKING/! → major, feat → minor, fix → patch ) npm에 publish.
+# 패키지별 태그(pi-kis@0.3.0, pi-toss@0.1.0, pi-finance-core@0.1.0) + GitHub Release.
+#
+# 준비사항 (1회):
+#   - GitHub Secrets 에 `NPM_TOKEN` 추가 (npmjs.org access token, publish 권한)
+#   - npm provenance를 쓰려면 package.json에 `repository` 필요(설정됨) + publish에
+#     `--provenance` 추가 + job permissions에 `id-token: write` 필요
+#
+# 수동 릴리스: Actions 탭 → "Bump & Release" → Run workflow → 버전 타입 선택
+#   (auto = 커밋 메시지 기반 자동 감지 / patch / minor / major — 변경된 패키지 전체에 적용)
+
+name: Bump & Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: '버전 타입 (auto = 커밋 메시지 기반 자동 감지)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write # 버전 커밋/태그 push + GitHub Release 생성
+
+concurrency:
+  group: bump-and-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bump-release:
+    name: Bump & Publish to npm
+    runs-on: ubuntu-latest
+    # 버전 범프 커밋("[skip ci]")에 의한 재트리거 방지
+    if: "!contains(github.event.head_commit.message || '', '[skip ci]')"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 패키지별 마지막 태그 이후 커밋을 읽기 위해 전체 히스토리 필요
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 변경 감지: push의 커밋들이 건드린 packages/* 판별
+      - name: Detect changed packages
+        id: changed
+        env:
+          BASE_REF: ${{ github.event.before }}
+        run: |
+          if [ "$BASE_REF" = "0000000000000000000000000000000000000000" ]; then
+            FILES=$(git diff --name-only $(git rev-list --max-parents=0 HEAD) HEAD)
+          else
+            FILES=$(git diff --name-only "$BASE_REF" HEAD)
+          fi
+          for pkg in pi-kis pi-toss pi-finance-core; do
+            if echo "$FILES" | grep -q "^packages/${pkg}/"; then
+              echo "$pkg=1" >> "$GITHUB_OUTPUT"
+              echo "changed: $pkg"
+            else
+              echo "$pkg=0" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # 패키지별 버전 범프 (패키지 고유 태그 pi-kis@x 이후 커밋 메시지 기준)
+      - name: Bump versions, commit & tag
+        id: bump
+        env:
+          BUMP_INPUT: ${{ inputs.bump }}
+          CHANGED_KIS: ${{ steps.changed.outputs.pi-kis }}
+          CHANGED_TOSS: ${{ steps.changed.outputs.pi-toss }}
+          CHANGED_CORE: ${{ steps.changed.outputs.pi-finance-core }}
+        run: |
+          set -euo pipefail
+          RELEASED=""
+          for pkg in pi-finance-core pi-toss pi-kis; do  # topo 순서: core → toss → kis
+            CHANGED_VAR="CHANGED_$(echo "$pkg" | tr '-' '_' | tr 'a-z' 'A-Z')"
+            if [ "${!CHANGED_VAR}" != "1" ]; then continue; fi
+            DIR="packages/$pkg"
+
+            # bump 타입: workflow_dispatch 명시값 > 패키지 태그 이후 커밋 메시지
+            if [ "$BUMP_INPUT" != "auto" ] && [ -n "$BUMP_INPUT" ]; then
+              BUMP="$BUMP_INPUT"
+            else
+              LAST_TAG=$(git tag -l "${pkg}@*" --sort=-version:refname | head -1 || true)
+              if [ -n "$LAST_TAG" ]; then
+                COMMITS=$(git log "$LAST_TAG"..HEAD --format=%s -- "$DIR" 2>/dev/null)
+              else
+                COMMITS=$(git log --format=%s -- "$DIR" 2>/dev/null)
+              fi
+              if echo "$COMMITS" | grep -qiE 'BREAKING CHANGE|!:|major'; then
+                BUMP=major
+              elif echo "$COMMITS" | grep -qiE '^feat|^feature|minor'; then
+                BUMP=minor
+              else
+                BUMP=patch
+              fi
+            fi
+
+            pnpm --filter "$pkg" exec npm version "$BUMP" --no-git-tag-version --force
+            VERSION=$(node -p "require('./$DIR/package.json').version")
+            echo "Releasing $pkg@$VERSION ($BUMP)"
+            RELEASED="$RELEASED $pkg@$VERSION"
+            git add "$DIR/package.json"
+          done
+
+          if [ -z "$RELEASED" ]; then
+            echo "변경된 패키지 없음 — publish 생략"
+            exit 0
+          fi
+
+          pnpm install --lockfile-only --silent
+          git add pnpm-lock.yaml
+          git commit -m "chore(release):${RELEASED} [skip ci]"
+          for TAG in $RELEASED; do
+            git tag "$TAG"
+          done
+          git push origin HEAD:main --tags
+          echo "released=$RELEASED" >> "$GITHUB_OUTPUT"
+
+      # pnpm publish -r — workspace:* 치환 + topo 순서 (npm publish 금지)
+      - name: Publish to npm
+        env:
+          RELEASED: ${{ steps.bump.outputs.released }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$RELEASED" ]; then exit 0; fi
+          FILTERS=""
+          for TAG in $RELEASED; do
+            PKG="${TAG%@*}"
+            FILTERS="$FILTERS --filter $PKG"
+          done
+          pnpm publish -r $FILTERS --no-git-checks --access public
+
+      - name: Create GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASED: ${{ steps.bump.outputs.released }}
+        run: |
+          if [ -z "$RELEASED" ]; then exit 0; fi
+          for TAG in $RELEASED; do
+            PKG="${TAG%@*}"; V="${TAG#*@}"
+            NOTES=$(git log --format='- %s' "${PKG}@$(git tag -l "${PKG}@*" --sort=-version:refname | sed -n '2p' 2>/dev/null || true)".."$TAG" 2>/dev/null | head -40 || true)
+            gh release create "$TAG" --title "$TAG" --notes "$NOTES" || true
+          done

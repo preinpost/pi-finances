@@ -1,0 +1,17 @@
+{
+  "name": "pi-finances",
+  "version": "0.0.0",
+  "private": true,
+  "description": "finance pi packages monorepo — pi-kis (한국투자증권), pi-toss (토스증권), pi-finance-core (공용)",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^5.9.3"
+  }
+}

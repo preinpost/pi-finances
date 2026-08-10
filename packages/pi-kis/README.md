@@ -8,13 +8,18 @@ MCP 서버 프로세스도, GitHub에서 코드를 내려받아 실행하는 방
 ```bash
 # npm 레지스트리 (권장) — 배포 버전
 pi install npm:pi-kis
-# 버전 고정: pi install npm:pi-kis@0.2.0
+# 버전 고정: pi install npm:pi-kis@0.3.0
 
-# 또는 GitHub 소스 직접 설치 (최신 커밋 기준)
-pi install git:github.com/preinpost/pi-kis
+# 토스증권 툴(toss_*)도 쓰려면 (선택)
+pi install npm:pi-toss
 
 # pi 재시작
 ```
+
+> ⚠️ v0.3.0부터 토스증권은 **pi-toss 패키지로 분리**되었습니다.
+> 기존 `pi-kis` 사용자가 toss_* 툴을 유지하려면 `pi install npm:pi-toss`를 추가로 설치하세요
+> (키는 `/toss-key`에서 재등록할 필요 없음 — 공용 키 저장소를 그대로 사용).
+> 참고: 모노레포로 이전하면서 GitHub git 설치(`pi install git:...`)는 더 이상 지원하지 않습니다 — npm만.
 
 이후 업데이트/제거:
 
@@ -29,8 +34,8 @@ pi remove npm:pi-kis    # 제거
 # pi 안에서:
 /kis-key       # KIS API 키 입력창 → OS 키체인 저장 (파일 폴백 시 ~/.pi/agent/kis-keys.json)
                #   appKey/appSecret(실전·모의) + 계좌번호 (선택)
-/toss-key      # 토스증권 키 등록 (developers.tossinvest.com 발급 client_id/client_secret — toss_* 툴)
 /kis-status    # 백엔드/키/토큰/API 수(338: REST 278 + WEBSOCKET 60, alias 164) 진단
+               #   (토스 키는 pi-toss 패키지의 /toss-key에서 관리)
 
 # 그 다음 자연어로:
 "RKLB 현재가 알려줘"              # kis_overseas_price
@@ -59,21 +64,18 @@ pi remove npm:pi-kis    # 제거
 | `kis_research` | 주식 리서치 — 재무제표/뉴스/컨센서스 (`kind: income\|ratios\|news\|consensus`, `symb`) |
 | `kis_technical` | 기술적 분석(타점) — MA/RSI/ATR/볼린저/지지저항/추세 (`market`, `symb`, `period`) |
 | `kis_derivatives` | 해외 선물/옵션 — 종목코드(SRS_CD) 단위 시세/상품정보/분봉/장운영시간 + **option-greeks**(IV 역산 → Black-Scholes 델타/감마/세타/베가/로) |
-| `toss_price` | 토스 현재가 — 복수 종목 (KRX 6자리 / US 티커, 콤마 구분 최대 200) |
-| `toss_chart` | 토스 캔들·지표 — 일봉(1d)/1분봉(1m), kis_technical과 동일 지표 로직 |
-| `toss_market` | 토스 전용 시장 데이터 (환율·장운영시간·랭킹·투자자별 매매대금·종목경고 — KIS 비겹침) |
-| `toss_balance` | 토스 자산 종합 (계좌·보유종목·매수여력 KRW/USD·수수료) |
-| `toss_order` | 토스 주문 생성 (지정가/시장가, clientOrderId 멱등, 1억원 이상 confirm 필수) |
-| `toss_orders` | 토스 주문 목록/상세/정정/취소 |
-| `toss_conditional` | 토스 조건주문 (SINGLE/OCO/OTO — KIS에 없는 강점) |
-| `broker_price` | 현재가 (KIS/Toss 자동 폴백) — 국내 6자리/해외 티커, `source: primary/fallback` |
-| `broker_chart` | 차트·지표 (KIS/Toss 자동 폴백) — D(폴백)/W·M(KIS 전용)/1d·1m(Toss) |
+| `broker_price` | 현재가 (KIS 우선) — 국내 6자리/해외 티커. KIS 불가 시 toss_price 사용 안내 (pi-toss 패키지) |
+| `broker_chart` | 차트·지표 (KIS 우선) — D/W/M/1d. 1m는 KIS 미지원 → toss_chart 안내 (pi-toss) |
 
-## 브로커 폴백 (시세·차트만)
+토스증권 툴(`toss_price`/`toss_chart`/`toss_market`/`toss_balance`/`toss_order`/`toss_orders`/`toss_conditional`)은
+[pi-toss](https://github.com/preinpost/pi-finances/tree/main/packages/pi-toss) 패키지에서 제공합니다.
 
-- 등록된 키가 있는 브로커만 후보 — 둘 다 있으면 KIS 우선 (KIS가 주봉/월봉 보유), 하나만 있으면 그 브로커로 동작.
-- 첫 브로커 실패/데이터 없음 → 상대 브로커 재시도 (응답 `source: "fallback"` 표시).
-- **계좌·주문·자산은 폴백 불가** — 증권사별 계좌에 묶여 있으므로 `kis_*`/`toss_*` 툴로 브로커를 명시적으로 선택해야 한다.
+## 브로커 폴백 (KIS 우선, 에이전트 중재)
+
+- v0.3.0부터 pi-kis는 **KIS 전용** — `broker_*` 툴은 KIS 키/데이터 우선이고, KIS가 불가능하면
+  (키 미등록·실패·1분봉 미지원) 에러 메시지에 **toss_* 툴 사용 안내**를 담아 반환한다.
+  pi는 패키지별 module root를 분리하므로 코드 레벨 폴백 대신 **에이전트가 pi-toss 툴을 호출**하는 구조.
+- **계좌·주문·자산은 브로커 간 폴백 불가** — 증권사별 계좌에 묶여 있으므로 `kis_*`/`toss_*` 툴로 명시적으로 선택.
 
 ## 아키텍처 (에이전트 통합 친화적 3계층)
 
@@ -88,27 +90,26 @@ src/
     generated/       apis.json(338개) / aliases.json / ws-tr-ids.json
   roles/             — 도메인 역할 (core를 typed wrapper로 확장) — 에이전트가 직접 import
     market.ts        현재가·52주 요약(getDomesticQuoteSummary)·차트·실시간 재수출
-    broker.ts        브로커 중립 퍼사드 — 시세·차트 KIS/Toss 자동 폴백 (keysRegistered로 후보 선별)
+    broker.ts        KIS 우선 퍼사드 — 시세·차트, 불가 시 toss_* 툴 안내 (에이전트 중재 폴백)
     portfolio.ts     잔고/체결/미체결 조회
     research.ts      재무제표(income/ratios)·뉴스·애널리스트 컨센서스
-    indicators.ts    기술적 지표 (MA/RSI/ATR/볼린저/지지저항/추세 — 순수 계산)
     greeks.ts        Black-Scholes 그릭스 + IV 역산 (순수 계산 — 해외옵션용)
     derivatives.ts   해외 선물/옵션 파이프라인 (SRS_CD 파싱·시세·상품정보·만기·option-greeks)
     trading.ts       주문/정정/취소 — prepare/send 2단계 + 검증 API(안전 가드)
-    toss.ts          토스증권 역할 (시세·자산·주문·조건주문)
     types.ts         공용 타입 (PreparedOrder/PreparedCancel 등)
-  core/toss/         토스증권 transport (OAuth 클라이언트 + 그룹별 레이트리밋)
   agent/             — pi 통합
     extension.ts     registerExtension (마이그레이션 + tools/commands 등록)
-    tools.ts         kis_* 10 + toss_* 7 + broker_* 2 툴 (execute는 roles/core 위임)
-    commands.ts      /kis-key, /toss-key, /kis-status
+    tools.ts         kis_* 10 + broker_* 2 툴 (execute는 roles/core 위임)
+    commands.ts      /kis-key, /kis-status
 ```
 
-- **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/research/indicators/trading/toss)이 v2 키·tr_id·파라미터를 캡슐화한다.
+- **공용 모듈**: 기술적 지표(`indicators.ts`)와 시크릿 스토어는 [pi-finance-core](https://github.com/preinpost/pi-finances/tree/main/packages/pi-finance-core) 패키지에 있다 (pi-kis/pi-toss 공유).
+
+- **핵심 설계**: `core`는 안정된 transport만 담고, 역할(market/portfolio/research/trading)이 v2 키·tr_id·파라미터를 캡슐화한다. (토스 역할은 pi-toss 패키지)
   자동매매 에이전트는 `roles/trading.ts`를 직접 import해 `prepare*`(요약+검증) → 사용자 확인 → `send*`(실행) 흐름으로 사용한다.
 - 주문은 원샷 함수가 아니라 **prepare/send 2단계** — 실전 주문은 사용자 확인 후 `send*`로만 실행한다.
 
-## 브로커 비교 (KIS vs Toss)
+## 브로커 비교 (KIS vs Toss — Toss는 pi-toss 패키지)
 
 | 항목 | KIS (pi-kis) | Toss (토스증권) |
 |---|---|---|
@@ -122,7 +123,7 @@ src/
 | 모의투자 | paper 지원 | 실전 전용 |
 | 레이트리밋 | 전역 300ms(조회)/600ms(주문) | 그룹별 (ACCOUNT 1/s ~ MARKET_DATA 10/s) |
 
-> **활용**: 시세·차트는 어느 브로커든 동일하므로 KIS 우선. 토스는 **비겹침 데이터**(조건주문·수수료·장운영시간·환율·랭킹·종목경고·투자자별 매매대금)로 인사이트를 보강한다.
+> **활용**: 시세·차트는 어느 브로커든 동일하므로 KIS 우선. 토스는 **비겹침 데이터**(조건주문·수수료·장운영시간·환율·랭킹·종목경고·투자자별 매매대금)로 인사이트를 보강한다. (토스 툴은 pi-toss 패키지 설치 필요)
 
 ## API 키 체계 (v2)
 
@@ -161,7 +162,7 @@ src/
 - **마이그레이션**: 키체인 활성 시 기존 평문 파일을 자동으로 키체인으로 옮기고 삭제합니다 (확장 로드 시 1회).
 - **적응형 폴백**: 키체인 쓰기가 거부되면(대표: SSH/헤드리스 macOS에서 `Platform failure: User interaction is not allowed` — `errSecInteractionNotAllowed`) 자동으로 0600 파일 백엔드로 전환하고, 키체인에 있던 데이터를 파일로 이관합니다. macOS + SSH 세션은 기본적으로 파일 백엔드를 사용합니다.
 - **강제 지정**: `KIS_SECRET_STORE=file` (헤드리스/컨테이너) 또는 `KIS_SECRET_STORE=keyring` (키체인 강제 — 사용 불가 시 에러)
-- **의존성**: `@napi-rs/keyring`은 패키지 의존성. npm/git 소스 설치 시 pi가 자동 설치, 로컬 경로 설치 시 패키지 루트에서 `npm install` 1회 실행 필요.
+- **의존성**: `pi-finance-core`(공용) + `@napi-rs/keyring`(core 내). npm 소스 설치 시 pi가 자동 설치, 로컬 경로 설치 시 패키지 루트에서 `npm install`(pnpm 워크스페이스는 루트에서 `pnpm install`) 1회 실행 필요.
 - 키: `/kis-key`로 입력 (입력 다이얼로그). 셸 env(`KIS_APP_KEY` 등)도 fallback.
 - 실전 키만으로 시세/차트 조회 가능. 모의 키는 `env: "paper"` 또는 `auto`(모의 키 우선)에 사용.
 - 주문/잔고 API는 계좌 정보(acctStock) 필요 — `/kis-key`에서 선택 등록. `12345678-01` 형식도 그대로 입력 가능 (상품코드 `-01`은 자동 분리, `ACNT_PRDT_CD` 기본 `01`).

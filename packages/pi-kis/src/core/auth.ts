@@ -8,7 +8,7 @@
  *   cached tokens and only re-issue when expired.
  */
 import { createHash } from "node:crypto";
-import { keysPath, store } from "./secret.ts";
+import { getKeys, getTokenCache, keysPath, saveTokenCache, store } from "./secret.ts";
 import type { KisKeys, TokenCache } from "./secret.ts";
 
 export type { KisKeys, TokenCache } from "./secret.ts";
@@ -39,7 +39,7 @@ export function parseAccount(raw: string | undefined): { cano?: string; prdtCd?:
 
 /** Load keys: active secret store first, shell env as fallback per field. */
 export function loadKeys(): KisKeys {
-	const file = store.getKeys();
+	const file = getKeys();
 	const env = process.env;
 	const real = parseAccount(file.acctStock ?? env.KIS_ACCT_STOCK);
 	const paper = parseAccount(file.paperStock ?? env.KIS_PAPER_STOCK);
@@ -55,8 +55,6 @@ export function loadKeys(): KisKeys {
 		paperStock: paper.cano,
 		paperStockPrdtCd: paper.prdtCd,
 		paperFuture: file.paperFuture ?? env.KIS_PAPER_FUTURE,
-		tossClientId: file.tossClientId ?? env.TOSS_CLIENT_ID,
-		tossClientSecret: file.tossClientSecret ?? env.TOSS_CLIENT_SECRET,
 	};
 }
 
@@ -82,11 +80,11 @@ export function keysFor(env: KisEnv): { appKey: string; appSecret: string } {
 }
 
 function readTokenCache(): TokenCache {
-	return store.getTokenCache();
+	return getTokenCache();
 }
 
 async function writeTokenCache(cache: TokenCache): Promise<void> {
-	await store.saveTokenCache(cache);
+	await saveTokenCache(cache);
 }
 
 function appKeyHash(appKey: string): string {

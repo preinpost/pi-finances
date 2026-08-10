@@ -24,7 +24,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { baseUrl, keysFor, resolveEnv, type EnvArg, type KisEnv } from "./auth.ts";
-import { store } from "./secret.ts";
+import { getApprovalCache, saveApprovalCache } from "./secret.ts";
 import type { ApiDef } from "./client.ts";
 
 const WS_URL_REAL = "ws://ops.koreainvestment.com:21000";
@@ -70,16 +70,16 @@ async function issueApprovalKeyOnce(env: KisEnv): Promise<string> {
 	if (typeof key !== "string" || !key) {
 		throw new Error(`KIS 웹소켓 접속키 발급 실패: ${text.slice(0, 300)}`);
 	}
-	const cache = store.getApprovalCache();
+	const cache = getApprovalCache();
 	cache[env] = { approvalKey: key, appKeyHash: hashKey(appKey), expiresAt: Date.now() + APPROVAL_TTL_MS };
-	await store.saveApprovalCache(cache);
+	await saveApprovalCache(cache);
 	return key;
 }
 
 /** 캐시된 접속키 반환, 없거나 만료 시 발급 (발급 실패 시 1회 재시도). */
 export async function getApprovalKey(env: KisEnv): Promise<string> {
 	const { appKey } = keysFor(env);
-	const cached = store.getApprovalCache()[env];
+	const cached = getApprovalCache()[env];
 	if (cached && cached.approvalKey && cached.appKeyHash === hashKey(appKey) && cached.expiresAt > Date.now() + 60_000) {
 		return cached.approvalKey;
 	}
@@ -93,14 +93,14 @@ export async function getApprovalKey(env: KisEnv): Promise<string> {
 }
 
 export async function clearApprovalCache(env: KisEnv): Promise<void> {
-	const cache = store.getApprovalCache();
+	const cache = getApprovalCache();
 	delete cache[env];
-	await store.saveApprovalCache(cache);
+	await saveApprovalCache(cache);
 }
 
 /** /kis-status용 — 만료까지 남은 초 (캐시 없으면 null). */
 export function approvalAge(env: KisEnv): number | null {
-	const cached = store.getApprovalCache()[env];
+	const cached = getApprovalCache()[env];
 	if (!cached) return null;
 	return Math.round((cached.expiresAt - Date.now()) / 1000);
 }

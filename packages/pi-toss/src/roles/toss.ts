@@ -18,7 +18,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { getDefaultAccountSeq, tossRequest } from "../core/toss/client.ts";
-import type { Bar } from "./indicators.ts";
+import type { Bar } from "pi-finance-core";
 
 // ── 공통 타입 ──────────────────────────────────────────────────────────────
 

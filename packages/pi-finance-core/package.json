@@ -1,0 +1,40 @@
+{
+  "name": "pi-finance-core",
+  "version": "0.1.0",
+  "description": "pi-finances 공용 라이브러리 — 브로커 중립 기술적 지표(indicators) + 범용 시크릿 스토어(keyring/file). pi-kis·pi-toss가 공유하는 순수 모듈 (확장/스킬 없음).",
+  "type": "module",
+  "license": "MIT",
+  "author": "minsoo.lee <preinpost@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/preinpost/pi-finances.git"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "finance",
+    "stock",
+    "indicators",
+    "keyring"
+  ],
+  "dependencies": {
+    "@napi-rs/keyring": "^1.3.0"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

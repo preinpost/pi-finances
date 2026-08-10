@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { keysPath, loadKeys, resolveEnv, tokenAge } from "../core/auth.ts";
 import { specStats } from "../core/client.ts";
 import { approvalAge } from "../core/ws.ts";
-import { hasPlaintextFiles, migrateSecretsToKeyring, store } from "../core/secret.ts";
+import { hasPlaintextFiles, migrateSecretsToKeyring, saveKeys as saveStoredKeys, store } from "../core/secret.ts";
 import type { KisKeys } from "../core/secret.ts";
 import { createWatcher, hasSessionWatcher, parseArgs as parseWatchArgs, setSessionWatcher, stopSessionWatcher } from "../watch.ts";
 
@@ -25,7 +25,7 @@ function masked(v: string | undefined): string {
 }
 
 async function saveKeys(keys: Record<string, string>): Promise<void> {
-	await store.saveKeys(keys as unknown as KisKeys);
+	await saveStoredKeys(keys as unknown as KisKeys);
 }
 
 export function registerCommands(pi: ExtensionAPI): void {
@@ -78,44 +78,9 @@ export function registerCommands(pi: ExtensionAPI): void {
 		},
 	});
 
-	// ── /toss-key ───────────────────────────────────────────────────────
-	pi.registerCommand("toss-key", {
-		description: "토스증권 Open API 키 등록 (개발자센터 발급 client_id/client_secret → OS 키체인/0600 파일 폴백)",
-		handler: async (_args, ctx) => {
-			const existing = loadKeys();
-			const clientId = await ctx.ui.input(
-				"Toss Client ID",
-				existing.tossClientId ? `현재 값: ${masked(existing.tossClientId)} — 엔터로 유지` : "developers.tossinvest.com에서 발급받은 client_id (c_...)",
-			);
-			if (clientId === undefined) {
-				ctx.ui.notify("취소됨 — 키를 저장하지 않았습니다.", "info");
-				return;
-			}
-			const clientSecret = await ctx.ui.input(
-				"Toss Client Secret",
-				existing.tossClientSecret ? `현재 값: ${masked(existing.tossClientSecret)} — 엔터로 유지` : "client_secret (s_...)",
-			);
-			if (clientSecret === undefined) {
-				ctx.ui.notify("취소됨 — 키를 저장하지 않았습니다.", "info");
-				return;
-			}
-
-			const keys: Record<string, string> = { ...(existing as KisKeys) }; // 기존 KIS 키 보존
-			if (clientId.trim()) keys.tossClientId = clientId.trim();
-			if (clientSecret.trim()) keys.tossClientSecret = clientSecret.trim();
-
-			await saveKeys(keys);
-			ctx.ui.notify(
-				`토스 키 저장 완료 → ${store.backend === "keyring" ? "OS keyring (Keychain/CredMan/SecretService)" : keysPath} (${store.backend})\n` +
-				`Client ID: ${masked(keys.tossClientId)} (toss_* 툴 사용 가능)`,
-				"info",
-			);
-		},
-	});
-
 	// ── /kis-status ─────────────────────────────────────────────────────
 	pi.registerCommand("kis-status", {
-		description: "KIS 연동 상태 진단 (키 파일, 토큰 캐시, API 수: REST/WEBSOCKET/alias)",
+		description: "KIS 연동 상태 진단 (키, 토큰 캐시, API 수: REST/WEBSOCKET/alias)",
 		handler: async (_args, ctx) => {
 			const keys = loadKeys();
 			const env = resolveEnv("auto");
@@ -127,17 +92,15 @@ export function registerCommands(pi: ExtensionAPI): void {
 				`appKey     : ${masked(keys.appKey)}`,
 				`appSecret  : ${masked(keys.appSecret)}`,
 				`paper keys : ${keys.paperAppKey ? `${masked(keys.paperAppKey)} / ${masked(keys.paperAppSecret)}` : "not set"}`,
-				`toss keys  : ${keys.tossClientId ? `${masked(keys.tossClientId)} (toss_* 툴 사용 가능)` : "not set — /toss-key"}`,
 				`accounts   : ${keys.acctStock ? "1 set" : "0 set"} (주문/잔고용, 선택)`,
 				`auto env   : ${env}`,
 				`token cache: real=${tokenAge("real") !== null ? `${tokenAge("real")}s 남음` : "없음"} / paper=${tokenAge("paper") !== null ? `${tokenAge("paper")}s 남음` : "없음"}`,
-				`toss token : ${loadKeys().tossClientId ? (store.getTokenCache().toss ? "캐시됨" : "미발급") : "—"} (OAuth, 발급 시 자동 캐시)`,
 				`approval   : real=${approvalAge("real") !== null ? `${approvalAge("real")}s 남음` : "없음"} / paper=${approvalAge("paper") !== null ? `${approvalAge("paper")}s 남음` : "없음"} (웹소켓 전용, REST 토큰과 별개)`,
 				`apis       : ${stats.total}개 (REST ${stats.rest} / WEBSOCKET ${stats.websocket}) + alias ${stats.aliases}개`,
 				`사용법     : "RKLB 현재가 알려줘" → kis_overseas_price / kis_api (v2 키: kis_list_apis로 확인)`,
 				`실시간     : "삼성전자 실시간체결가" → kis_realtime { tr_id: "H0STCNT0", tr_key: "005930" }`,
-				`토스       : "RKLB 매도 타점" → toss_chart/toss_market (토스 키는 /toss-key에서 등록)`,
-				`폴백      : "현재가/차트" → broker_price/broker_chart (KIS/Toss 자동 폴백)`,
+				`토스       : 토스증권 툴(toss_*)은 pi-toss 패키지에서 제공 (pi install npm:pi-toss, 키는 /toss-key)`,
+				`폴백      : "현재가/차트" → broker_price/broker_chart (KIS 우선, 실패 시 toss_* 안내)`,
 				`워치      : 실시간 감시 → /kis-watch start --symbols ... (subagent 불필요)`,
 			];
 			ctx.ui.notify(lines.join("\n"), "info");

@@ -20,8 +20,7 @@
  * 정식 스펙: https://openapi.tossinvest.com/openapi-docs/latest/openapi.json
  * (로컬: /tmp/toss-oas.json)
  */
-import { loadKeys } from "../auth.ts";
-import { store } from "../secret.ts";
+import { getKeys, getTokenCache, saveTokenCache } from "../secret.ts";
 import { withGroupRateLimit } from "./ratelimit.ts";
 
 export const TOSS_BASE = "https://openapi.tossinvest.com";
@@ -59,18 +58,18 @@ function makeTossError(message: string, code: string, status: number): TossError
 
 /** 토큰 캐시 제거 (401 재발급 경로에서 사용). */
 export async function clearTossToken(): Promise<void> {
-	const cache = store.getTokenCache();
+	const cache = getTokenCache();
 	if (cache.toss) {
 		delete cache.toss;
-		await store.saveTokenCache(cache);
+		await saveTokenCache(cache);
 	}
 }
 
 async function issueTossTokenOnce(): Promise<TossToken> {
-	const { tossClientId, tossClientSecret } = loadKeys();
+	const { tossClientId, tossClientSecret } = getKeys();
 	if (!tossClientId || !tossClientSecret) {
 		throw new Error(
-			"Toss API keys missing. Run /kis-key to register toss client_id/client_secret " +
+			"Toss API keys missing. Run /toss-key to register client_id/client_secret " +
 				"(or set TOSS_CLIENT_ID/TOSS_CLIENT_SECRET).",
 		);
 	}
@@ -102,15 +101,15 @@ async function issueTossTokenOnce(): Promise<TossToken> {
 	}
 	const expiresIn = Number(json.expires_in ?? 3600);
 	const t: TossToken = { token, expiresAt: Date.now() + expiresIn * 1000 - 60_000 };
-	const cache = store.getTokenCache();
+	const cache = getTokenCache();
 	cache.toss = t;
-	await store.saveTokenCache(cache);
+	await saveTokenCache(cache);
 	return t;
 }
 
 /** 캐시된 토큰 반환, 없거나 만료 임박 시 발급 (실패 시 캐시 정리 후 1회 재시도). */
 export async function getTossToken(): Promise<string> {
-	const cached = store.getTokenCache().toss;
+	const cached = getTokenCache().toss;
 	if (cached && cached.token && cached.expiresAt > Date.now() + 60_000) return cached.token;
 	try {
 		return (await withGroupRateLimit("AUTH", () => issueTossTokenOnce())).token;
