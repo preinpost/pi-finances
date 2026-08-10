@@ -20,7 +20,7 @@
  * 정식 스펙: https://openapi.tossinvest.com/openapi-docs/latest/openapi.json
  * (로컬: /tmp/toss-oas.json)
  */
-import { getKeys, getTokenCache, saveTokenCache } from "./secret.ts";
+import { clearTossToken, getKeys, getTokenCache, saveTokenCache } from "./secret.ts";
 import { withGroupRateLimit } from "./ratelimit.ts";
 
 export const TOSS_BASE = "https://openapi.tossinvest.com";
@@ -54,15 +54,6 @@ function unwrap(json: unknown): unknown {
 
 function makeTossError(message: string, code: string, status: number): TossError {
 	return Object.assign(new Error(message), { toss: { code, status } });
-}
-
-/** 토큰 캐시 제거 (401 재발급 경로에서 사용). */
-export async function clearTossToken(): Promise<void> {
-	const cache = getTokenCache();
-	if (cache.toss) {
-		delete cache.toss;
-		await saveTokenCache(cache);
-	}
 }
 
 async function issueTossTokenOnce(): Promise<TossToken> {

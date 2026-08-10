@@ -129,7 +129,9 @@ export async function getToken(env: KisEnv): Promise<string> {
 
 export async function clearTokenCache(env: KisEnv): Promise<void> {
 	const cache = readTokenCache();
-	delete cache[env];
+	// ⚠️ mergeWrite는 키 삭제 불가 — delete 후 저장하면 기존 값이 남는다.
+	// undefined로 덮어써 직렬화 시 해당 env 필드가 제거되게 한다.
+	cache[env] = undefined;
 	await writeTokenCache(cache);
 }
 

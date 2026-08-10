@@ -44,6 +44,9 @@ export function getKeys(): TossKeys {
 
 export async function saveKeys(keys: TossKeys): Promise<void> {
 	await mergeWrite(store, "keys", keys as SecretBlob);
+	// 키(시크릿) 변경 시 서버가 이전에 발급한 토큰을 폐기하므로 캐시도 무효화.
+	// 키가 그대로여도(엔터로 유지) 재발급 한 번이 더 들 뿐이라 안전하게 항상 무효화.
+	await clearTossToken();
 }
 
 export function getTokenCache(): TossTokenCache {
@@ -52,4 +55,19 @@ export function getTokenCache(): TossTokenCache {
 
 export async function saveTokenCache(cache: TossTokenCache): Promise<void> {
 	await mergeWrite(store, "token", cache as SecretBlob);
+}
+
+/**
+ * 저장된 토스 토큰 캐시 무효화 (401 응답·키 변경 시 호출).
+ *
+ * ⚠️ mergeWrite는 패치 병합만 하므로 `delete cache.toss` 후 저장하면 기존 값이
+ * 그대로 남는다(키 삭제 불가). undefined로 덮어써야 직렬화(JSON.stringify) 시
+ * toss 필드가 제거된다. KIS의 real/paper 필드는 보존된다.
+ */
+export async function clearTossToken(): Promise<void> {
+	const cache = getTokenCache();
+	if (cache.toss) {
+		cache.toss = undefined;
+		await saveTokenCache(cache);
+	}
 }

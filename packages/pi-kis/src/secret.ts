@@ -62,6 +62,16 @@ export function getKeys(): KisKeys {
 
 export async function saveKeys(keys: KisKeys): Promise<void> {
 	await mergeWrite(store, "keys", keys as SecretBlob);
+	// 키(시크릿) 변경 시 서버가 이전 토큰/웹소켓 키를 폐기하므로 캐시도 무효화.
+	// (mergeWrite는 키 삭제 불가 → undefined로 덮어써 직렬화 시 제거)
+	const cache = getTokenCache();
+	cache.real = undefined;
+	cache.paper = undefined;
+	await saveTokenCache(cache);
+	const approval = getApprovalCache();
+	approval.real = undefined;
+	approval.paper = undefined;
+	await saveApprovalCache(approval);
 }
 
 export function getTokenCache(): TokenCache {

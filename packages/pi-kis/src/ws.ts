@@ -94,7 +94,8 @@ export async function getApprovalKey(env: KisEnv): Promise<string> {
 
 export async function clearApprovalCache(env: KisEnv): Promise<void> {
 	const cache = getApprovalCache();
-	delete cache[env];
+	// ⚠️ mergeWrite는 키 삭제 불가 — undefined로 덮어써 직렬화 시 제거.
+	cache[env] = undefined;
 	await saveApprovalCache(cache);
 }
 
