@@ -35,7 +35,7 @@ export function registerCommands(pi: ExtensionAPI): void {
 		handler: async (_args, ctx) => {
 			const existing = loadKeys();
 			const appKey = await ctx.ui.input(
-				"KIS App Key (실전)",
+				"KIS App Key",
 				existing.appKey ? `현재 값: ${masked(existing.appKey)} — 엔터로 유지` : "개발자센터에서 발급받은 App Key",
 			);
 			if (appKey === undefined) {
@@ -43,7 +43,7 @@ export function registerCommands(pi: ExtensionAPI): void {
 				return;
 			}
 			const appSecret = await ctx.ui.input(
-				"KIS App Secret (실전)",
+				"KIS App Secret",
 				existing.appSecret ? `현재 값: ${masked(existing.appSecret)} — 엔터로 유지` : "App Secret",
 			);
 			if (appSecret === undefined) {
