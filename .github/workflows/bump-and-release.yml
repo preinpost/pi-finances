@@ -61,6 +61,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 배포 전 안전망 — 깨진 상태로 publish되는 것 방지
+      - name: Typecheck all packages
+        run: pnpm -r typecheck
+
       # 변경 감지: push의 커밋들이 건드린 packages/* 판별
       - name: Detect changed packages
         id: changed

@@ -38,6 +38,13 @@ pi install /absolute/path/to/packages/pi-toss
 # (로컬 경로 설치는 소스를 그대로 로드 — 개발 중엔 설정 파일을 직접 수정해도 됨)
 ```
 
+## CI
+
+- **`ci.yml`** — PR + main push 시 패키지별 잡(매트릭스)으로 typecheck / 스모크 테스트
+  (확장 툴·커맨드 계약 검증) / tarball 검증(`workspace:*` 미치환 감지) 실행.
+  GitHub Actions는 루트 `.github/workflows/`만 읽으므로 패키지별 CI는 잡 단위로 구성.
+- 스모크 테스트: `packages/*/scripts/smoke.mjs` (`node --experimental-transform-types`)
+
 ## 릴리스
 
 main push/merge 시 커밋 메시지 기반(`BREAKING`/`feat`/`fix`)으로 **변경된 패키지만**

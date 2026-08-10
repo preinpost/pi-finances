@@ -1,0 +1,67 @@
+# CI — 패키지별 검사 (typecheck + 스모크 + tarball 검증)
+#
+# GitHub Actions는 루트 .github/workflows/만 읽으므로 "패키지별 CI"는
+# 매트릭스 잡(패키지별 1잡)으로 구현한다. packages/** 변경 시 전 패키지 검사
+# (3잡 × ~30초 — 비용 낮아 변경 필터 생략, 필요해지면 paths-filter 추가).
+#
+# 각 잡:
+#   1. typecheck (tsc --noEmit)
+#   2. 스모크 테스트 — 확장이 계약된 툴/커맨드를 등록하는지 (pi-kis/pi-toss만)
+#   3. tarball 검증 — pnpm pack 결과에 workspace:* 잔존 감지 (npm publish 함정 방지)
+
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+
+jobs:
+  check:
+    name: check (${{ matrix.pkg }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: [pi-finance-core, pi-toss, pi-kis]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter ${{ matrix.pkg }} typecheck
+
+      - name: Extension smoke test
+        if: matrix.pkg != 'pi-finance-core'
+        run: pnpm --filter ${{ matrix.pkg }} exec node --experimental-transform-types scripts/smoke.mjs
+
+      - name: Tarball sanity (workspace:* 치환 확인)
+        run: |
+          cd packages/${{ matrix.pkg }}
+          rm -f *.tgz
+          FILE=$(pnpm pack 2>/dev/null | tail -1)
+          if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
+            echo "❌ pnpm pack 실패"
+            exit 1
+          fi
+          if tar -xzOf "$FILE" package/package.json | grep -q 'workspace:'; then
+            echo "❌ tarball package.json에 workspace:* 잔존 — npm/pi install 시 깨짐 (pnpm publish로만 배포)"
+            exit 1
+          fi
+          rm -f "$FILE"
+          echo "✅ tarball OK — workspace:* 정상 치환"
