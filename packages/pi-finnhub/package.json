@@ -1,0 +1,23 @@
+{
+  "name": "pi-finnhub",
+  "version": "0.1.0",
+  "description": "Finnhub (공식 API) 클라이언트 for pi — 미국 주식 시세·차트·뉴스·펀더멘털·컨센서스 (무료 키, 직접 REST, 의존성 0).",
+  "type": "module",
+  "license": "MIT",
+  "author": "minsoo.lee <preinpost@gmail.com>",
+  "repository": { "type": "git", "url": "git+https://github.com/preinpost/pi-finances.git" },
+  "bugs": { "url": "https://github.com/preinpost/pi-finances/issues" },
+  "homepage": "https://github.com/preinpost/pi-finances#readme",
+  "engines": { "node": ">=22.6" },
+  "publishConfig": { "access": "public" },
+  "keywords": ["pi-package", "pi", "pi-coding-agent", "finnhub", "market-data", "stock", "news", "fundamentals"],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "pi": { "extensions": ["./index.ts"] },
+  "files": ["index.ts", "src", "README.md"],
+  "dependencies": { "pi-finance-core": "workspace:*" },
+  "scripts": { "typecheck": "tsc --noEmit -p ." },
+  "bundledDependencies": ["pi-finance-core"]
+}
