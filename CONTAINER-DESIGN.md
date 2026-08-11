@@ -176,8 +176,10 @@ env가 무시될 수 있음** → 엔트리포인트에서 스토어 파일을 �
 
 ## 9. RPC 웹챗 진화 (Phase 3, 설계 방향만)
 
+> 상세 설계: **WEB-APP-DESIGN.md** (아키텍처·API 계약·UX·보안·구현 순서)
+
 - 파드당 `pi --mode rpc` 서브프로세스 1개 (JSONL stdin/stdout 프로토콜 — `docs/rpc.md`).
-- 백엔드가 `prompt` 명령 → 이벤트 스트림을 브라우저에 SSE/WS로 중계.
+- 백엔드가 `prompt` 명령 → 이벤트 스트림을 브라우저에 SSE로 중계 (제로 의존성: node:http).
 - 금융분석 UX: 리포트 카드(종목명·타점·지표), stock-html 스킬의 HTML 리포트 뷰어,
   세션 이력 UI. `steer`/`streamingBehavior`로 중간 개입 가능.
 - 권한 승인(예: 주문)은 RPC 권한 이벤트를 UI 버튼으로 연결 (TUI 팝업 대체).
