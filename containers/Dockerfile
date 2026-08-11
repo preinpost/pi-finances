@@ -41,12 +41,14 @@ ENV TZ=Asia/Seoul \
 # pi install은 소스를 한 번에 하나만 받는다 (CLI 제약) — 패키지별로 실행.
 # 빌드 시점 HOME은 /root(기본) — npm 캐시 사용 가능. 런타임 HOME은 아래 useradd 후 설정.
 # pi-finance-core(공용 스킬 kis-timing 포함)는 pi-kis/pi-toss에 번들로 자동 포함
+# pi-web-access: 웹 검색·URL 페치·GitHub 클론·PDF/유튜브 분석 (금융 리서치 보강, 외부 패키지)
 RUN pi install npm:pi-kis \
  && pi install npm:pi-toss \
  && pi install npm:pi-twelve-data \
  && pi install npm:pi-finnhub \
  && pi install npm:pi-coingecko \
- && pi install npm:pi-naver-news
+ && pi install npm:pi-naver-news \
+ && pi install npm:pi-web-access
 
 # ── 금융분석 포커스 설정 (AGENTS.md / APPEND_SYSTEM.md / prompts/*) ──
 COPY agent-config/ /opt/pi-agent/

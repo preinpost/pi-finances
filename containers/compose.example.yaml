@@ -16,8 +16,23 @@ services:
     ports:
       - "7681:7681"          # 웹터미널
     environment:
-      # ── LLM 프로바이더 (필수) ──────────────────────────────────────────
+      # ── LLM 프로바이더 (하나 이상 주입 — 컨테이너 TUI에서 /model 로 선택) ────
+      # 기본값: Anthropic (가장 많이 쓰는 프로바이더)
       ANTHROPIC_API_KEY: ""
+      # OpenRouter — 여러 모델(Claude/GPT/DeepSeek 등)을 하나의 키로 라우팅
+      # OPENROUTER_API_KEY: ""
+      # DeepSeek — deepseek-chat / deepseek-reasoner (저렴한 코딩·분석용)
+      # DEEPSEEK_API_KEY: ""
+      # OpenAI — GPT 시리즈
+      # OPENAI_API_KEY: ""
+      # Google Gemini — GEMINI_API_KEY
+      # GEMINI_API_KEY: ""
+      # xAI (Grok)
+      # XAI_API_KEY: ""
+      # Groq — 빠른 추론 (Llama 등 오픈모델)
+      # GROQ_API_KEY: ""
+      # Mistral
+      # MISTRAL_API_KEY: ""
       # ── 한국투자증권 OPEN API (선택 — https://apiportal.koreainvestment.com) ──
       KIS_APP_KEY: ""          # 실전투자 App Key
       KIS_APP_SECRET: ""       # 실전투자 App Secret

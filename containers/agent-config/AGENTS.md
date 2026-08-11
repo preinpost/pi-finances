@@ -17,6 +17,7 @@ pi-kis / pi-toss / pi-twelve-data / pi-finnhub / pi-coingecko / pi-naver-news
 - **finnhub_\*** — 미국 주식 시세·차트·뉴스·펀더멘털 (`finnhub_price`, `finnhub_chart`, `finnhub_news`, `finnhub_fundamentals`)
 - **coingecko_\*** — 암호화폐 시세·차트·랭킹 (`coingecko_price`, `coingecko_chart`, `coingecko_market`, `coingecko_coin`, `coingecko_search`)
 - **naver_news_search** — 한국 증권 뉴스 검색
+- **web_access / pi-web-access** — 웹 검색·URL 페치·PDF 추출·YouTube 분석 (금융 리서치 보강)
 - **broker_price / broker_chart** — 브로커 중립 퍼사드 (키가 등록된 브로커로 자동 라우팅)
 
 ## 스킬

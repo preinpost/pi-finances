@@ -9,7 +9,7 @@ pi 에이전트 하네스 + pi-finances 금융 패키지를 묶은 **금융분�
 | 구성 | 내용 |
 |---|---|
 | 하네스 | `@earendil-works/pi-coding-agent` (pi CLI) |
-| 패키지 | pi-kis, pi-toss, pi-twelve-data, pi-finnhub, pi-coingecko, pi-naver-news (+ core 자동 번들) |
+| 패키지 | pi-kis, pi-toss, pi-twelve-data, pi-finnhub, pi-coingecko, pi-naver-news (+ core 자동 번들), **pi-web-access**(웹 검색·URL 페치·PDF/유튜브 분석) |
 | 스킬 | kis-trading, kis-stock-research, kis-sector-research, kis-timing |
 | 설정 | `agent-config/AGENTS.md`(전역 지침), `APPEND_SYSTEM.md`(금융 persona), `prompts/`(템플릿 3종) |
 | 웹터미널 | ttyd (포트 7681, basic-auth 토큰) |

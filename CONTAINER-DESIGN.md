@@ -109,7 +109,7 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 
 | 구성 | 내용 | 근거 |
 |---|---|---|
-| 패키지 7개 | pi-kis, pi-toss, pi-twelve-data, pi-finnhub, pi-coingecko, pi-naver-news (+core 자동 번들) | 모노레포 README의 설치 목록 |
+| 패키지 8개 | pi-kis, pi-toss, pi-twelve-data, pi-finnhub, pi-coingecko, pi-naver-news (+core 자동 번들), pi-web-access(외부 — 웹 검색·URL 페치·PDF/유튜브 분석) | 모노레포 README의 설치 목록 + 금융 리서치 보강 |
 | 스킬 4개 | kis-trading, kis-stock-research, kis-sector-research, kis-timing | 패키지 번들 스킬, 설치 시 자동 등록 |
 | TZ | `Asia/Seoul` | 한국 시장 운영 시간 기준 |
 | AGENTS.md | 전역 금융분석 컨벤션 (리포트 형식, 키 미등록 시 안내 멘트, 주의문구) | pi 컨텍스트 파일 메커니즘 |
