@@ -59,6 +59,11 @@ RUN useradd -m -u 1001 pi \
   && mkdir -p /workspace \
   && chown -R pi:pi /opt/pi-agent /workspace
 
+# ── 웹챗 백엔드 (Phase 3 — WEB-APP-DESIGN.md §7) ────────────────────
+# 제로 의존성(node:http)이므로 node_modules 불필요 — server.mjs + static만 복사
+COPY web/ /opt/pi-web/
+RUN chown -R pi:pi /opt/pi-web
+
 # 런타임 HOME (pi 사용자) — 빌드 타임 npm 설치와 충돌하지 않도록 useradd 뒤에 설정
 ENV HOME=/home/pi
 

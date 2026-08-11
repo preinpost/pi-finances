@@ -14,8 +14,13 @@ services:
     init: true               # PID 1 = tini — 시그널/좀비 처리
     restart: unless-stopped
     ports:
-      - "7681:7681"          # 웹터미널
+      - "7681:7681"          # 웹터미널 (ttyd)
+      # - "8080:8080"        # 웹챗 (Phase 3 — 아래 PI_WEB=1 주석 해제 시)
     environment:
+      # [웹챗 Phase 3] — ttyd 대신 브라우저 챗 UI를 쓰려면 주석 해제
+      # PI_WEB: "1"
+      # PI_WEB_TOKEN: ""       # (3c 하드닝에서 적용 예정 — 3a에선 인증 없음)
+
       # ── LLM 프로바이더 (원하는 프로바이더 블록을 주석 해제해 한 세트로 사용) ──
       # 모델 ID 확인: 컨테이너 안에서 pi --list-models (또는 TUI /model 로 변경 가능)
       #

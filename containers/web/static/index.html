@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pi 금융분석</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<header>
+  <h1>pi 금융분석 <span class="badge">3a</span></h1>
+  <div id="conn" class="conn offline">연결 대기</div>
+</header>
+<main id="messages" aria-live="polite"></main>
+<footer>
+  <div id="status" class="status"></div>
+  <form id="composer" autocomplete="off">
+    <textarea id="input" rows="1" placeholder="분석 요청을 입력하세요 (예: 삼성전자 기술적 분석 해줘)"></textarea>
+    <button id="send" type="submit">전송</button>
+  </form>
+</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>

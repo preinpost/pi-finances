@@ -1,8 +1,9 @@
 # pi-finance-agent 컨테이너
 
 pi 에이전트 하네스 + pi-finances 금융 패키지를 묶은 **금융분석 전용 컨테이너**.
-브라우저 웹터미널(ttyd)로 pi TUI에 접속해 인터랙티브 금융분석을 수행한다.
-설계 문서: 루트 `CONTAINER-DESIGN.md`.
+브라우저 웹터미널(ttyd) 또는 **웹챗(Phase 3, `PI_WEB=1`)** 으로 pi 에이전트에 접속해
+인터랙티브 금융분석을 수행한다.
+설계 문서: 루트 `CONTAINER-DESIGN.md`, `WEB-APP-DESIGN.md`.
 
 ## 포함 구성
 
@@ -13,6 +14,7 @@ pi 에이전트 하네스 + pi-finances 금융 패키지를 묶은 **금융분�
 | 스킬 | kis-trading, kis-stock-research, kis-sector-research, kis-timing |
 | 설정 | `agent-config/AGENTS.md`(전역 지침), `APPEND_SYSTEM.md`(금융 persona), `prompts/`(템플릿 3종) |
 | 웹터미널 | ttyd (포트 7681, basic-auth 토큰) |
+| 웹챗 (Phase 3) | `web/server.mjs` + 정적 UI (포트 8080, `PI_WEB=1` — WEB-APP-DESIGN.md) |
 
 ## 빌드 & 실행
 
@@ -25,6 +27,28 @@ docker compose up --build
 
 접속: 브라우저에서 `http://localhost:7681` → **user=`pi`**, **token=`$TTYD_TOKEN`**
 (`TTYD_TOKEN` 미설정 시 시작 로그에 자동 생성 토큰이 출력된다).
+
+## 웹챗 (Phase 3 — WEB-APP-DESIGN.md)
+
+ttyd 대신 브라우저 챗 UI를 쓰려면 `compose.yaml`에서 주석 해제:
+
+```yaml
+ports:
+  - "8080:8080"
+environment:
+  PI_WEB: "1"
+```
+
+```bash
+docker compose up --build
+```
+
+접속: 브라우저에서 `http://localhost:8080`
+
+- 백엔드(`server.mjs`)가 `pi --mode rpc` 서브프로세스를 띄우고 SSE로 중계한다 (제로 npm 의존성).
+- `PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING` env는 그대로 rpc spawn 플래그로 사용된다.
+- 3a 상태: 텍스트 스트리밍 챗만 (마크다운/템플릿 버튼/확인 모달은 3b, 인증은 3c).
+- 세션은 `/opt/pi-agent/web-sessions`에 저장 (파드 수명 = 세션 수명, 에페메럴).
 
 ## 환경 변수 (키 주입 계약 — 설계 §5)
 

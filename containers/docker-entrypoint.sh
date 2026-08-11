@@ -4,12 +4,15 @@
 #
 # 동작 모드:
 #   기본         — ttyd 웹터미널로 pi TUI 서빙 (포트 7681, basic-auth 토큰)
+#   PI_WEB=1     — 웹챗 백엔드 (Phase 3 — WEB-APP-DESIGN.md §7, 포트 8080)
 #   PI_HEADLESS=1 — pi -p --mode json 헤드리스 배치 실행 (인자/표준입력으로 프롬프트)
+#   (PI_WEB이 PI_HEADLESS보다 우선)
 #
 # 설계 근거: CONTAINER-DESIGN.md
 #   §5 — 시크릿 스토어 파일을 제거해 env 주입 키가 항상 우선하도록 보장
 #   §6 — ttyd 웹터미널, 헤드리스 겸용
 #   §8 — 키는 에페메럴(컨테이너 수명)로만 유지
+#   WEB-APP-DESIGN.md §7 — 웹챗 배포 (PI_WEB=1 → node /opt/pi-web/server.mjs)
 # ─────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -33,13 +36,19 @@ fi
 #    에페메럴 파드 모델(키 = 컨테이너 수명)이므로 삭제해도 무방하다.
 rm -f "$AGENT_DIR"/*-keys.json
 
-# 2) 헤드리스 배치 모드 (동일 이미지로 cron/CI 리포트 생성)
+# 2) 웹챗 모드 (Phase 3) — PI_HEADLESS보다 우선
+#    server.mjs가 PI_DEFAULT_MODEL/THINKING env를 읽어 rpc spawn 플래그로 재사용한다
+if [ "${PI_WEB:-0}" = "1" ]; then
+  exec node /opt/pi-web/server.mjs
+fi
+
+# 3) 헤드리스 배치 모드 (동일 이미지로 cron/CI 리포트 생성)
 #    토큰 생성 이전에 분기 — 배치 로그에 토큰 노이즈 없음
 if [ "${PI_HEADLESS:-0}" = "1" ]; then
   exec pi -p --mode json "${MODEL_ARGS[@]}" "$@"
 fi
 
-# 3) 웹터미널 토큰 — 미설정 시 자동 생성해 로그에 출력 (로컬/개발용)
+# 4) 웹터미널 토큰 — 미설정 시 자동 생성해 로그에 출력 (로컬/개발용)
 #    운영 환경에서는 백엔드가 TTYD_TOKEN을 주입한다 (설계 §8.3).
 if [ -z "${TTYD_TOKEN:-}" ]; then
   TTYD_TOKEN="$(openssl rand -hex 16)"
@@ -47,6 +56,6 @@ if [ -z "${TTYD_TOKEN:-}" ]; then
   echo "[pi-finance] 웹터미널: http://localhost:7681  user=pi  token=${TTYD_TOKEN}" >&2
 fi
 
-# 4) 기본 모드: 웹터미널(ttyd) → pi TUI
+# 5) 기본 모드: 웹터미널(ttyd) → pi TUI
 #    -W: 쓰기 가능한 터미널 / -c: basic-auth(user:token)
 exec ttyd -W -p 7681 -c "pi:${TTYD_TOKEN}" -- pi "${MODEL_ARGS[@]}"
