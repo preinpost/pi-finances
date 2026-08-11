@@ -136,9 +136,8 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 | 단계 | 내용 | 검증 |
 |---|---|---|
 | 3a ✅ | `server.mjs` 골격: rpc spawn + SSE + POST 화이트리스트 + 최소 챗 UI | 호스트/컨테이너 검증 완료 (실제 LLM 왕복 확인) |
-| 3b | React + Vite + TS + TanStack Query/Router 전면 개편 + API 보강(/api/templates, /api/files, /files/*) + 멀티스테이지 Dockerfile | tsc --noEmit + vite build + 호스트 왕복 + 컨테이너 스모크 |
-| 3b | 금융분석 UX: 템플릿 버튼, 마크다운, 상태 인디케이터, confirm 모달, 모델 드롭다운 | 브라우저 수동 테스트 (사용자) |
-| 3c | 하드닝: 토큰 인증, /files 경로 제한, 레드랙트, 재스폰/재접속 복원 | 토큰 401 검증, 경로 탈출 시도, 프로세스 kill 테스트 |
+| 3b ✅ | React + Vite + TS + TanStack Query/Router 전면 개편(챗/설정/리포트 뷰, 템플릿 버튼, 마크다운, confirm 모달, 모델 드롭다운) + API 보강(/api/templates, /api/files, /files/*) + 멀티스테이지 Dockerfile | tsc + vite build + 호스트 왕복 + 컨테이너 스모크 완료 |
+| 3c | 하드닝: 토큰 인증, 재접속 복원 | 토큰 401 검증, 프로세스 kill 테스트 |
 
 ## 9. 오픈 이슈
 
