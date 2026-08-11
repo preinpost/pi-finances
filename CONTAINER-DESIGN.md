@@ -115,6 +115,7 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 | AGENTS.md | 전역 금융분석 컨벤션 (리포트 형식, 키 미등록 시 안내 멘트, 주의문구) | pi 컨텍스트 파일 메커니즘 |
 | APPEND_SYSTEM.md | "금융분석 전문 에이전트" persona 강화 | 시스템 프롬프트 append |
 | 프롬프트 템플릿 | "일일 리포트", "종목 딥다이브", "섹터 스크리닝" 등 `/template` | pi prompt-templates |
+| 모델 기본값 | `PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING` env → 엔트리포인트가 `--model`/`--thinking` 플래그로 전달 (TUI `/model`로 변경 가능, pi에 env 기반 기본모델 설정은 없음 — usage.md 옵션 표) | pi CLI 플래그 |
 
 ## 5. 키 주입 계약 (코드 검증 테이블)
 

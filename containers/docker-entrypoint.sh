@@ -15,6 +15,18 @@ set -euo pipefail
 
 AGENT_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 
+# 0) 기본 모델/thinking — compose.yaml에서 키와 한 세트로 주입 가능
+#    PI_DEFAULT_MODEL="deepseek/deepseek-v4-pro" (provider/id, pi --list-models로 확인)
+#    PI_DEFAULT_THINKING="high" (off|minimal|low|medium|high|xhigh|max)
+#    → pi CLI의 --model / --thinking 플래그로 전달 (TUI 안에서 /model 로 변경 가능)
+MODEL_ARGS=()
+if [ -n "${PI_DEFAULT_MODEL:-}" ]; then
+  MODEL_ARGS+=(--model "$PI_DEFAULT_MODEL")
+fi
+if [ -n "${PI_DEFAULT_THINKING:-}" ]; then
+  MODEL_ARGS+=(--thinking "$PI_DEFAULT_THINKING")
+fi
+
 # 1) 시크릿 스토어 파일 제거
 #    env로 주입한 키가 항상 우선하도록 한다. 스토어 파일 값이 env보다 우선하는
 #    (file ?? env) 구조이므로, 볼륨 등에 남은 과거 키가 새 env를 가리는 사고를 방지.
@@ -24,7 +36,7 @@ rm -f "$AGENT_DIR"/*-keys.json
 # 2) 헤드리스 배치 모드 (동일 이미지로 cron/CI 리포트 생성)
 #    토큰 생성 이전에 분기 — 배치 로그에 토큰 노이즈 없음
 if [ "${PI_HEADLESS:-0}" = "1" ]; then
-  exec pi -p --mode json "$@"
+  exec pi -p --mode json "${MODEL_ARGS[@]}" "$@"
 fi
 
 # 3) 웹터미널 토큰 — 미설정 시 자동 생성해 로그에 출력 (로컬/개발용)
@@ -37,4 +49,4 @@ fi
 
 # 4) 기본 모드: 웹터미널(ttyd) → pi TUI
 #    -W: 쓰기 가능한 터미널 / -c: basic-auth(user:token)
-exec ttyd -W -p 7681 -c "pi:${TTYD_TOKEN}" -- pi
+exec ttyd -W -p 7681 -c "pi:${TTYD_TOKEN}" -- pi "${MODEL_ARGS[@]}"

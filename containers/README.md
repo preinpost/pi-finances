@@ -38,11 +38,16 @@ docker compose up --build
 | `FINNHUB_API_KEY` | Finnhub | 선택 |
 | `COINGECKO_API_KEY` | CoinGecko | 선택 |
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 네이버 뉴스 검색 | 선택 |
+| `PI_DEFAULT_MODEL` | 기본 모델 (`provider/id`, `pi --list-models`로 확인) | 선택 |
+| `PI_DEFAULT_THINKING` | 기본 thinking (`off/minimal/low/medium/high/xhigh/max`) | 선택 |
 | `TTYD_TOKEN` | 웹터미널 basic-auth | 권장 (미설정 시 자동 생성) |
 
 키는 compose.yaml의 `environment:` 또는 `docker run -e`로 주입되며 **이미지에 bake되지 않고
 컨테이너 종료 시 소멸**한다. 참고: `compose.example.yaml`이 템플릿 (키 없음, 커밋 유지),
 `compose.yaml`이 실키 파일 (gitignore 대상).
+
+모델/thinking도 키와 한 세트로 지정한다 — `PI_DEFAULT_MODEL`은 `--model` 플래그로,
+`PI_DEFAULT_THINKING`은 `--thinking` 플래그로 전달되며, TUI 안에서 `/model`로 언제든 변경 가능:
 
 ## 헤드리스 (배치 리포트)
 

@@ -16,23 +16,44 @@ services:
     ports:
       - "7681:7681"          # 웹터미널
     environment:
-      # ── LLM 프로바이더 (하나 이상 주입 — 컨테이너 TUI에서 /model 로 선택) ────
-      # 기본값: Anthropic (가장 많이 쓰는 프로바이더)
+      # ── LLM 프로바이더 (원하는 프로바이더 블록을 주석 해제해 한 세트로 사용) ──
+      # 모델 ID 확인: 컨테이너 안에서 pi --list-models (또는 TUI /model 로 변경 가능)
+      #
+      # [Anthropic — 기본값]
       ANTHROPIC_API_KEY: ""
-      # OpenRouter — 여러 모델(Claude/GPT/DeepSeek 등)을 하나의 키로 라우팅
+      # PI_DEFAULT_MODEL: "anthropic/claude-sonnet-4"
+      # PI_DEFAULT_THINKING: "medium"
+      #
+      # [OpenRouter — 여러 모델을 하나의 키로 라우팅]
       # OPENROUTER_API_KEY: ""
-      # DeepSeek — deepseek-chat / deepseek-reasoner (저렴한 코딩·분석용)
+      # PI_DEFAULT_MODEL: "openrouter/deepseek/deepseek-chat"
+      # PI_DEFAULT_THINKING: "low"
+      #
+      # [DeepSeek — 저렴한 분석용]
       # DEEPSEEK_API_KEY: ""
-      # OpenAI — GPT 시리즈
+      # PI_DEFAULT_MODEL: "deepseek/deepseek-v4-pro"
+      # PI_DEFAULT_THINKING: "high"
+      #
+      # [OpenAI — GPT 시리즈]
       # OPENAI_API_KEY: ""
-      # Google Gemini — GEMINI_API_KEY
+      # PI_DEFAULT_MODEL: "openai/gpt-5.6"
+      # PI_DEFAULT_THINKING: "medium"
+      #
+      # [Google Gemini]
       # GEMINI_API_KEY: ""
-      # xAI (Grok)
+      # PI_DEFAULT_MODEL: "google/gemini-3.6-flash"
+      #
+      # [xAI (Grok)]
       # XAI_API_KEY: ""
-      # Groq — 빠른 추론 (Llama 등 오픈모델)
+      # PI_DEFAULT_MODEL: "xai/grok-4.3"
+      #
+      # [Groq — 빠른 추론 (Llama 등 오픈모델)]
       # GROQ_API_KEY: ""
-      # Mistral
+      # PI_DEFAULT_MODEL: "groq/llama-3.3-70b"
+      #
+      # [Mistral]
       # MISTRAL_API_KEY: ""
+      # PI_DEFAULT_MODEL: "mistral/mistral-large-latest"
       # ── 한국투자증권 OPEN API (선택 — https://apiportal.koreainvestment.com) ──
       KIS_APP_KEY: ""          # 실전투자 App Key
       KIS_APP_SECRET: ""       # 실전투자 App Secret
