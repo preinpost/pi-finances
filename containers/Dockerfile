@@ -5,6 +5,18 @@
 # 설계 근거: 루트 CONTAINER-DESIGN.md (§4 이미지 설계)
 # pi 공식 컨테이너화 패턴: pi docs/containerization.md (node:24-bookworm-slim 기준)
 
+# ── 웹 프론트 빌드 (Phase 3b — React/Vite/TanStack) ───────────────
+# dist만 산출 — 런타임 이미지에는 node_modules가 들어가지 않는다
+FROM node:24-bookworm-slim AS web-build
+WORKDIR /build/web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
+
+# ════════════════════════════════════════════════════════════════════
+# 런타임 이미지
+# ════════════════════════════════════════════════════════════════════
 FROM node:24-bookworm-slim
 
 # ── 베이스 ───────────────────────────────────────────────────────────
@@ -59,9 +71,11 @@ RUN useradd -m -u 1001 pi \
   && mkdir -p /workspace \
   && chown -R pi:pi /opt/pi-agent /workspace
 
-# ── 웹챗 백엔드 (Phase 3 — WEB-APP-DESIGN.md §7) ────────────────────
-# 제로 의존성(node:http)이므로 node_modules 불필요 — server.mjs + static만 복사
-COPY web/ /opt/pi-web/
+# ── 웹챗 (Phase 3b — WEB-APP-DESIGN.md §7) ─────────────────────────
+# server.mjs(제로 의존성) + React 빌드 산출물(dist) + 프롬프트 템플릿
+COPY --from=web-build /build/web/dist /opt/pi-web/dist
+COPY web/server.mjs /opt/pi-web/
+COPY agent-config/prompts/ /opt/pi-web/templates/
 RUN chown -R pi:pi /opt/pi-web
 
 # 런타임 HOME (pi 사용자) — 빌드 타임 npm 설치와 충돌하지 않도록 useradd 뒤에 설정

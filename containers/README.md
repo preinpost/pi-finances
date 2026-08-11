@@ -73,6 +73,33 @@ docker compose up --build
 모델/thinking도 키와 한 세트로 지정한다 — `PI_DEFAULT_MODEL`은 `--model` 플래그로,
 `PI_DEFAULT_THINKING`은 `--thinking` 플래그로 전달되며, TUI 안에서 `/model`로 언제든 변경 가능:
 
+## 웹챗 (Phase 3 — React/TanStack 프론트)
+
+`PI_WEB=1`이면 ttyd 대신 브라우저 챗 UI(`http://localhost:8080`)가 뜬다:
+
+```bash
+# compose.yaml에서 아래 주석 해제 후
+#   - "8080:8080"   PI_WEB: "1"
+cd containers && docker compose up -d --build
+# → http://localhost:8080 (챗/설정/리포트 뷰)
+```
+
+**개발 워크플로 (HMR)**: 백엔드와 프론트를 분리 실행한다.
+
+```bash
+# 터미널 1 — 백엔드 (RPC + SSE + API)
+cd containers/web && npm install
+PI_WEB_SESSION_DIR=/tmp/web-sess PI_WEB_TEMPLATES_DIR=../agent-config/prompts \
+  PI_WEB_STATIC_DIR=dist PI_WEB_WORKSPACE=/tmp/ws PORT=8080 node server.mjs
+
+# 터미널 2 — Vite dev server (포트 5173, /api·/files 프록시 → :8080)
+cd containers/web && npm run dev
+# → http://localhost:5173
+```
+
+프론트 스택: React 19 + Vite + TypeScript + TanStack Query/Router. 빌드 산출물은
+Dockerfile의 `web-build` 스테이지에서 생성되어 런타임 이미지에는 node_modules가 없다.
+
 ## 헤드리스 (배치 리포트)
 
 동일 이미지를 cron/CI에서 배치 분석에 사용할 수 있다:

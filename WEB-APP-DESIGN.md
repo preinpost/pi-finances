@@ -12,12 +12,14 @@
   WebSocket/SSE로 대화하는 웹앱. 파드 1개 = 백엔드 1 + pi rpc 1 + 사용자 1.
 - 금융분석 특화 UX: 템플릿 버튼(일일 리포트/딥다이브/스크리닝), 마크다운 렌더링,
   HTML 리포트 링크, 모델/thinking 선택, 확인 모달(주문 등).
-- **제로 런타임 의존성**: Node 24 내장(`node:http`)만 사용 — 이미지에 node_modules 불필요.
+- **백엔드 제로 런타임 의존성**: Node 24 내장(`node:http`)만 사용 — 서버 런타임에 node_modules 불필요.
+- **프론트는 React + Vite + TS + TanStack** (Query: 데이터/스트리밍 상태, Router: 챗/설정/리포트 뷰):
+  Vite 빌드 산출물(dist)만 이미지에 복사 — **빌드 타임 의존성, 런타임 이미지는 여전히 제로**.
 
 **비목표 (MVP)**
 - 멀티테넌트/멀티세션 동시성 (파드당 1 세션, 브라우저는 브로드캐스트).
 - RPC `bash` 명령 노출 (보안 — 토큰 보유자만 셸 접근, ttyd와 동일 수준).
-- SSE 재연결 이벤트 리플레이 (재접속 시 `get_state` 스냅샷으로 복원).
+- SSE 재연결 이벤트 리플레이 (재접속 시 `get_messages` 스냅샷으로 복원).
 
 ## 2. 검증된 사실 (설계 근거)
 
@@ -46,10 +48,12 @@
 
 ```
 Browser (SPA)
-  ├─ GET  /            → static: index.html + app.js + vendor/marked.min.js
+  ├─ GET  /            → Vite 빌드 산출물 (dist/index.html + /assets/*)
   ├─ GET  /api/stream  → SSE (text/event-stream) — RPC 이벤트/UI 요청 중계
   ├─ POST /api/cmd     → {cmd, payload} — prompt/steer/abort/set_model/... 화이트리스트 중계
-  ├─ GET  /files/*     → /workspace 읽기 전용 서빙 (HTML 리포트 링크용)
+  ├─ GET  /api/templates → agent-config/prompts/*.md 목록 (템플릿 버튼용)
+  ├─ GET  /api/files     → /workspace 파일 목록 (리포트 뷰용)
+  ├─ GET  /files/*       → /workspace 읽기 전용 서빙 (HTML 리포트 링크용)
   └─ 인증: Bearer 토큰 (PI_WEB_TOKEN, 미설정 시 자동 생성 → 시작 로그)
 
 Node 백엔드 (containers/web/server.mjs, ~400줄)
@@ -74,9 +78,18 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 | `new_session` | new_session | "/ 새 대화" 버튼 (세션 초기화) |
 | `set_model` / `set_thinking` | set_model / set_thinking_level | 헤더 드롭다운 |
 | `list_models` / `list_thinking` | get_available_models / get_available_thinking_levels | 최초 1회 캐시 |
-| `get_state` | get_state | 재접속 시 복원 |
+| `get_state` / `get_messages` | get_state / get_messages | 재접속 시 하이드레이션 (`data.messages`) |
 | `export_html` | export_html | 리포트 내보내기 (옵션) |
 | `ui_response` | extension_ui_response | confirm/input/editor 모달 응답 |
+
+**HTTP 보조 API** (프론트 전용, RPC 미경유):
+
+| 엔드포인트 | 역할 |
+|---|---|
+| `GET /api/templates` | 프롬프트 템플릿 목록 `{name, title, body}` (frontmatter title/description 우선, body는 frontmatter 제거) |
+| `GET /api/files?dir=reports` | workspace 파일 목록 (2단계 재귀, .html/.md) `{name, size, mtime}` |
+| `GET /files/*` | workspace 읽기 전용 서빙 (.html/.md/.txt/.json, symlink 차단, 경로 탈출 403) |
+| `GET /` (SPA 폴백) | /api·/files 외 GET 경로 → index.html (클라이언트 라우팅) |
 
 **미노출**: `bash`, `fork`, `clone`, `get_entries`(대용량), `compact`(자동 설정 유지).
 
@@ -107,7 +120,11 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 
 ## 7. 배포 (기존 이미지 확장)
 
-- `containers/web/` 신설: `server.mjs`, `static/`(index.html, app.js, style.css, vendor/marked.min.js).
+- `containers/web/` (npm 프로젝트 — 루트 pnpm 워크스페이스와 무관): `server.mjs`,
+  `src/`(React 앱: routes/__root·index·settings·reports, hooks/useSseStream·useRpc,
+  components/ConfirmModal·TemplateButtons·ModelPicker), `package.json`(lock 커밋), `dist/`(빌드 산출물, gitignore).
+- Dockerfile 멀티스테이지: Stage 1 `npm ci && npm run build` → Stage 2 `COPY --from=web-build` (dist + server.mjs),
+  `agent-config/prompts/` → `/opt/pi-web/templates/` 복사.
 - Dockerfile: `COPY web/ /opt/pi-web/` + `chown` — pi 설치 레이어와 분리.
 - 엔트리포인트 분기 추가: `PI_WEB=1` → `exec node /opt/pi-web/server.mjs` (기본값은 ttyd 유지).
 - compose: `PI_WEB=1`, 포트 `8080:8080` 추가 (ttyd 7681과 공존), `PI_WEB_TOKEN` 추가.
@@ -118,7 +135,8 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 
 | 단계 | 내용 | 검증 |
 |---|---|---|
-| 3a | `server.mjs` 골격: rpc spawn + SSE + POST 화이트리스트 + 최소 챗 UI (텍스트 전용) | 호스트 `node server.mjs` → curl로 SSE 수신 + prompt 왕복 (키 env 주입) |
+| 3a ✅ | `server.mjs` 골격: rpc spawn + SSE + POST 화이트리스트 + 최소 챗 UI | 호스트/컨테이너 검증 완료 (실제 LLM 왕복 확인) |
+| 3b | React + Vite + TS + TanStack Query/Router 전면 개편 + API 보강(/api/templates, /api/files, /files/*) + 멀티스테이지 Dockerfile | tsc --noEmit + vite build + 호스트 왕복 + 컨테이너 스모크 |
 | 3b | 금융분석 UX: 템플릿 버튼, 마크다운, 상태 인디케이터, confirm 모달, 모델 드롭다운 | 브라우저 수동 테스트 (사용자) |
 | 3c | 하드닝: 토큰 인증, /files 경로 제한, 레드랙트, 재스폰/재접속 복원 | 토큰 401 검증, 경로 탈출 시도, 프로세스 kill 테스트 |
 

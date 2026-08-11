@@ -5,3 +5,5 @@
 .DS_Store
 compose.yaml
 compose.example.yaml
+web/node_modules
+web/dist
