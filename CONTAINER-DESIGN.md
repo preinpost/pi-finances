@@ -161,7 +161,7 @@ env가 무시될 수 있음** → 엔트리포인트에서 스토어 파일을 �
   k8s `NetworkPolicy`로 egress-only 권장. KIS/Toss API는 IP 화이트리스트 불필요
   (appkey/secret 인증 — 키움 eBest와 달리 컨테이너 NAT에서 동작).
 - **실시간(WS)**: KIS 실시간체결(H0STCNT0) 등은 파드에서 정상 동작. `/kis-watch` 사용 가능.
-- **로컬 MVP**: `docker-compose.yml` 1서비스 + `-p 7681:7681`. 키는 compose의 env 파일로.
+- **로컬 MVP**: `containers/compose.yaml` 1서비스 + `-p 7681:7681`. 키는 compose의 env 파일로.
 
 ## 8. 보안 설계
 

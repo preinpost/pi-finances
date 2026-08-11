@@ -3,3 +3,5 @@
 *.log
 .git
 .DS_Store
+compose.yaml
+compose.example.yaml

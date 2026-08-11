@@ -18,7 +18,8 @@ pi 에이전트 하네스 + pi-finances 금융 패키지를 묶은 **금융분�
 
 ```bash
 cd containers
-cp .env.example .env     # API 키 입력 (.env는 gitignore 대상)
+cp compose.example.yaml compose.yaml   # 템플릿 복사
+# compose.yaml의 environment에 실제 API 키 입력 (compose.yaml은 gitignore 대상)
 docker compose up --build
 ```
 
@@ -39,7 +40,9 @@ docker compose up --build
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 네이버 뉴스 검색 | 선택 |
 | `TTYD_TOKEN` | 웹터미널 basic-auth | 권장 (미설정 시 자동 생성) |
 
-키는 런타임 env로만 주입되며 **이미지에 bake되지 않고 컨테이너 종료 시 소멸**한다.
+키는 compose.yaml의 `environment:` 또는 `docker run -e`로 주입되며 **이미지에 bake되지 않고
+컨테이너 종료 시 소멸**한다. 참고: `compose.example.yaml`이 템플릿 (키 없음, 커밋 유지),
+`compose.yaml`이 실키 파일 (gitignore 대상).
 
 ## 헤드리스 (배치 리포트)
 
