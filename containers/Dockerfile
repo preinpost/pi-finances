@@ -5,14 +5,14 @@
 # 설계 근거: 루트 CONTAINER-DESIGN.md (§4 이미지 설계)
 # pi 공식 컨테이너화 패턴: pi docs/containerization.md (node:24-bookworm-slim 기준)
 
-# ── 웹 프론트 빌드 (Phase 3b — React/Vite/TanStack) ───────────────
-# dist만 산출 — 런타임 이미지에는 node_modules가 들어가지 않는다
+# ── 웹 프론트/서버 빌드 (pi-web-chat 소스 벤더링 — WEB-APP-DESIGN.md §7) ──
+# dist만 산출 — 런타임 이미지에는 devDependencies가 들어가지 않는다
 FROM node:24-bookworm-slim AS web-build
 WORKDIR /build/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
-RUN npm run build
+RUN npm run build   # vite(프론트 dist/public) + esbuild(서버 dist/index.js)
 
 # ════════════════════════════════════════════════════════════════════
 # 런타임 이미지
@@ -71,15 +71,21 @@ RUN useradd -m -u 1001 pi \
   && mkdir -p /workspace \
   && chown -R pi:pi /opt/pi-agent /workspace
 
-# ── 웹챗 (Phase 3b — WEB-APP-DESIGN.md §7) ─────────────────────────
-# server.mjs(제로 의존성) + React 빌드 산출물(dist) + 프롬프트 템플릿
+# ── 웹챗 (pi-web-chat — WEB-APP-DESIGN.md §7) ─────────────────────
+# dist(프론트+서버 번들) + 런타임 의존성 2종(@earendil-works/pi-coding-agent, ws —
+# esbuild가 external로 남김) + 금융 프롬프트 템플릿(agent-config/prompts)
 COPY --from=web-build /build/web/dist /opt/pi-web/dist
-COPY web/server.mjs /opt/pi-web/
+COPY --from=web-build /build/web/package.json /build/web/package-lock.json /opt/pi-web/
+RUN npm ci --omit=dev --prefix /opt/pi-web
 COPY agent-config/prompts/ /opt/pi-web/templates/
 RUN chown -R pi:pi /opt/pi-web
 
 # 런타임 HOME (pi 사용자) — 빌드 타임 npm 설치와 충돌하지 않도록 useradd 뒤에 설정
-ENV HOME=/home/pi
+ENV HOME=/home/pi \
+    PORT=8080 \
+    HOST=0.0.0.0 \
+    PI_WEB_CWD=/workspace \
+    PI_WEB_TEMPLATES_DIR=/opt/pi-web/templates
 
 # ── 엔트리포인트 (웹터미널/헤드리스 분기) ───────────────────────────
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

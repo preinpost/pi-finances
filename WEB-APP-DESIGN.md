@@ -1,4 +1,10 @@
-# Phase 3 설계 — 금융분석 웹챗 (RPC 웹앱) (review 대상)
+# Phase 3 설계 — 금융분석 웹챗 (review 대상)
+
+> **2026-08-11 결정**: 프론트/백엔드를 **pi-web-chat 소스 벤더링**(github.com/preinpost/pi-web-chat,
+> v0.1.19)으로 교체. 자체 구현(server.mjs + React SSE 앱)은 폐기 — pi-web-chat이 SDK 기반
+> (AgentSessionRuntime) 세션 허브·모델/확장 관리·포크 등 성숙 기능을 이미 갖추고 있어 재구현 대신
+> 벤더링+적응을 택함. 벤더링 내역·동기화: `containers/web/UPSTREAM.md`. 아래 문서는 교체 전
+> 설계 과정 기록으로 남겨둔다.
 
 > CONTAINER-DESIGN.md §9(진화 로드맵)의 Phase 3 상세 설계.
 > ttyd 웹터미널(Phase 1)을 대체하는 **커스텀 웹챗 UI** — 브라우저에서 pi 에이전트와
@@ -118,25 +124,30 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 - SSE 응답에 `X-Accel-Buffering: no`, CSP 헤더(`default-src 'self'`), `X-Content-Type-Options`.
 - 키·토큰은 백엔드 로그에서 레드랙트 (정규식 `sk-...`/`token=` 마스킹).
 
-## 7. 배포 (기존 이미지 확장)
+## 7. 배포 (기존 이미지 확장) — 벤더링 후 실제 구성
 
-- `containers/web/` (npm 프로젝트 — 루트 pnpm 워크스페이스와 무관): `server.mjs`,
-  `src/`(React 앱: routes/__root·index·settings·reports, hooks/useSseStream·useRpc,
-  components/ConfirmModal·TemplateButtons·ModelPicker), `package.json`(lock 커밋), `dist/`(빌드 산출물, gitignore).
-- Dockerfile 멀티스테이지: Stage 1 `npm ci && npm run build` → Stage 2 `COPY --from=web-build` (dist + server.mjs),
-  `agent-config/prompts/` → `/opt/pi-web/templates/` 복사.
-- Dockerfile: `COPY web/ /opt/pi-web/` + `chown` — pi 설치 레이어와 분리.
-- 엔트리포인트 분기 추가: `PI_WEB=1` → `exec node /opt/pi-web/server.mjs` (기본값은 ttyd 유지).
-- compose: `PI_WEB=1`, 포트 `8080:8080` 추가 (ttyd 7681과 공존), `PI_WEB_TOKEN` 추가.
-- 모델 env(`PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING`)는 백엔드가 rpc spawn 플래그로 재사용 —
-  compose 키/모델 한 세트 구조 그대로 유효.
+> 2026-08-11 벤더링으로 교체됨 — 아래는 현재 실제 구성 (상세: `containers/web/UPSTREAM.md`).
+
+- `containers/web/` = pi-web-chat 소스 벤더링 (npm 프로젝트 — 루트 pnpm 워크스페이스와 무관):
+  `server/`(SDK 기반 AgentSessionRuntime + WS), `shared/protocol.ts`, `src/`(React 19 +
+  TanStack Router/Query + Base UI + Tailwind v4), `bin/ scripts/ public/`(PWA), `package.json`+lock.
+- Dockerfile 멀티스테이지: Stage 1(web-build) `npm ci && npm run build`(vite+esbuild) →
+  Stage 2 `COPY --from=web-build /build/web/dist /opt/pi-web/dist` + `npm ci --omit=dev`
+  (런타임 의존성 `@earendil-works/pi-coding-agent`, `ws`만) + `agent-config/prompts/` →
+  `/opt/pi-web/templates/` 복사.
+- 엔트리포인트: `PI_WEB=1` → `exec node /opt/pi-web/dist/index.js` (기본값은 ttyd 유지).
+- 컨테이너 env: `PORT=8080 HOST=0.0.0.0 PI_WEB_CWD=/workspace PI_WEB_TEMPLATES_DIR=/opt/pi-web/templates`.
+  모델 기본값(`PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING`)은 SDK가 설정으로 사용.
+- 로컬 적응(upstream 미포함): `server/index.ts`의 `GET /api/templates`, `src/components/FinanceTemplates.tsx`
+  (금융 템플릿 버튼) — 채팅 입력창 위에 표시.
+- ⚠️ 인증 없음 — 외부 노출 시 토큰 인증 프록시(3c) 필요.
 
 ## 8. 구현 순서 (워커 할당 단위)
 
 | 단계 | 내용 | 검증 |
 |---|---|---|
 | 3a ✅ | `server.mjs` 골격: rpc spawn + SSE + POST 화이트리스트 + 최소 챗 UI | 호스트/컨테이너 검증 완료 (실제 LLM 왕복 확인) |
-| 3b ✅ | React + Vite + TS + TanStack Query/Router 전면 개편(챗/설정/리포트 뷰, 템플릿 버튼, 마크다운, confirm 모달, 모델 드롭다운) + API 보강(/api/templates, /api/files, /files/*) + 멀티스테이지 Dockerfile | tsc + vite build + 호스트 왕복 + 컨테이너 스모크 완료 |
+| 3b ✅ | ~~React + Vite + TS + TanStack 전면 개편~~ → **pi-web-chat 소스 벤더링 + 적응**(/api/templates, 금융 템플릿 버튼) + 멀티스테이지 Dockerfile | tsc + vite build + 호스트 왕복(WS) + 컨테이너 스모크 완료 |
 | 3c | 하드닝: 토큰 인증, 재접속 복원 | 토큰 401 검증, 프로세스 kill 테스트 |
 
 ## 9. 오픈 이슈

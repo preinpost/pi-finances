@@ -12,7 +12,7 @@
 #   §5 — 시크릿 스토어 파일을 제거해 env 주입 키가 항상 우선하도록 보장
 #   §6 — ttyd 웹터미널, 헤드리스 겸용
 #   §8 — 키는 에페메럴(컨테이너 수명)로만 유지
-#   WEB-APP-DESIGN.md §7 — 웹챗 배포 (PI_WEB=1 → node /opt/pi-web/server.mjs)
+#   WEB-APP-DESIGN.md §7 — 웹챗 배포 (PI_WEB=1 → node /opt/pi-web/dist/index.js)
 # ─────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -36,10 +36,10 @@ fi
 #    에페메럴 파드 모델(키 = 컨테이너 수명)이므로 삭제해도 무방하다.
 rm -f "$AGENT_DIR"/*-keys.json
 
-# 2) 웹챗 모드 (Phase 3) — PI_HEADLESS보다 우선
-#    server.mjs가 PI_DEFAULT_MODEL/THINKING env를 읽어 rpc spawn 플래그로 재사용한다
+# 2) 웹챗 모드 (Phase 3 — pi-web-chat) — PI_HEADLESS보다 우선
+#    pi-web-chat 서버(dist/index.js)가 PI_DEFAULT_MODEL/THINKING·PORT·HOST·PI_WEB_CWD를 env로 읽는다
 if [ "${PI_WEB:-0}" = "1" ]; then
-  exec node /opt/pi-web/server.mjs
+  exec node /opt/pi-web/dist/index.js
 fi
 
 # 3) 헤드리스 배치 모드 (동일 이미지로 cron/CI 리포트 생성)

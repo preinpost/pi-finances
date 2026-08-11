@@ -14,7 +14,7 @@ pi 에이전트 하네스 + pi-finances 금융 패키지를 묶은 **금융분�
 | 스킬 | kis-trading, kis-stock-research, kis-sector-research, kis-timing |
 | 설정 | `agent-config/AGENTS.md`(전역 지침), `APPEND_SYSTEM.md`(금융 persona), `prompts/`(템플릿 3종) |
 | 웹터미널 | ttyd (포트 7681, basic-auth 토큰) |
-| 웹챗 (Phase 3) | `web/server.mjs` + 정적 UI (포트 8080, `PI_WEB=1` — WEB-APP-DESIGN.md) |
+| 웹챗 (Phase 3) | pi-web-chat 소스 벤더링 (포트 8080, `PI_WEB=1` — WEB-APP-DESIGN.md, UPSTREAM.md) |
 
 ## 빌드 & 실행
 
@@ -45,10 +45,11 @@ docker compose up --build
 
 접속: 브라우저에서 `http://localhost:8080`
 
-- 백엔드(`server.mjs`)가 `pi --mode rpc` 서브프로세스를 띄우고 SSE로 중계한다 (제로 npm 의존성).
-- `PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING` env는 그대로 rpc spawn 플래그로 사용된다.
-- 3a 상태: 텍스트 스트리밍 챗만 (마크다운/템플릿 버튼/확인 모달은 3b, 인증은 3c).
-- 세션은 `/opt/pi-agent/web-sessions`에 저장 (파드 수명 = 세션 수명, 에페메럴).
+- 웹앱은 pi-web-chat(SDK 기반 AgentSessionRuntime, WebSocket) 소스 벤더링 — 자세한 내용은 아래
+  "웹챗 (Phase 3 — pi-web-chat 소스 벤더링)" 섹션과 [`web/UPSTREAM.md`](web/UPSTREAM.md).
+- `PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING` env는 SDK가 모델 기본값으로 사용한다.
+- 세션은 pi CLI와 공유 (`PI_CODING_AGENT_DIR` 기반, 채팅 cwd=`/workspace` — 에페메럴).
+- ⚠️ **웹챗에는 인증이 없다** (HOST=0.0.0.0 바인딩) — 외부 노출 시 토큰 인증 프록시(3c) 필요.
 
 ## 환경 변수 (키 주입 계약 — 설계 §5)
 
@@ -73,32 +74,43 @@ docker compose up --build
 모델/thinking도 키와 한 세트로 지정한다 — `PI_DEFAULT_MODEL`은 `--model` 플래그로,
 `PI_DEFAULT_THINKING`은 `--thinking` 플래그로 전달되며, TUI 안에서 `/model`로 언제든 변경 가능:
 
-## 웹챗 (Phase 3 — React/TanStack 프론트)
+## 웹챗 (Phase 3 — pi-web-chat 소스 벤더링)
 
-`PI_WEB=1`이면 ttyd 대신 브라우저 챗 UI(`http://localhost:8080`)가 뜬다:
+`PI_WEB=1`이면 ttyd 대신 브라우저 챗 UI(`http://localhost:8080`)가 뜬다.
+웹앱은 [pi-web-chat](https://github.com/preinpost/pi-web-chat) (MIT, v0.1.19) 소스를
+`containers/web/`에 벤더링해 사용한다 — 자체 server.mjs/React 구현은 폐기. 동기화·로컬 적응 내역은
+[`containers/web/UPSTREAM.md`](web/UPSTREAM.md) 참고.
 
 ```bash
 # compose.yaml에서 아래 주석 해제 후
 #   - "8080:8080"   PI_WEB: "1"
 cd containers && docker compose up -d --build
-# → http://localhost:8080 (챗/설정/리포트 뷰)
+# → http://localhost:8080 (챗/세션 드로어/모델·확장 설정/리포트)
 ```
 
-**개발 워크플로 (HMR)**: 백엔드와 프론트를 분리 실행한다.
+**주요 기능** (pi-web-chat): 세션 드로어·`/s/:id` URL 공유 (pi CLI와 세션 공유 —
+`PI_CODING_AGENT_DIR` 기반, 같은 cwd의 pi CLI 세션이 목록에 표시됨), 모델/커스텀 프로바이더
+관리, thinking 레벨, 확장(extension) 정보, 포크, 마크다운 렌더링, i18n·테마·PWA·모바일 지원.
+컨테이너 로컬 적응으로 금융 템플릿 버튼(일일 리포트/딥다이브/섹터 스크리닝)이 입력창 위에 표시된다.
+
+**개발 워크플로 (HMR)**: `containers/web`은 독립 npm 프로젝트 (pnpm 워크스페이스와 무관).
 
 ```bash
-# 터미널 1 — 백엔드 (RPC + SSE + API)
 cd containers/web && npm install
-PI_WEB_SESSION_DIR=/tmp/web-sess PI_WEB_TEMPLATES_DIR=../agent-config/prompts \
-  PI_WEB_STATIC_DIR=dist PI_WEB_WORKSPACE=/tmp/ws PORT=8080 node server.mjs
-
-# 터미널 2 — Vite dev server (포트 5173, /api·/files 프록시 → :8080)
-cd containers/web && npm run dev
+npm run dev        # 서버(:3141) + Vite(:5173, /api·/ws 프록시) 동시 실행
 # → http://localhost:5173
 ```
 
-프론트 스택: React 19 + Vite + TypeScript + TanStack Query/Router. 빌드 산출물은
-Dockerfile의 `web-build` 스테이지에서 생성되어 런타임 이미지에는 node_modules가 없다.
+```bash
+npm run typecheck  # tsc --noEmit
+npm run build      # vite(프론트) + esbuild(서버) → dist/
+```
+
+**환경변수**: `PORT`(기본 3141), `HOST`(기본 127.0.0.1 — 컨테이너는 0.0.0.0),
+`PI_WEB_CWD`(채팅 작업 디렉터리 — 컨테이너는 `/workspace`), `PI_WEB_TEMPLATES_DIR`(금융 템플릿
+경로 — 컨테이너는 `/opt/pi-web/templates`). 빌드 산출물(dist)은 Dockerfile의 `web-build`
+스테이지에서 생성되고, 런타임 의존성(`@earendil-works/pi-coding-agent`, `ws`)만
+`npm ci --omit=dev`로 설치된다.
 
 ## 헤드리스 (배치 리포트)
 
