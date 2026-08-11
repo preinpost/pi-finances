@@ -1,0 +1,23 @@
+# pi 금융분석 에이전트 — 로컬 MVP (설계 CONTAINER-DESIGN.md §7)
+#
+# 사용법:
+#   cp .env.example .env   # API 키 입력
+#   docker compose up --build
+#   브라우저 → http://localhost:7681  (user=pi, token=$TTYD_TOKEN 또는 시작 로그)
+services:
+  pi-finance:
+    build: .
+    image: pi-finance:latest
+    init: true               # PID 1 = tini — 시그널/좀비 처리
+    restart: unless-stopped
+    ports:
+      - "7681:7681"          # 웹터미널
+    env_file:
+      - .env
+    # ── 선택: 세션·리포트만 보존 (키 파일은 절대 볼륨에 두지 않음 — 설계 §8.6) ──
+    # volumes:
+    #   - pi-finance-sessions:/opt/pi-agent/sessions
+    #   - ./reports:/workspace/reports
+
+# volumes:
+#   pi-finance-sessions:

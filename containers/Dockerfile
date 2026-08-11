@@ -1,0 +1,70 @@
+# pi 금융분석 에이전트 컨테이너
+#
+# pi 하네스 + pi-finances 패키지(pi-kis/toss/twelve-data/finnhub/coingecko/naver-news) +
+# 금융분석 설정(AGENTS.md, persona, 프롬프트 템플릿)을 bake한 이미지.
+# 설계 근거: 루트 CONTAINER-DESIGN.md (§4 이미지 설계)
+# pi 공식 컨테이너화 패턴: pi docs/containerization.md (node:24-bookworm-slim 기준)
+
+FROM node:24-bookworm-slim
+
+# ── 베이스 ───────────────────────────────────────────────────────────
+# bash/ca-certificates/git/ripgrep: pi 공식 Dockerfile 권장 구성
+# tzdata: 한국 시장 시간(TZ=Asia/Seoul)
+# ttyd: bookworm apt에 없음(arm64 빌드에서 확인) → GitHub 공식 릴리스 정적 바이너리
+#       (설계 §6 — 컨테이너 빌드 검증 중 발견, 2026-08-11)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+     bash ca-certificates curl git ripgrep tzdata \
+  && rm -rf /var/lib/apt/lists/*
+
+# ttyd 1.7.7 (tsl0922/ttyd) — x86_64/aarch64 정적 바이너리, libwebsockets 번들
+RUN case "$(uname -m)" in \
+      x86_64)  TTYD_ARCH=x86_64 ;; \
+      aarch64) TTYD_ARCH=aarch64 ;; \
+      *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" \
+      -o /usr/local/bin/ttyd \
+ && chmod +x /usr/local/bin/ttyd
+
+# ── pi 하네스 (글로벌 설치) ─────────────────────────────────────────
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
+# ── 금융분석 에이전트 환경 ──────────────────────────────────────────
+# PI_CODING_AGENT_DIR: 에이전트 디렉터리를 HOME과 무관한 고정 경로로 (설계 §3 결정 5)
+# KIS_SECRET_STORE=file: 컨테이너에는 keyring(Secret Service)이 없으므로 파일 백엔드 강제 (설계 §3 결정 3)
+ENV TZ=Asia/Seoul \
+    PI_CODING_AGENT_DIR=/opt/pi-agent \
+    KIS_SECRET_STORE=file
+
+# ── 금융 패키지 설치 (빌드 타임, 유저 스코프 → /opt/pi-agent) ───────
+# pi install은 소스를 한 번에 하나만 받는다 (CLI 제약) — 패키지별로 실행.
+# 빌드 시점 HOME은 /root(기본) — npm 캐시 사용 가능. 런타임 HOME은 아래 useradd 후 설정.
+# pi-finance-core(공용 스킬 kis-timing 포함)는 pi-kis/pi-toss에 번들로 자동 포함
+RUN pi install npm:pi-kis \
+ && pi install npm:pi-toss \
+ && pi install npm:pi-twelve-data \
+ && pi install npm:pi-finnhub \
+ && pi install npm:pi-coingecko \
+ && pi install npm:pi-naver-news
+
+# ── 금융분석 포커스 설정 (AGENTS.md / APPEND_SYSTEM.md / prompts/*) ──
+COPY agent-config/ /opt/pi-agent/
+
+# ── non-root 실행 유저 (설계 §8.4) ──────────────────────────────────
+# node:24 이미지에 UID 1000(node 유저)이 이미 존재 → 1001 사용 (빌드 검증 중 발견)
+RUN useradd -m -u 1001 pi \
+  && mkdir -p /workspace \
+  && chown -R pi:pi /opt/pi-agent /workspace
+
+# 런타임 HOME (pi 사용자) — 빌드 타임 npm 설치와 충돌하지 않도록 useradd 뒤에 설정
+ENV HOME=/home/pi
+
+# ── 엔트리포인트 (웹터미널/헤드리스 분기) ───────────────────────────
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+EXPOSE 7681
+USER 1001
+WORKDIR /workspace
+ENTRYPOINT ["docker-entrypoint.sh"]
