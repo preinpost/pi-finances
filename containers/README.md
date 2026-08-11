@@ -107,8 +107,7 @@ npm run build      # vite(프론트) + esbuild(서버) → dist/
 ```
 
 **환경변수**: `PORT`(기본 3141), `HOST`(기본 127.0.0.1 — 컨테이너는 0.0.0.0),
-`PI_WEB_CWD`(채팅 작업 디렉터리 — 컨테이너는 `/workspace`), `PI_WEB_TEMPLATES_DIR`(금융 템플릿
-경로 — 컨테이너는 `/opt/pi-web/templates`). 빌드 산출물(dist)은 Dockerfile의 `web-build`
+`PI_WEB_CWD`(채팅 작업 디렉터리 — 컨테이너는 `/workspace`). 빌드 산출물(dist)은 Dockerfile의 `web-build`
 스테이지에서 생성되고, 런타임 의존성(`@earendil-works/pi-coding-agent`, `ws`)만
 `npm ci --omit=dev`로 설치된다.
 

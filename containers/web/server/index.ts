@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { homedir } from "node:os";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
@@ -40,10 +40,6 @@ mkdirSync(AGENT_CWD, { recursive: true });
 //   production package: <pkg>/dist/index.js  + <pkg>/dist/public/
 //   dev (tsx server/):  <pkg>/server/index.ts + <pkg>/dist/  (vite default) or dist/public
 const HERE = dirname(fileURLToPath(import.meta.url));
-
-// 컨테이너 로컬 적응 (upstream 미포함): 금융 템플릿 버튼용 프롬프트 템플릿 디렉터리.
-// 기본값은 패키지의 templates/ (Dockerfile이 agent-config/prompts를 복사), env로 오버라이드 가능.
-const TEMPLATES_DIR = resolve(process.env.PI_WEB_TEMPLATES_DIR ?? join(HERE, "..", "templates"));
 
 function readPackageVersion(): string {
   for (const candidate of [join(HERE, "..", "package.json"), join(HERE, "package.json")]) {
@@ -453,37 +449,6 @@ const httpServer = createServer(async (req, res) => {
         "cache-control": "no-store",
       });
       res.end(JSON.stringify({ ok: true, version: PACKAGE_VERSION }));
-      return;
-    }
-
-    // 컨테이너 로컬 적응 (upstream 미포함): 금융 템플릿 목록 — *.md + frontmatter(title) 파싱
-    if (url.pathname === "/api/templates") {
-      const templates: { name: string; title: string; body: string }[] = [];
-      try {
-        for (const name of readdirSync(TEMPLATES_DIR).sort()) {
-          if (!name.endsWith(".md")) continue;
-          const raw = readFileSync(join(TEMPLATES_DIR, name), "utf8");
-          let body = raw;
-          let title = name.replace(/\.md$/, "");
-          if (body.startsWith("---")) {
-            const end = body.indexOf("\n---", 3);
-            if (end >= 0) {
-              const fm = body.slice(3, end);
-              const m = fm.match(/^\s*title\s*:\s*(.+)$/m);
-              if (m) title = m[1]!.trim();
-              body = body.slice(end + 4);
-            }
-          } else {
-            const m = body.match(/^#\s+(.+)$/m);
-            if (m) title = m[1]!.trim();
-          }
-          templates.push({ name: name.replace(/\.md$/, ""), title, body: body.trim() });
-        }
-      } catch {
-        /* 템플릿 디렉터리 없음/읽기 실패 — 빈 목록 */
-      }
-      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-      res.end(JSON.stringify({ templates }));
       return;
     }
 

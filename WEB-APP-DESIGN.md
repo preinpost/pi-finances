@@ -50,25 +50,20 @@
   재개. 파드 수명 = 세션 수명 (에페메럴 모델 그대로).
 - Node 24: 타입 스트리핑 기본 활성 — 백엔드는 `.mjs` (빌드 스텝 없음, `node:http` 내장).
 
-## 3. 아키텍처
+## 3. 아키텍처 (2026-08-11 갱신 — pi-web-chat 벤더링 기준)
 
 ```
-Browser (SPA)
-  ├─ GET  /            → Vite 빌드 산출물 (dist/index.html + /assets/*)
-  ├─ GET  /api/stream  → SSE (text/event-stream) — RPC 이벤트/UI 요청 중계
-  ├─ POST /api/cmd     → {cmd, payload} — prompt/steer/abort/set_model/... 화이트리스트 중계
-  ├─ GET  /api/templates → agent-config/prompts/*.md 목록 (템플릿 버튼용)
-  ├─ GET  /api/files     → /workspace 파일 목록 (리포트 뷰용)
-  ├─ GET  /files/*       → /workspace 읽기 전용 서빙 (HTML 리포트 링크용)
-  └─ 인증: Bearer 토큰 (PI_WEB_TOKEN, 미설정 시 자동 생성 → 시작 로그)
+Browser (SPA — React 19 + TanStack Router/Query + Base UI + Tailwind v4)
+  ├─ GET  /            → Vite 빌드 산출물 (dist/public)
+  ├─ WS   /ws          → 세션별 실시간 이벤트/명령 (세션 허브 — URL /s/:sessionId)
+  ├─ GET  /api/health·sessions·models·custom-models·fork-points·extensions·state
+  └─ ⚠️ 인증 없음 (3c에서 토큰 인증 프록시 예정)
 
-Node 백엔드 (containers/web/server.mjs, ~400줄)
-  ├─ spawn("pi", ["--mode","rpc","--session-dir","/opt/pi-agent/web-sessions",
-  │              ...PI_DEFAULT_MODEL/THINKING 플래그])
-  ├─ stdin: 화이트리스트 명령 직렬화 (JSONL)
-  ├─ stdout: 라인 파싱 → 이벤트 분류 → SSE 브로드캐스트
-  ├─ stderr: 로그 (키/토큰 레드랙트)
-  └─ 자식 사망 시 동일 세션 디렉터리로 재스폰 → 클라이언트에 status 이벤트
+Node 서버 (containers/web/dist/index.js — pi-web-chat 벤더링)
+  ├─ @earendil-works/pi-coding-agent SDK (AgentSessionRuntime — rpc 서브프로세스 아님)
+  ├─ 세션 허브: 세션별 독립 런타임, 같은 세션 클라이언트끼리 브로드캐스트
+  ├─ 세션 파일: PI_CODING_AGENT_DIR(=/opt/pi-agent)/sessions — 컨테이너 pi CLI와 공유
+  └─ chat cwd: PI_WEB_CWD(=/workspace)
 ```
 
 **SSE + POST를 선택** (WS 대신): 브라우저 EventSource 내장 + `node:http` 스트리밍이면
@@ -88,16 +83,16 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 | `export_html` | export_html | 리포트 내보내기 (옵션) |
 | `ui_response` | extension_ui_response | confirm/input/editor 모달 응답 |
 
-**HTTP 보조 API** (프론트 전용, RPC 미경유):
+**HTTP 보조 API** (pi-web-chat 고유):
 
 | 엔드포인트 | 역할 |
 |---|---|
-| `GET /api/templates` | 프롬프트 템플릿 목록 `{name, title, body}` (frontmatter title/description 우선, body는 frontmatter 제거) |
-| `GET /api/files?dir=reports` | workspace 파일 목록 (2단계 재귀, .html/.md) `{name, size, mtime}` |
-| `GET /files/*` | workspace 읽기 전용 서빙 (.html/.md/.txt/.json, symlink 차단, 경로 탈출 403) |
-| `GET /` (SPA 폴백) | /api·/files 외 GET 경로 → index.html (클라이언트 라우팅) |
+| `GET /api/health` | 상태·버전 `{ok, version}` |
+| `GET /api/sessions` | 세션 목록 (pi CLI와 공유 — 파일 기반) |
+| `GET /api/models` / `/api/custom-models` | 모델 카탈로그 + 커스텀 프로바이더 (ModelsDialog) |
+| `GET /api/fork-points` / `/api/extensions` / `/api/state` | fork 지점·확장 정보·세션 스냅샷 |
 
-**미노출**: `bash`, `fork`, `clone`, `get_entries`(대용량), `compact`(자동 설정 유지).
+**미노출**: RPC `bash`(SDK 직접 사용이라 해당 없음), 대용량 이벤트 히스토리.
 
 ## 5. 금융분석 UX (MVP)
 
@@ -133,13 +128,12 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
   TanStack Router/Query + Base UI + Tailwind v4), `bin/ scripts/ public/`(PWA), `package.json`+lock.
 - Dockerfile 멀티스테이지: Stage 1(web-build) `npm ci && npm run build`(vite+esbuild) →
   Stage 2 `COPY --from=web-build /build/web/dist /opt/pi-web/dist` + `npm ci --omit=dev`
-  (런타임 의존성 `@earendil-works/pi-coding-agent`, `ws`만) + `agent-config/prompts/` →
-  `/opt/pi-web/templates/` 복사.
+  (런타임 의존성 `@earendil-works/pi-coding-agent`, `ws`만).
 - 엔트리포인트: `PI_WEB=1` → `exec node /opt/pi-web/dist/index.js` (기본값은 ttyd 유지).
-- 컨테이너 env: `PORT=8080 HOST=0.0.0.0 PI_WEB_CWD=/workspace PI_WEB_TEMPLATES_DIR=/opt/pi-web/templates`.
+- 컨테이너 env: `PORT=8080 HOST=0.0.0.0 PI_WEB_CWD=/workspace`.
   모델 기본값(`PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING`)은 SDK가 설정으로 사용.
-- 로컬 적응(upstream 미포함): `server/index.ts`의 `GET /api/templates`, `src/components/FinanceTemplates.tsx`
-  (금융 템플릿 버튼) — 채팅 입력창 위에 표시.
+- 로컬 적응(upstream 미포함): **없음** — 2026-08-11 금융 템플릿 버튼·`/api/templates` 제거,
+  업스트림 그대로 사용 (UPSTREAM.md 참조).
 - ⚠️ 인증 없음 — 외부 노출 시 토큰 인증 프록시(3c) 필요.
 
 ## 8. 구현 순서 (워커 할당 단위)
@@ -147,7 +141,7 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 | 단계 | 내용 | 검증 |
 |---|---|---|
 | 3a ✅ | `server.mjs` 골격: rpc spawn + SSE + POST 화이트리스트 + 최소 챗 UI | 호스트/컨테이너 검증 완료 (실제 LLM 왕복 확인) |
-| 3b ✅ | ~~React + Vite + TS + TanStack 전면 개편~~ → **pi-web-chat 소스 벤더링 + 적응**(/api/templates, 금융 템플릿 버튼) + 멀티스테이지 Dockerfile | tsc + vite build + 호스트 왕복(WS) + 컨테이너 스모크 완료 |
+| 3b ✅ | ~~React + Vite + TS + TanStack 전면 개편~~ → **pi-web-chat 소스 벤더링**(세션·모델·확장·fork·i18n 등 전체 기능) + 멀티스테이지 Dockerfile | tsc + vite build + 호스트 왕복(WS) + 컨테이너 스모크 완료 |
 | 3c | 하드닝: 토큰 인증, 재접속 복원 | 토큰 401 검증, 프로세스 kill 테스트 |
 
 ## 9. 오픈 이슈

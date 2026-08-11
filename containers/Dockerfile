@@ -73,19 +73,17 @@ RUN useradd -m -u 1001 pi \
 
 # ── 웹챗 (pi-web-chat — WEB-APP-DESIGN.md §7) ─────────────────────
 # dist(프론트+서버 번들) + 런타임 의존성 2종(@earendil-works/pi-coding-agent, ws —
-# esbuild가 external로 남김) + 금융 프롬프트 템플릿(agent-config/prompts)
+# esbuild가 external로 남김)
 COPY --from=web-build /build/web/dist /opt/pi-web/dist
 COPY --from=web-build /build/web/package.json /build/web/package-lock.json /opt/pi-web/
 RUN npm ci --omit=dev --prefix /opt/pi-web
-COPY agent-config/prompts/ /opt/pi-web/templates/
 RUN chown -R pi:pi /opt/pi-web
 
 # 런타임 HOME (pi 사용자) — 빌드 타임 npm 설치와 충돌하지 않도록 useradd 뒤에 설정
 ENV HOME=/home/pi \
     PORT=8080 \
     HOST=0.0.0.0 \
-    PI_WEB_CWD=/workspace \
-    PI_WEB_TEMPLATES_DIR=/opt/pi-web/templates
+    PI_WEB_CWD=/workspace
 
 # ── 엔트리포인트 (웹터미널/헤드리스 분기) ───────────────────────────
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

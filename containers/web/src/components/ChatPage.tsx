@@ -6,7 +6,6 @@ import { useT } from "../lib/i18n";
 import { useSidebarPinned } from "../lib/sidebar";
 import { useLeftEdgeSwipe } from "../lib/useEdgeSwipe";
 import { Composer } from "./Composer";
-import { FinanceTemplates } from "./FinanceTemplates"; // 컨테이너 로컬 적응 (upstream 미포함)
 import { MessageList } from "./MessageList";
 import { ModelMenu } from "./ModelMenu";
 import { SessionsDrawer, SessionsSidebar } from "./SessionsDrawer";
@@ -117,7 +116,6 @@ export function ChatPage() {
               activeTools={activeTools}
               isStreaming={isStreaming}
             />
-            <FinanceTemplates />
             <Composer isStreaming={isStreaming} />
           </>
         )}
