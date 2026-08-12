@@ -139,7 +139,7 @@ jobs:
             echo "isnew=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # 태그 규칙:
+      # 태그 규칙 (build-push-action에 직접 전달되는 실제 태그명 — DSL 아님):
       #   v1.2.3 태그(수동)  → 1.2.3, 1.2, latest   (릴리스 없는 경우만 빌드)
       #   dispatch tag 입력   → 해당 태그만
       #   main + 새 VERSION  → 1.2.3, 1.2, latest
@@ -150,16 +150,16 @@ jobs:
         run: |
           if [ "${{ github.ref_type }}" = "tag" ]; then
             V="${GITHUB_REF_NAME#v}"
-            TAGS="$(printf 'type=raw,value=%s\ntype=raw,value=%s\ntype=raw,value=latest\n' "$V" "${V%.*}")"
+            TAGS="$(printf '%s\n%s\nlatest\n' "$V" "${V%.*}")"
           elif [ -n "${{ inputs.tag }}" ]; then
-            TAGS="type=raw,value=${{ inputs.tag }}"
+            TAGS="${{ inputs.tag }}"
           elif [ "${{ steps.newver.outputs.isnew }}" = "true" ]; then
             V="${{ steps.ver.outputs.version }}"
-            TAGS="$(printf 'type=raw,value=%s\ntype=raw,value=%s\ntype=raw,value=latest\n' "$V" "${V%.*}")"
+            TAGS="$(printf '%s\n%s\nlatest\n' "$V" "${V%.*}")"
           elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            TAGS="type=raw,value=latest"
+            TAGS="latest"
           else
-            TAGS="type=raw,value=sha-${GITHUB_SHA:0:7}"
+            TAGS="sha-${GITHUB_SHA:0:7}"
           fi
           {
             echo "tags<<EOF"
