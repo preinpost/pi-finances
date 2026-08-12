@@ -15,11 +15,13 @@ description: pi-finances 모노레포(7개 pi-* npm 패키지 + Docker 컨테이
 1. **로컬에서 수동 `npm publish` 금지** — GitHub Actions가 전담. 로컬 역할 = 작업·검증·커밋·푸시.
 2. 패키지 워크플로우 `.github/workflows/release-<pkg>.yml` (7개 전부 동일 템플릿):
    `main` 푸시(`packages/<pkg>/**` 변경) 또는 `workflow_dispatch` →
-   typecheck → 스모크 → **버전 범프(커밋 메시지 기반)** → `npm publish` → 태그 `pi-<pkg>@V` + GitHub Release →
-   **컨테이너 버전 자동 patch+1 커밋** (`containers/VERSION`)
+   typecheck → 스모크 → **버전 범프(커밋 메시지 기반)** → `npm publish` → 태그 `pi-<pkg>@V` + GitHub Release
+   (컨테이너 관련 코드 없음 — 릴리스 성공이 workflow_run 후속 이벤트로 컨테이너를 트리거)
 3. 컨테이너 워크플로우 `.github/workflows/release-pi-finance-container.yml`:
-   - **버전 단일 소스 = `containers/VERSION`** — npm 패키지 릴리스마다 patch+1 자동 커밋 →
-     이 커밋이 트리거가 되어 **버전 이미지(0.1.1 등)+latest 빌드·푸시 + git 태그 v0.1.1 + GitHub Release 자동 생성**
+   - **버전 단일 소스 = `containers/VERSION`** — **후속 트리거(`workflow_run`)**: npm 패키지 릴리스가
+     성공으로 완료되면 이 워크플로우가 `containers/VERSION` patch+1 커밋(`[skip ci]`) →
+     **버전 이미지(0.1.1 등)+latest 빌드·푸시 + git 태그 v0.1.1 + GitHub Release 자동 생성**
+   - `[skip ci]` 커밋은 GHA가 런 자체를 만들지 않으므로 이중 발화 없음. 릴리스 실패는 `conclusion == 'success'` 필터로 제외
    - VERSION 변경 없는 main 푸시 → `latest`만 갱신 (컨테이너 CI)
    - 수동 경로 유지: `v*` 태그 푸시 → semver 태그+latest+Release / `workflow_dispatch` → 입력 tag (없으면 `sha-<short>`)
    - 자동 릴리스가 만든 v* 태그의 재트리거는 릴리스 존재 확인 후 빌드 스킵 (이중 빌드 방지)
@@ -29,7 +31,7 @@ description: pi-finances 모노레포(7개 pi-* npm 패키지 + Docker 컨테이
 ```
 작업 → 로컬 검증 → 커밋(Conventional) → main 푸시
   → npm 패키지 릴리스 자동 (패키지별 워크플로우)
-  → containers/VERSION patch+1 자동 커밋 → 컨테이너 버전 이미지+latest 빌드·푸시 + v* 태그/릴리스 자동
+  → workflow_run 후속 트리거 → 컨테이너 버전 patch+1 → 버전 이미지+latest 빌드·푸시 + v* 태그/릴리스 자동
 ```
 
 > 컴포넌트 하나 릴리스될 때마다 Docker 이미지도 patch가 하나씩 오릅니다 (예: 0.1.0 → 컴포넌트 릴리스 → 0.1.1).
@@ -65,9 +67,10 @@ gh release view pi-<pkg>@V                                # GitHub Release 확�
 
 ### 3단계 — Docker 컨테이너 (완전 자동)
 
-- **npm 패키지 릴리스 → 자동**: publish 성공 후 워크플로우가 `containers/VERSION` patch+1 커밋 →
-  컨테이너 워크플로우가 버전 태그(0.1.1, 0.1) + latest 빌드·푸시 → git 태그 v0.1.1 + GitHub Release 자동 생성
-  (별도 조치 불필요 — 커밋 메시지에 `[skip ci]`를 넣으면 안 됨. 넣으면 컨테이너 빌드가 안 돎)
+- **npm 패키지 릴리스 → 자동**: 릴리스 워크플로우가 성공 완료되면 `workflow_run` 후속 이벤트로
+  컨테이너 워크플로우가 `containers/VERSION` patch+1 커밋(`[skip ci]`) →
+  버전 태그(0.1.1, 0.1) + latest 빌드·푸시 → git 태그 v0.1.1 + GitHub Release 자동 생성
+  (패키지 워크플로우는 손댈 필요 없음 — 별도 조치 불필요)
 - **버전 릴리스 수동**: `git tag v1.2.3 && git push origin v1.2.3` → semver 태그 + latest + GitHub Release (digest 포함 노트)
 - **수동 빌드**: `gh workflow run release-pi-finance-container.yml -f tag=1.2.3`
 - 확인: `docker manifest inspect ghcr.io/preinpost/pi-finance:latest` (amd64/arm64)
@@ -80,7 +83,7 @@ gh release view pi-<pkg>@V                                # GitHub Release 확�
 | 버전이 안 올라감 | 커밋 메시지가 `feat/fix` 등 규칙에 안 맞거나, 푸시 커밋이 `[skip ci]` |
 | tarball에 `workspace:*` 잔존 | ci.yml의 tarball 검증이 잡음 — pnpm publish가 재작성하므로 로컬 pack 출력과 혼동 주의 |
 | 형제 패키지 워크플로우 오발동 | 커밋에 타 패키지 파일이 섞였는지 확인 (`git status`로 범위 확인) |
-| 컨테이너 버전이 안 오름 | 범프 커밋에 `[skip ci]`가 들어갔는지 (있으면 컨테이너 워크플로우 스킵) 또는 패키지 publish 실패 |
+| 컨테이너 버전이 안 오름 | 패키지 릴리스 실패(conclusion 필터), 또는 `[skip ci]` 커밋이 유일 변경(런 없음 → 이벤트 없음 — 정상) |
 | 컨테이너 버전이 2씩 뜀 | 두 패키지가 병렬 릴리스 — fetch+reset 재계산으로 직렬화되므로 정상 (각 릴리스당 +1) |
 | 컨테이너 워크플로우가 두 번 돎 | 자동 태그 재트리거 — 릴리스 존재 확인 후 빌드 스킵하므로 의도된 동작 |
 

@@ -2,12 +2,13 @@
 #
 # 버전 정책 (자동):
 #   - 컨테이너 이미지 버전의 단일 소스 = containers/VERSION 파일
-#   - npm 패키지 릴리스 워크플로우(7개)가 publish 성공 후 containers/VERSION의
-#     patch를 +1 커밋 → 이 커밋 푸시가 컨테이너 워크플로우를 트리거
-#   - main 푸시에서 VERSION이 아직 릴리스 안 된 새 버전(git 태그 v* 없음)이면
-#     버전 태그(1.2.3, 1.2) + latest 빌드·푸시 → git 태그 v1.2.3 + GitHub Release 자동 생성
+#   - npm 패키지 릴리스가 성공하면 workflow_run 후속 이벤트로 이 워크플로우가
+#     트리거되어 containers/VERSION의 patch를 +1 커밋([skip ci]) → 버전 태그
+#     (1.2.3, 1.2) + latest 빌드·푸시 → git 태그 v1.2.3 + GitHub Release 자동 생성.
+#     패키지 워크플로우는 수정 불필요 (후속 빌드 트리거).
+#   - [skip ci] 커밋은 GHA가 런 자체를 만들지 않으므로 이중 발화 없음.
 #   - VERSION 변경 없는 main 푸시 → latest만 갱신 (컨테이너 CI)
-#   - v* 태그 수동 푸시 / workflow_dispatch → 기존 수동 릴리스 경로 유지
+#   - v* 태그 수동 푸시 / workflow_dispatch → 수동 릴리스 경로 유지
 #     (자동 릴리스가 만든 태그의 재트리거는 릴리스 존재 확인 후 빌드 스킵)
 #
 # 빌드 컨텍스트는 containers/ (Dockerfile이 web/, agent-config/, docker-entrypoint.sh를
@@ -27,6 +28,17 @@ on:
       tag:
         description: '이미지 버전 태그 (예: 1.2.3 — 미입력 시 sha-<short>)'
         required: false
+  # 후속 빌드 트리거 — npm 패키지 릴리스 완료(성공) 시 containers/VERSION patch+1 후 버전 릴리스
+  workflow_run:
+    workflows:
+      - Release pi-coingecko
+      - Release pi-finance-core
+      - Release pi-finnhub
+      - Release pi-kis
+      - Release pi-naver-news
+      - Release pi-toss
+      - Release pi-twelve-data
+    types: [completed]
 
 permissions:
   contents: write   # 태그/릴리스 생성
@@ -45,6 +57,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Detect new version이 git 태그(v*) 존재로 판정하므로 전체 히스토리 필요
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3 # arm64 레이어 빌드용
@@ -58,6 +72,39 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 후속 트리거(workflow_run): npm 패키지 릴리스 성공 → containers/VERSION patch+1
+      # 커밋([skip ci]) — GHA가 [skip ci] 커밋의 런을 만들지 않아 이중 발화 없음.
+      # 릴리스 실패는 conclusion 필터, 스킵 커밋은 display_title 필터로 제외.
+      - name: Bump container version (component release)
+        if: github.event_name == 'workflow_run'
+        run: |
+          set -euo pipefail
+          [ "${{ github.event.workflow_run.conclusion }}" = "success" ] || { echo "릴리스 실패(skip) — conclusion=${{ github.event.workflow_run.conclusion }}"; exit 0; }
+          case "${{ github.event.workflow_run.display_title }}" in *"[skip ci]") echo "스킵 커밋 — 진행 안 함"; exit 0;; esac
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 병렬 릴리스(타 패키지) 직렬화: fetch 후 reset으로 항상 최신 상태에서 재계산
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            if [ -f containers/VERSION ]; then
+              IFS=. read -r MAJ MIN PATCH < containers/VERSION
+              NEW="${MAJ}.${MIN}.$((PATCH + 1))"
+            else
+              NEW="1.0.0"
+            fi
+            echo "$NEW" > containers/VERSION
+            git add containers/VERSION
+            git commit -m "chore(container): v${NEW} [skip ci]" || true
+            if git push origin HEAD:main; then
+              echo "컨테이너 버전 → v${NEW}"
+              exit 0
+            fi
+            sleep 8
+          done
+          echo "컨테이너 버전 범프 푸시 실패 (5회 재시도)" >&2
+          exit 1
 
       - name: Read container version
         id: ver
