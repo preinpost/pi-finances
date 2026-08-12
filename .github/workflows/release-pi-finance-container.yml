@@ -96,12 +96,12 @@ jobs:
           BODY=$(gh release view "${VERSION}" --json body -q .body)
           # heredoc(따옴표 없음) — ${VERSION#v}/${DIGEST}는 확장, \` 는 리터럴 백틱
           gh release edit "${VERSION}" --notes "$(cat <<EOF
-${BODY}
+          ${BODY}
 
----
-### Docker 이미지
-- \`ghcr.io/preinpost/pi-finance:${VERSION#v}\` (\`latest\`)
-- digest: \`${DIGEST}\`
-EOF
-)"
+          ---
+          ### Docker 이미지
+          - \`ghcr.io/preinpost/pi-finance:${VERSION#v}\` (\`latest\`)
+          - digest: \`${DIGEST}\`
+          EOF
+          )"
           echo "Released ${VERSION}"
