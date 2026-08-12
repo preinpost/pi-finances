@@ -1,5 +1,5 @@
 ---
-name: toss-playbook
+name: toss-order-playbook
 description: 돌파 매매 플레이북 (토스증권 조건주문 기반) — "돌파", "예약주문", "브래킷", "저항 돌파", "페이크아웃", "트리거 계산", "손절/익절 세팅", "플레이북" 등 요청 시 이 스킬의 규칙(트리거 버퍼·손절 배치·1:3 브래킷·유의점)대로 타점을 계산하고 toss_conditional 조건주문을 설계한다. 차트 지표는 반드시 차트 툴(kis_technical/toss_chart/broker_chart)로 계산. 툴 파라미터 사용법은 toss-conditional 스킬 참고. 실전 주문은 사용자 확인 후에만.
 ---
 
