@@ -398,7 +398,10 @@ export async function getOrder(orderId: string, accountSeq?: number): Promise<Re
 // ── 조건주문 (CONDITIONAL_ORDER 5/s / CONDITIONAL_ORDER_HISTORY 10/s) ─────
 
 export interface TossConditionalCondition {
-	/** 매매 유형 (필수) — BUY/SELL. */
+	/**
+	 * 매매 유형 (필수) — BUY/SELL.
+	 * OTO(연속주문)는 first/second 방향이 달라도 됨 — first=BUY 체결 후 second=SELL 감시 (공식 스펙).
+	 */
 	orderSide: "BUY" | "SELL";
 	/** 감시 가격 (필수) — 현재가가 이 값에 닿으면 주문 생성. */
 	triggerPrice: string;
@@ -423,7 +426,12 @@ export interface TossConditionalOrderRequest {
 	accountSeq?: number;
 }
 
-/** 조건주문 생성 (CONDITIONAL_ORDER, 5/s) — 응답: { conditionalOrderId, clientOrderId }. OCO/OTO는 second 필수 + LIMIT만 허용. */
+/**
+ * 조건주문 생성 (CONDITIONAL_ORDER, 5/s) — 응답: { conditionalOrderId, clientOrderId }.
+ * OCO(익절·손절): first/second 모두 SELL, first 감시가 > 현재가 > second 감시가.
+ * OTO(연속주문): first 체결 후 second 감시 시작 — first=BUY, second=SELL.
+ * OCO/OTO는 second 필수 + LIMIT만 허용.
+ */
 export async function placeConditionalOrder(req: TossConditionalOrderRequest): Promise<Record<string, unknown>> {
 	if ((req.type === "OCO" || req.type === "OTO") && !req.second) {
 		throw new Error("OCO/OTO 조건주문은 second 조건이 필수입니다.");

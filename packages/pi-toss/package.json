@@ -42,6 +42,7 @@
   "files": [
     "index.ts",
     "src",
+    "skills",
     "README.md",
     ".env.example"
   ],

@@ -50,6 +50,9 @@ pi install npm:pi-toss
 | `toss_orders` | 주문 목록/상세/정정/취소 |
 | `toss_conditional` | 조건주문 (SINGLE/OCO/OTO — KIS에 없는 강점) |
 
+> 📘 조건주문 사용 패턴 (예약 매수 + 체결 시 위아래 로스/익절 브래킷, OTO `secondSide`, 주의사항)은
+> `skills/toss-conditional/SKILL.md` 참고.
+
 > ⚠️ 실전 전용 패키지입니다 (모의투자 없음). 주문·취소·정정 툴은 사용자 확인 후에만 호출하세요.
 
 ## 에이전트 디버깅 가이드 (툴 발견·파라미터 확인)
@@ -62,7 +65,8 @@ MCP 서버 전용이라 여기서 조회되지 않습니다 ("Tool not found"). 
 2. **`src/agent/tools.ts`** (설치본: `~/.pi/agent/npm/node_modules/pi-toss/src/agent/tools.ts`) —
    툴 등록·입력 검증·에러 메시지 원본
    (예: `toss_conditional` modify는 `conditionalOrderId/type/side/quantity/orderType/expireDate/triggerPrice` 필수,
-   OCO/OTO는 `secondTriggerPrice` 추가 필요)
+   OCO/OTO는 `secondTriggerPrice` 추가 필요, OTO(연속주문)는 `secondSide`로 자식 방향 지정 — first=BUY 체결 후 second=SELL)
+   (참고: OTO/OCO는 지정가 LIMIT만 지원 — 공식 스펙 openapi.tossinvest.com)
 3. **`src/roles/toss.ts`** — 실제 API 호출 로직·기본값·제약 (예: OCO/OTO 조건주문은 LIMIT만 허용)
 
 - 실전 API는 **서버 에러 메시지가 가장 빠른 피드백** — 반복 호출하며 파라미터 교정

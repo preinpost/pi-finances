@@ -322,8 +322,10 @@ export function registerTools(pi: ExtensionAPI): void {
 		name: "toss_conditional",
 		label: "토스 조건주문",
 		description:
-			"토스증권 조건주문 (KIS에 없는 강점 기능) — type: SINGLE(1조건)/OCO(둘 중 하나 체결 시 나머지 취소)/OTO(부모 체결 후 자식). " +
+			"토스증권 조건주문 (KIS에 없는 강점 기능) — type: SINGLE(1조건)/OCO(익절·손절, 둘 중 하나 체결 시 나머지 자동 취소)/OTO(연속주문, 부모 체결 후 자식 감시 시작). " +
 			"create/modify: side(BUY/SELL) + triggerPrice(트리거 가격) 필수, orderPrice(지정가, LIMIT 시), expireDate(YYYY-MM-DD). " +
+			"OCO(익절·손절)는 first/second 모두 SELL — first=익절가 > 현재가 > second=손절가. " +
+			"OTO(연속주문)는 first=BUY 체결 후 second 감시 시작, second 방향은 secondSide로 지정 (예: 매수 체결 후 매도 = first BUY + secondSide SELL, OTO 필수). " +
 			"OCO/OTO는 secondTriggerPrice/secondOrderPrice로 두번째 조건 지정 (지정가 LIMIT만 허용). " +
 			"list(기본 OPEN)/detail/cancel은 conditionalOrderId 필요. 실전 주문 — **사용자 확인 후에만** 호출. " +
 			"confirmHighValueOrder: 1억원 이상 동의 (기본 false).",
@@ -331,7 +333,7 @@ export function registerTools(pi: ExtensionAPI): void {
 			action: Type.Union([Type.Literal("create"), Type.Literal("list"), Type.Literal("detail"), Type.Literal("modify"), Type.Literal("cancel")], { description: "동작" }),
 			type: Type.Optional(Type.Union([Type.Literal("SINGLE"), Type.Literal("OCO"), Type.Literal("OTO")], { description: "create/modify: 조건주문 타입 (기본 SINGLE)" })),
 			symbol: Type.Optional(Type.String({ description: "종목 심볼, 예: 005930 또는 AAPL (create 필수)" })),
-			side: Type.Optional(Type.Union([Type.Literal("BUY"), Type.Literal("SELL")], { description: "조건 매매 유형 (create/modify 필수, OCO/OTO는 동일 적용)" })),
+			side: Type.Optional(Type.Union([Type.Literal("BUY"), Type.Literal("SELL")], { description: "조건 매매 유형 (create/modify 필수 — first 조건 방향; OTO의 second 방향은 secondSide로 지정)" })),
 			quantity: Type.Optional(Type.String({ description: "수량 (주 단위, 그룹 공통) (create/modify 필수)" })),
 			orderType: Type.Optional(Type.Union([Type.Literal("LIMIT"), Type.Literal("MARKET")], { description: "호가 유형 (create/modify 필수, OCO/OTO는 LIMIT만)" })),
 			expireDate: Type.Optional(Type.String({ description: "만료일 YYYY-MM-DD (create/modify 필수)" })),
@@ -339,6 +341,7 @@ export function registerTools(pi: ExtensionAPI): void {
 			orderPrice: Type.Optional(Type.String({ description: "첫번째 조건 지정가 (orderType=LIMIT)" })),
 			secondTriggerPrice: Type.Optional(Type.String({ description: "두번째 조건 트리거 가격 (OCO/OTO 필수)" })),
 			secondOrderPrice: Type.Optional(Type.String({ description: "두번째 조건 지정가 (OCO/OTO, LIMIT)" })),
+			secondSide: Type.Optional(Type.Union([Type.Literal("BUY"), Type.Literal("SELL")], { description: "두번째 조건 방향 (OTO 연속주문 필수 — 매수 체결 후 매도: first=BUY, secondSide=SELL. OCO는 side와 동일해야 함. 미지정 시 side 사용)" })),
 			conditionalOrderId: Type.Optional(Type.String({ description: "조건주문 식별자 (detail/modify/cancel 필수)" })),
 			status: Type.Optional(Type.Union([Type.Literal("OPEN"), Type.Literal("CLOSED")], { description: "list 필터 (기본 OPEN)" })),
 			confirmHighValueOrder: Type.Optional(Type.Boolean({ description: "1억원 이상 주문 동의 (기본 false)" })),
@@ -351,6 +354,12 @@ export function registerTools(pi: ExtensionAPI): void {
 						if (!params.symbol || !params.side || !params.quantity || !params.orderType || !params.expireDate || !params.triggerPrice) {
 							return jsonResult({ ok: false, error: "create는 symbol/side/quantity/orderType/expireDate/triggerPrice가 필요합니다." });
 						}
+						if (params.type === "OCO" && params.secondSide && params.secondSide !== params.side) {
+							return jsonResult({ ok: false, error: "OCO(익절·손절)는 first/second 모두 같은 방향(SELL)이어야 합니다." });
+						}
+						if (params.type === "OTO" && !params.secondSide) {
+							return jsonResult({ ok: false, error: "OTO(연속주문)는 secondSide(자식 방향) 지정이 필요합니다 — 매수 체결 후 매도면 first=BUY, secondSide=SELL." });
+						}
 						const first = {
 							orderSide: params.side,
 							triggerPrice: params.triggerPrice,
@@ -358,7 +367,7 @@ export function registerTools(pi: ExtensionAPI): void {
 						};
 						const second =
 							params.secondTriggerPrice !== undefined
-								? { orderSide: params.side, triggerPrice: params.secondTriggerPrice, orderPrice: params.secondOrderPrice }
+								? { orderSide: params.secondSide ?? params.side, triggerPrice: params.secondTriggerPrice, orderPrice: params.secondOrderPrice }
 								: undefined;
 						const data = await placeConditionalOrder({
 							symbol: params.symbol,
@@ -382,6 +391,12 @@ export function registerTools(pi: ExtensionAPI): void {
 						if (!params.conditionalOrderId || !params.type || !params.side || !params.quantity || !params.orderType || !params.expireDate || !params.triggerPrice) {
 							return jsonResult({ ok: false, error: "modify는 conditionalOrderId/type/side/quantity/orderType/expireDate/triggerPrice가 필요합니다." });
 						}
+						if (params.type === "OCO" && params.secondSide && params.secondSide !== params.side) {
+							return jsonResult({ ok: false, error: "OCO(익절·손절)는 first/second 모두 같은 방향(SELL)이어야 합니다." });
+						}
+						if (params.type === "OTO" && !params.secondSide) {
+							return jsonResult({ ok: false, error: "OTO(연속주문)는 secondSide(자식 방향) 지정이 필요합니다 — 매수 체결 후 매도면 first=BUY, secondSide=SELL." });
+						}
 						return jsonResult({
 							ok: true,
 							action: params.action,
@@ -395,7 +410,7 @@ export function registerTools(pi: ExtensionAPI): void {
 									first: { orderSide: params.side, triggerPrice: params.triggerPrice, orderPrice: params.orderPrice },
 									second:
 										params.secondTriggerPrice !== undefined
-											? { orderSide: params.side, triggerPrice: params.secondTriggerPrice, orderPrice: params.secondOrderPrice }
+											? { orderSide: params.secondSide ?? params.side, triggerPrice: params.secondTriggerPrice, orderPrice: params.secondOrderPrice }
 											: undefined,
 									confirmHighValueOrder: params.confirmHighValueOrder,
 								},
