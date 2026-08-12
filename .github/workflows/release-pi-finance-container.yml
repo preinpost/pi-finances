@@ -94,5 +94,14 @@ jobs:
         run: |
           gh release create "${VERSION}" --generate-notes
           BODY=$(gh release view "${VERSION}" --json body -q .body)
-          gh release edit "${VERSION}" --notes "$(printf '%s\n\n---\n### Docker 이미지\n- \`ghcr.io/preinpost/pi-finance:${VERSION#v}\` (\`latest\`)\n- digest: \`${DIGEST}\`\n' "$BODY")"
+          # heredoc(따옴표 없음) — ${VERSION#v}/${DIGEST}는 확장, \` 는 리터럴 백틱
+          gh release edit "${VERSION}" --notes "$(cat <<EOF
+${BODY}
+
+---
+### Docker 이미지
+- \`ghcr.io/preinpost/pi-finance:${VERSION#v}\` (\`latest\`)
+- digest: \`${DIGEST}\`
+EOF
+)"
           echo "Released ${VERSION}"
