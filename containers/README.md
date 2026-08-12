@@ -28,6 +28,26 @@ docker compose up --build
 접속: 브라우저에서 `http://localhost:7681` → **user=`pi`**, **token=`$TTYD_TOKEN`**
 (`TTYD_TOKEN` 미설정 시 시작 로그에 자동 생성 토큰이 출력된다).
 
+## 릴리스 (GHCR)
+
+`.github/workflows/release-pi-finance-container.yml`이 빌드·푸시를 자동화한다
+(멀티아키텍처 linux/amd64+arm64, GHA 캐시):
+
+- **main 푸시** → `ghcr.io/preinpost/pi-finance:latest` 갱신
+- **`v*` 태그 푸시** → 버전 태그(`1.2.3`, `1.2`) + `latest` + GitHub Release 생성
+- **수동** → Actions 탭에서 workflow_dispatch (tag 입력 시 해당 태그)
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+로컬에서 직접 올릴 때:
+
+```bash
+docker tag pi-finance:latest ghcr.io/preinpost/pi-finance:1.0.0
+docker push ghcr.io/preinpost/pi-finance:1.0.0
+```
+
 ## 웹챗 (Phase 3 — WEB-APP-DESIGN.md)
 
 ttyd 대신 브라우저 챗 UI를 쓰려면 `compose.yaml`에서 주석 해제:
