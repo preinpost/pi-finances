@@ -24,7 +24,8 @@ description: pi-finances 모노레포(7개 pi-* npm 패키지 + Docker 컨테이
    - `[skip ci]` 커밋은 GHA가 런 자체를 만들지 않으므로 이중 발화 없음. 릴리스 실패는 `conclusion == 'success'` 필터로 제외
    - VERSION 변경 없는 main 푸시 → `latest`만 갱신 (컨테이너 CI)
    - 수동 경로 유지: `v*` 태그 푸시 → semver 태그+latest+Release / `workflow_dispatch` → 입력 tag (없으면 `sha-<short>`)
-   - 자동 릴리스가 만든 v* 태그의 재트리거는 릴리스 존재 확인 후 빌드 스킵 (이중 빌드 방지)
+   - 자동 릴리스가 만든 v* 태그는 GITHUB_TOKEN으로 생성되어 GHA 이벤트가 발생하지 않음 (이중 빌드 구조적 방지)
+   - 수동 v* 태그 푸시의 재트리거는 릴리스 존재 확인 후 빌드 스킵
 
 ## 배포 절차 (전체 흐름)
 
