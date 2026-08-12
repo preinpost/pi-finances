@@ -139,8 +139,8 @@ jobs:
             echo "isnew=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # 태그 규칙 (build-push-action에 직접 전달되는 실제 태그명 — DSL 아님):
-      #   v1.2.3 태그(수동)  → 1.2.3, 1.2, latest   (릴리스 없는 경우만 빌드)
+      # 태그 규칙 (build-push-action에 직접 전달되는 실제 태그명 — 풀네임 필수):
+      #   v1.2.3 태그(수동)  → ghcr.io/preinpost/pi-finance:1.2.3, :1.2, :latest (릴리스 없는 경우만 빌드)
       #   dispatch tag 입력   → 해당 태그만
       #   main + 새 VERSION  → 1.2.3, 1.2, latest
       #   main (기존 버전)    → latest
@@ -148,18 +148,19 @@ jobs:
       - name: Compute image tags
         id: tags
         run: |
+          IMG="ghcr.io/preinpost/pi-finance"
           if [ "${{ github.ref_type }}" = "tag" ]; then
             V="${GITHUB_REF_NAME#v}"
-            TAGS="$(printf '%s\n%s\nlatest\n' "$V" "${V%.*}")"
+            TAGS="$(printf '%s:%s\n%s:%s\n%s:latest\n' "$IMG" "$V" "$IMG" "${V%.*}" "$IMG")"
           elif [ -n "${{ inputs.tag }}" ]; then
-            TAGS="${{ inputs.tag }}"
+            TAGS="${IMG}:${{ inputs.tag }}"
           elif [ "${{ steps.newver.outputs.isnew }}" = "true" ]; then
             V="${{ steps.ver.outputs.version }}"
-            TAGS="$(printf '%s\n%s\nlatest\n' "$V" "${V%.*}")"
+            TAGS="$(printf '%s:%s\n%s:%s\n%s:latest\n' "$IMG" "$V" "$IMG" "${V%.*}" "$IMG")"
           elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            TAGS="latest"
+            TAGS="${IMG}:latest"
           else
-            TAGS="sha-${GITHUB_SHA:0:7}"
+            TAGS="${IMG}:sha-${GITHUB_SHA:0:7}"
           fi
           {
             echo "tags<<EOF"
