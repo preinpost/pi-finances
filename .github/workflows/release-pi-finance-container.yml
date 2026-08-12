@@ -1,13 +1,17 @@
 # Release pi-finance container — Docker 이미지 GHCR 릴리스
 #
+# 버전 정책 (자동):
+#   - 컨테이너 이미지 버전의 단일 소스 = containers/VERSION 파일
+#   - npm 패키지 릴리스 워크플로우(7개)가 publish 성공 후 containers/VERSION의
+#     patch를 +1 커밋 → 이 커밋 푸시가 컨테이너 워크플로우를 트리거
+#   - main 푸시에서 VERSION이 아직 릴리스 안 된 새 버전(git 태그 v* 없음)이면
+#     버전 태그(1.2.3, 1.2) + latest 빌드·푸시 → git 태그 v1.2.3 + GitHub Release 자동 생성
+#   - VERSION 변경 없는 main 푸시 → latest만 갱신 (컨테이너 CI)
+#   - v* 태그 수동 푸시 / workflow_dispatch → 기존 수동 릴리스 경로 유지
+#     (자동 릴리스가 만든 태그의 재트리거는 릴리스 존재 확인 후 빌드 스킵)
+#
 # 빌드 컨텍스트는 containers/ (Dockerfile이 web/, agent-config/, docker-entrypoint.sh를
 # 상대 경로로 참조 — containers/compose.yaml의 build: . 과 동일).
-#
-# 트리거:
-#   - main 푸시            → ghcr.io/preinpost/pi-finance:latest 갱신 (컨테이너 CI)
-#   - v* 태그 푸시          → 버전 태그(1.2.3, 1.2) + latest 푸시 + GitHub Release 생성
-#   - workflow_dispatch    → 수동 빌드/푸시 (tag 입력 시 해당 태그로, 없으면 sha-<short>)
-#
 # GITHUB_TOKEN(packages: write)으로 GHCR 인증 — 별도 시크릿 불필요.
 # 멀티아키텍처: linux/amd64 + linux/arm64 (Dockerfile이 uname -m으로 ttyd 바이너리 분기).
 # GHA 캐시로 재빌드 가속 (web-build npm ci + pi install 레이어).
@@ -25,7 +29,7 @@ on:
         required: false
 
 permissions:
-  contents: write   # GitHub Release 생성
+  contents: write   # 태그/릴리스 생성
   packages: write   # GHCR 푸시
 
 concurrency:
@@ -55,38 +59,108 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Read container version
+        id: ver
+        run: |
+          if [ -f containers/VERSION ]; then
+            echo "version=$(cat containers/VERSION)" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 자동 릴리스가 만든 v* 태그의 재트리거 감지 — 이미 릴리스가 있으면 빌드 스킵
+      - name: Check release exists
+        id: rel
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --json id >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # VERSION 파일이 아직 릴리스되지 않은 새 버전인지 (git 태그 v* 존재 여부)
+      - name: Detect new version
+        id: newver
+        if: github.ref_type == 'branch' && steps.ver.outputs.version != ''
+        run: |
+          if git tag -l "v${{ steps.ver.outputs.version }}" | grep -q .; then
+            echo "isnew=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "isnew=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # 태그 규칙:
-      #   v1.2.3 태그  → 1.2.3, 1.2, latest
-      #   main 푸시    → latest
-      #   dispatch     → 입력 tag (또는 sha-<short>)
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/preinpost/pi-finance
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' || github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
-            type=sha,enable=${{ github.ref_type != 'tag' && inputs.tag == '' }}
+      #   v1.2.3 태그(수동)  → 1.2.3, 1.2, latest   (릴리스 없는 경우만 빌드)
+      #   dispatch tag 입력   → 해당 태그만
+      #   main + 새 VERSION  → 1.2.3, 1.2, latest
+      #   main (기존 버전)    → latest
+      #   dispatch (tag 없음) → sha-<short>
+      - name: Compute image tags
+        id: tags
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            V="${GITHUB_REF_NAME#v}"
+            TAGS="$(printf 'type=raw,value=%s\ntype=raw,value=%s\ntype=raw,value=latest\n' "$V" "${V%.*}")"
+          elif [ -n "${{ inputs.tag }}" ]; then
+            TAGS="type=raw,value=${{ inputs.tag }}"
+          elif [ "${{ steps.newver.outputs.isnew }}" = "true" ]; then
+            V="${{ steps.ver.outputs.version }}"
+            TAGS="$(printf 'type=raw,value=%s\ntype=raw,value=%s\ntype=raw,value=latest\n' "$V" "${V%.*}")"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            TAGS="type=raw,value=latest"
+          else
+            TAGS="type=raw,value=sha-${GITHUB_SHA:0:7}"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         id: build
+        if: github.ref_type != 'tag' || steps.rel.outputs.exists == 'false'
         uses: docker/build-push-action@v6
         with:
           context: containers
           file: containers/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/preinpost/pi-finances
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # v* 태그 푸시 시 GitHub Release 생성 (기존 패키지 릴리스 패턴과 동일)
-      - name: Create GitHub Release
-        if: github.ref_type == 'tag'
+      # main 푸시 + 새 VERSION → git 태그 vX.Y.Z + GitHub Release 자동 생성
+      # (gh release create가 태그를 함께 생성 → 태그 푸시 재트리거는 위 릴리스 존재 체크로 스킵)
+      - name: Tag & Release (자동 버전 릴리스)
+        if: github.ref_type == 'branch' && steps.newver.outputs.isnew == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: v${{ steps.ver.outputs.version }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          gh release create "${VERSION}" --target "${GITHUB_SHA}" --generate-notes
+          BODY=$(gh release view "${VERSION}" --json body -q .body)
+          gh release edit "${VERSION}" --notes "$(cat <<EOF
+          ${BODY}
+
+          ---
+          ### Docker 이미지 (컴포넌트 릴리스 자동 버전)
+          - \`ghcr.io/preinpost/pi-finance:${VERSION#v}\` (\`latest\`)
+          - digest: \`${DIGEST}\`
+          EOF
+          )"
+          echo "Released ${VERSION}"
+
+      # 수동 v* 태그 푸시 시 GitHub Release 생성 (기존 수동 경로)
+      - name: Create GitHub Release (수동 v* 태그)
+        if: github.ref_type == 'tag' && steps.rel.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ github.ref_name }}

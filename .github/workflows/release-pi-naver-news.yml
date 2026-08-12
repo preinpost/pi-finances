@@ -141,3 +141,32 @@ jobs:
           git push origin --tags
           gh release create "pi-naver-news@${VERSION}" --generate-notes
           echo "Released pi-naver-news@${VERSION}"
+
+      # 컴포넌트 릴리스 → 컨테이너 이미지 버전 자동 patch+1 (containers/VERSION).
+      # 이 커밋이 main에 푸시되면 release-pi-finance-container.yml이 버전 빌드·푸시+릴리스.
+      # 병렬 릴리스(타 패키지) 직렬화: fetch 후 reset으로 항상 최신 상태에서 재계산.
+      - name: Bump container version
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            if [ -f containers/VERSION ]; then
+              IFS=. read -r MAJ MIN PATCH < containers/VERSION
+              NEW="${MAJ}.${MIN}.$((PATCH + 1))"
+            else
+              NEW="1.0.0"
+            fi
+            echo "$NEW" > containers/VERSION
+            git add containers/VERSION
+            git commit -m "chore(container): v${NEW}" || true
+            if git push origin HEAD:main; then
+              echo "컨테이너 버전 → v${NEW}"
+              exit 0
+            fi
+            sleep 8
+          done
+          echo "컨테이너 버전 범프 푸시 실패 (5회 재시도)" >&2
+          exit 1
