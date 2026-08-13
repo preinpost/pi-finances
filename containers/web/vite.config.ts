@@ -46,17 +46,10 @@ export default defineConfig({
       workbox: {
         // API/WS는 캐시하지 않음 (빌드 에셋만 precache)
         navigateFallbackDenylist: [/^\/api\//, /^\/ws/],
-        // App shell: prefer network so iOS PWAs pick up new deploys
-        runtimeCaching: [
-          {
-            urlPattern: ({ request }) => request.mode === "navigate",
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "pi-web-html",
-              networkTimeoutSeconds: 3,
-            },
-          },
-        ],
+        // ⚠️ 네비게이션(HTML)은 캐시하지 않는다 — NetworkFirst 폴백이 예전 index.html을
+        // 서빙해 구버전 번들로 롤백되는 경합(배포 후 "옛 UI가 다시 보임")이 있었음.
+        // 네트워크 실패 시에만 navigateFallback(프리캐시된 shell)이 대신 응답한다.
+        runtimeCaching: [],
       },
     }),
   ],
