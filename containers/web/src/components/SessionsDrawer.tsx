@@ -61,6 +61,18 @@ function TrashIcon() {
   );
 }
 
+/** 새 세션 시작 (드로어/헤더 공용). 세션 목록은 드로어가 열릴 때 자동 갱신된다. */
+export function useNewSession() {
+  const navigate = useNavigate();
+  return () => {
+    // "/" 초안 화면. 이미 / 에 있어도 force 로 새 초안 WS를 연다.
+    // 세션 id는 첫 메시지 때 서버가 내려주고 /s/:id 로 교체된다.
+    void navigate({ to: "/" });
+    chatClient.connect(null, { force: true });
+    chatClient.requestComposerFocus();
+  };
+}
+
 function SessionRow({
   session,
   active,
@@ -178,14 +190,12 @@ function SessionsPanel({
     else setSidebarPinned(true);
   };
 
-  const startNewSession = () => {
-    // "/" 초안 화면. 이미 / 에 있어도 force 로 새 초안 WS를 연다.
-    // 세션 id는 첫 메시지 때 서버가 내려주고 /s/:id 로 교체된다.
-    void navigate({ to: "/" });
-    chatClient.connect(null, { force: true });
+  const startNewSession = useNewSession();
+
+  const startFromPanel = () => {
+    startNewSession();
     window.setTimeout(() => void refetch(), 150);
     onClose?.();
-    chatClient.requestComposerFocus();
   };
 
   const handleDeleteSession = async (session: UISessionInfo) => {
@@ -234,7 +244,7 @@ function SessionsPanel({
 
       <div className="px-2 pb-1">
         <button
-          onClick={startNewSession}
+          onClick={startFromPanel}
           className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13.5px] font-medium text-accent transition-colors hover:bg-accent-soft/60"
         >
           <PlusIcon />

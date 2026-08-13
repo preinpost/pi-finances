@@ -9,7 +9,7 @@ import { Composer } from "./Composer";
 import { MessageList } from "./MessageList";
 import { ModelMenu } from "./ModelMenu";
 import { PixelLoader } from "./PixelLoader";
-import { SessionsDrawer, SessionsSidebar } from "./SessionsDrawer";
+import { SessionsDrawer, SessionsSidebar, useNewSession } from "./SessionsDrawer";
 import { SettingsMenu } from "./SettingsMenu";
 import { ThinkingMenu } from "./ThinkingMenu";
 
@@ -43,6 +43,7 @@ export function ChatPage() {
   const { connection, sessionId, snapshot, streamText, streamThinking, activeTools } = useChat();
   const isStreaming = snapshot?.isStreaming ?? false;
   const sidebarPinned = useSidebarPinned();
+  const startNewSession = useNewSession();
   const showConnectingOverlay = connection !== "connected" && !snapshot;
   const params = useParams({ strict: false }) as { sessionId?: string };
   const routeSessionId = params.sessionId ?? null;
@@ -80,6 +81,17 @@ export function ChatPage() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-canvas md:my-2 md:mr-2 md:rounded-2xl md:border md:border-line md:shadow-sm">
         <header className="flex shrink-0 items-center gap-1 border-b border-line/70 px-2.5 py-2 pt-[max(0.5rem,var(--safe-top))]">
           <SessionsDrawer currentSessionFile={snapshot?.sessionFile} />
+          <button
+            type="button"
+            onClick={startNewSession}
+            title={t("newSession")}
+            aria-label={t("newSession")}
+            className="flex size-9 items-center justify-center rounded-lg text-faint transition-colors hover:bg-hover hover:text-ink"
+          >
+            <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
+          </button>
           <div className="flex min-w-0 items-center gap-2 px-1">
             {!sidebarPinned && (
               <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-soft to-bubble font-serif text-[15px] font-semibold text-accent shadow-[inset_0_0_0_1px_var(--c-line)]">
