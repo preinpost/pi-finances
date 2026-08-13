@@ -20,7 +20,9 @@ pi 에이전트 하네스 + pi-finances 금융 패키지를 묶은 **금융분�
 cd containers
 cp compose.example.yaml compose.yaml   # 템플릿 복사
 # compose.yaml의 environment에 실제 API 키 입력 (compose.yaml은 gitignore 대상)
-docker compose up --build
+docker compose up --build              # 로컬 빌드
+# 원격: image가 ghcr.io/preinpost/pi-finance:latest
+# docker compose pull && docker compose up -d
 ```
 
 접속: 브라우저에서 `http://localhost:8080` → **user=`$PI_WEB_USER`**(기본 `pi`),
@@ -31,7 +33,8 @@ docker compose up --build
 `.github/workflows/release-pi-finance-container.yml`이 빌드·푸시를 자동화한다
 (멀티아키텍처 linux/amd64+arm64, GHA 캐시):
 
-- **main 푸시** → `ghcr.io/preinpost/pi-finance:latest` 갱신
+- **main 푸시 + `containers/**` 변경** → VERSION patch+1 + 버전 태그 + `latest`
+- **그 외 main 푸시** → `latest`만 갱신
 - **`v*` 태그 푸시** → 버전 태그(`1.2.3`, `1.2`) + `latest` + GitHub Release 생성
 - **수동** → Actions 탭에서 workflow_dispatch (tag 입력 시 해당 태그)
 
@@ -133,7 +136,7 @@ npm run build      # vite(프론트) + esbuild(서버) → dist/
 
 ```bash
 docker run --rm -e ANTHROPIC_API_KEY=... -e KIS_APP_KEY=... -e KIS_APP_SECRET=... \
-  -e PI_HEADLESS=1 pi-finance:latest \
+  -e PI_HEADLESS=1 ghcr.io/preinpost/pi-finance:latest \
   "삼성전자 일일 리포트 작성해줘"
 # 또는 표준입력: echo "..." | docker run --rm -e PI_HEADLESS=1 ...
 ```

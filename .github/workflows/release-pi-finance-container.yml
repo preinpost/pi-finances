@@ -7,7 +7,8 @@
 #     (1.2.3, 1.2) + latest 빌드·푸시 → git 태그 v1.2.3 + GitHub Release 자동 생성.
 #     패키지 워크플로우는 수정 불필요 (후속 빌드 트리거).
 #   - [skip ci] 커밋은 GHA가 런 자체를 만들지 않으므로 이중 발화 없음.
-#   - VERSION 변경 없는 main 푸시 → latest만 갱신 (컨테이너 CI)
+#   - containers/** 변경이 있는 main 푸시 → VERSION patch+1 후 버전 태그+latest
+#   - 그 외 main 푸시(문서만 등) → latest만 갱신
 #   - v* 태그 수동 푸시 / workflow_dispatch → 수동 릴리스 경로 유지
 #     (자동 릴리스가 만든 태그의 재트리거는 릴리스 존재 확인 후 빌드 스킵)
 #
@@ -73,21 +74,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 후속 트리거(workflow_run): npm 패키지 릴리스 성공 → containers/VERSION patch+1
+      # VERSION patch+1 — npm 패키지 릴리스 후속, 또는 containers/** 가 바뀐 main 푸시.
       # 커밋([skip ci]) — GHA가 [skip ci] 커밋의 런을 만들지 않아 이중 발화 없음.
-      # 릴리스 실패는 conclusion 필터, 스킵 커밋은 display_title 필터로 제외.
-      - name: Bump container version (component release)
-        if: github.event_name == 'workflow_run'
+      - name: Bump container version
+        if: github.event_name == 'workflow_run' || github.event_name == 'push'
         run: |
           set -euo pipefail
-          [ "${{ github.event.workflow_run.conclusion }}" = "success" ] || { echo "릴리스 실패(skip) — conclusion=${{ github.event.workflow_run.conclusion }}"; exit 0; }
-          case "${{ github.event.workflow_run.display_title }}" in *"[skip ci]") echo "스킵 커밋 — 진행 안 함"; exit 0;; esac
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            [ "${{ github.event.workflow_run.conclusion }}" = "success" ] || { echo "릴리스 실패(skip) — conclusion=${{ github.event.workflow_run.conclusion }}"; exit 0; }
+            case "${{ github.event.workflow_run.display_title }}" in *"[skip ci]") echo "스킵 커밋 — 진행 안 함"; exit 0;; esac
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            [ "${{ github.ref }}" = "refs/heads/main" ] || { echo "main 아님 — 범프 안 함"; exit 0; }
+            [ "${{ github.ref_type }}" = "branch" ] || { echo "태그 푸시 — 범프 안 함"; exit 0; }
+            git fetch origin main --deepen=20
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.sha }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              echo "before SHA 없음 — 범프 안 함"; exit 0
+            fi
+            CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" -- containers ':!containers/VERSION' || true)
+            if [ -z "$CHANGED" ]; then
+              echo "containers/** 변경 없음 — latest만"
+              exit 0
+            fi
+            echo "containers 변경 감지:"
+            echo "$CHANGED"
+          else
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # 병렬 릴리스(타 패키지) 직렬화: fetch 후 reset으로 항상 최신 상태에서 재계산
           for i in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main
+            if [ -n "${AFTER:-}" ] && git cat-file -e "${AFTER}^{commit}" 2>/dev/null; then
+              if git merge-base --is-ancestor HEAD "$AFTER"; then
+                git reset --hard "$AFTER"
+              fi
+            fi
             if [ -f containers/VERSION ]; then
               IFS=. read -r MAJ MIN PATCH < containers/VERSION
               NEW="${MAJ}.${MIN}.$((PATCH + 1))"

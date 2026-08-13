@@ -22,7 +22,8 @@ description: pi-finances 모노레포(7개 pi-* npm 패키지 + Docker 컨테이
      성공으로 완료되면 이 워크플로우가 `containers/VERSION` patch+1 커밋(`[skip ci]`) →
      **버전 이미지(0.1.1 등)+latest 빌드·푸시 + git 태그 v0.1.1 + GitHub Release 자동 생성**
    - `[skip ci]` 커밋은 GHA가 런 자체를 만들지 않으므로 이중 발화 없음. 릴리스 실패는 `conclusion == 'success'` 필터로 제외
-   - VERSION 변경 없는 main 푸시 → `latest`만 갱신 (컨테이너 CI)
+   - `containers/**` 변경이 있는 main 푸시 → VERSION patch+1 후 버전 태그+latest
+   - 그 외 main 푸시 → `latest`만 갱신
    - 수동 경로 유지: `v*` 태그 푸시 → semver 태그+latest+Release / `workflow_dispatch` → 입력 tag (없으면 `sha-<short>`)
    - 자동 릴리스가 만든 v* 태그는 GITHUB_TOKEN으로 생성되어 GHA 이벤트가 발생하지 않음 (이중 빌드 구조적 방지)
    - 수동 v* 태그 푸시의 재트리거는 릴리스 존재 확인 후 빌드 스킵
@@ -35,7 +36,7 @@ description: pi-finances 모노레포(7개 pi-* npm 패키지 + Docker 컨테이
   → workflow_run 후속 트리거 → 컨테이너 버전 patch+1 → 버전 이미지+latest 빌드·푸시 + v* 태그/릴리스 자동
 ```
 
-> 컴포넌트 하나 릴리스될 때마다 Docker 이미지도 patch가 하나씩 오릅니다 (예: 0.1.0 → 컴포넌트 릴리스 → 0.1.1).
+> 컴포넌트 릴리스 또는 `containers/**`(웹챗·이미지) 변경마다 Docker 이미지 patch가 오릅니다.
 > 전체 확인은 `gh run list --workflow release-pi-finance-container.yml` + `docker manifest inspect ghcr.io/preinpost/pi-finance:<버전>`
 
 ### 1단계 — 로컬 검증
