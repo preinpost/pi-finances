@@ -24,6 +24,9 @@
   --color-hover: var(--c-hover);
   --color-selected: var(--c-selected);
   --color-inset: var(--c-inset);
+  --color-code-bg: var(--c-code-bg);
+  --color-code-border: var(--c-code-border);
+  --color-code-text: var(--c-code-text);
   --color-danger: var(--c-danger);
   --color-up: var(--c-up);
   --color-down: var(--c-down);
@@ -55,6 +58,9 @@
   --c-hover: rgba(15, 23, 42, 0.05);
   --c-selected: rgba(15, 23, 42, 0.08);
   --c-inset: #f0f4fa;
+  --c-code-bg: #e7eefb;
+  --c-code-border: #c3d5f2;
+  --c-code-text: #1d4ed8;
   --c-danger: #dc2626;
   /* 한국 주식 컨벤션: 상승=레드, 하락=블루 (카드 위 4.5:1 확보) */
   --c-up: #d43c36;
@@ -77,6 +83,9 @@
   --c-hover: rgba(255, 255, 255, 0.06);
   --c-selected: rgba(255, 255, 255, 0.1);
   --c-inset: #111a28;
+  --c-code-bg: rgba(96, 165, 250, 0.14);
+  --c-code-border: rgba(96, 165, 250, 0.32);
+  --c-code-text: #93c5fd;
   --c-danger: #f87171;
   --c-up: #ff5f56;
   --c-down: #4d9fff;
@@ -176,7 +185,7 @@ html.ua-keyboard .composer-bar {
   --tw-prose-quotes: var(--c-muted);
   --tw-prose-quote-borders: var(--c-line);
   --tw-prose-captions: var(--c-muted);
-  --tw-prose-code: var(--c-ink);
+  --tw-prose-code: var(--c-code-text);
   --tw-prose-th-borders: var(--c-line);
   --tw-prose-td-borders: var(--c-line);
 }
@@ -185,8 +194,11 @@ html.ua-keyboard .composer-bar {
   @apply rounded-xl border border-neutral-800 bg-[#0d1117] text-[13px];
 }
 
+/* 인라인 코드 칩 — 주변 버블/캔버스와 겹치지 않게 전용 틴트 + 테두리 + 얇은 폰트 */
 .prose :not(pre) > code {
-  background-color: var(--c-bubble);
+  background-color: var(--c-code-bg);
+  border: 1px solid var(--c-code-border);
+  color: var(--c-code-text);
   @apply rounded px-1.5 py-0.5 text-[13px] font-normal before:content-none after:content-none;
 }
 

@@ -711,6 +711,8 @@ const httpServer = createServer(async (req, res) => {
         enabled: AUTH.enabled,
         authenticated: AUTH.enabled ? Boolean(session) : true,
         user: AUTH.enabled ? session?.user : undefined,
+        // 로그인 폼 프리필용 — PI_WEB_USER로 바뀌면 여기서 따라온다.
+        expectedUser: AUTH.enabled ? AUTH.user : undefined,
       });
       return;
     }

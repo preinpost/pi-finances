@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { login, refreshAuth } from "../lib/auth";
+import { login, refreshAuth, useAuth } from "../lib/auth";
 import { useT } from "../lib/i18n";
 
 export function LoginPage() {
   const t = useT();
-  const [user, setUser] = useState("pi");
+  // Gate가 status 준비 후에만 렌더링하므로 status는 항상 존재한다.
+  const expectedUser = useAuth().status?.expectedUser ?? "";
+  const [user, setUser] = useState(expectedUser);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
