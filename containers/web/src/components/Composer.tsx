@@ -149,7 +149,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
                 {t("sendHint")}
               </span>
             )}
-            {isStreaming ? (
+            {isStreaming && (
               <button
                 onClick={() => chatClient.send({ type: "abort" })}
                 className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink text-canvas transition-[transform,opacity] duration-150 hover:opacity-85 active:scale-95"
@@ -159,18 +159,17 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
                   <rect x="6" y="6" width="12" height="12" rx="2" />
                 </svg>
               </button>
-            ) : (
-              <button
-                onClick={send}
-                disabled={!text.trim() && images.length === 0}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink transition-[transform,opacity] duration-150 hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label={t("send")}
-              >
-                <svg viewBox="0 0 24 24" className="size-[18px] fill-none stroke-current stroke-2">
-                  <path d="M12 19V5M5 12l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
             )}
+            <button
+              onClick={send}
+              disabled={!text.trim() && images.length === 0}
+              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink transition-[transform,opacity] duration-150 hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+              aria-label={isStreaming ? t("steer") : t("send")}
+            >
+              <svg viewBox="0 0 24 24" className="size-[18px] fill-none stroke-current stroke-2">
+                <path d="M12 19V5M5 12l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>

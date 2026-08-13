@@ -116,6 +116,48 @@ export interface UICustomModelsResponse {
   warning?: string;
 }
 
+export type UIAuthType = "api_key" | "oauth";
+
+export interface UIAuthProvider {
+  id: string;
+  name: string;
+  methods: UIAuthType[];
+  status?: { type: UIAuthType; source?: string };
+  loggedIn: boolean;
+}
+
+export interface UIAuthCatalog {
+  providers: UIAuthProvider[];
+}
+
+export interface UIAuthPrompt {
+  type: "text" | "secret" | "select" | "manual_code";
+  message: string;
+  placeholder?: string;
+  options?: { id: string; label: string; description?: string }[];
+}
+
+export interface UIAuthEvent {
+  type: "info" | "auth_url" | "device_code" | "progress";
+  message?: string;
+  url?: string;
+  instructions?: string;
+  userCode?: string;
+  verificationUri?: string;
+  links?: { url: string; label?: string }[];
+}
+
+export interface UIAuthSession {
+  id: string;
+  providerId: string;
+  providerName: string;
+  method: UIAuthType;
+  prompt?: UIAuthPrompt;
+  events: UIAuthEvent[];
+  done?: boolean;
+  error?: string;
+}
+
 export interface UIImageAttachment {
   /** base64 (data URL 아님) */
   data: string;

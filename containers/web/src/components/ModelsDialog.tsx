@@ -1,6 +1,7 @@
 import { Dialog } from "@base-ui-components/react/dialog";
 import { useEffect, useState } from "react";
 import type { UICustomApi, UICustomModel, UICustomProvider } from "../../shared/protocol";
+import { PROVIDER_PRESETS } from "../../shared/secrets";
 import { saveCustomModels, useCustomModels, useInvalidateModels } from "../lib/api";
 import { useT } from "../lib/i18n";
 
@@ -307,26 +308,53 @@ export function ModelsDialog({
               />
             ))}
             {draft && draft.length === 0 && (
-              <div className="py-6 text-center text-sm text-faint">{t("noCustomProviders")}</div>
+              <div className="py-4 text-center text-sm text-faint">{t("noCustomProviders")}</div>
             )}
-            <button
-              type="button"
-              onClick={() =>
-                setDraft((prev) => [
-                  ...(prev ?? []),
-                  {
-                    key: "",
-                    baseUrl: "",
-                    api: "openai-completions",
-                    apiKey: "",
-                    models: [{ id: "" }],
-                  },
-                ])
-              }
-              className="self-start rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-accent hover:bg-hover"
-            >
-              + {t("addProvider")}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {PROVIDER_PRESETS.map((preset) => {
+                const used = (draft ?? []).some((p) => p.key === preset.key);
+                return (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    disabled={used}
+                    onClick={() =>
+                      setDraft((prev) => [
+                        ...(prev ?? []),
+                        {
+                          key: preset.key,
+                          baseUrl: preset.baseUrl,
+                          api: preset.api,
+                          apiKey: preset.apiKeyEnv || "",
+                          models: preset.models.map((m) => ({ ...m })),
+                        },
+                      ])
+                    }
+                    className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-accent hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    + {preset.label}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() =>
+                  setDraft((prev) => [
+                    ...(prev ?? []),
+                    {
+                      key: "",
+                      baseUrl: "",
+                      api: "openai-completions",
+                      apiKey: "",
+                      models: [{ id: "" }],
+                    },
+                  ])
+                }
+                className="rounded-lg border border-dashed border-line px-3 py-1.5 text-[13px] font-medium text-muted hover:bg-hover hover:text-ink"
+              >
+                + {t("addProvider")}
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 border-t border-line px-4 py-3">

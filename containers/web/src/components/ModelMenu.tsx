@@ -23,6 +23,16 @@ export function ModelMenu({ current }: { current: UIModel | null }) {
     return (models ?? []).filter((m) => matchesQuery(m, q));
   }, [models, query]);
 
+  const grouped = useMemo(() => {
+    const map = new Map<string, UIModel[]>();
+    for (const m of filtered) {
+      const list = map.get(m.provider) ?? [];
+      list.push(m);
+      map.set(m.provider, list);
+    }
+    return [...map.entries()];
+  }, [filtered]);
+
   // Menu 내부 focus manager가 먼저 잡은 뒤 검색창으로 재포커스
   useEffect(() => {
     if (!open) return;
@@ -94,40 +104,42 @@ export function ModelMenu({ current }: { current: UIModel | null }) {
             </div>
 
             <div className="max-h-[min(50vh,22rem)] overflow-y-auto py-1">
-              {filtered.map((m) => {
-                const active = current && m.provider === current.provider && m.id === current.id;
-                return (
-                  <Menu.Item
-                    key={`${m.provider}/${m.id}`}
-                    onClick={() =>
-                      chatClient.send({ type: "set_model", provider: m.provider, id: m.id })
-                    }
-                    className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm outline-none data-[highlighted]:bg-hover ${
-                      active ? "text-accent" : "text-ink"
-                    }`}
-                  >
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate">{m.name ?? m.id}</span>
-                      <span className="truncate font-mono text-[10.5px] text-faint">
-                        {m.provider}
-                      </span>
-                    </span>
-                    {active && (
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="size-4 shrink-0 fill-none stroke-current stroke-2.5"
-                        aria-hidden
+              {grouped.map(([provider, list]) => (
+                <div key={provider}>
+                  <div className="px-3 pt-2 pb-1 font-mono text-[10px] tracking-wide text-faint uppercase">
+                    {provider}
+                  </div>
+                  {list.map((m) => {
+                    const active = current && m.provider === current.provider && m.id === current.id;
+                    return (
+                      <Menu.Item
+                        key={`${m.provider}/${m.id}`}
+                        onClick={() =>
+                          chatClient.send({ type: "set_model", provider: m.provider, id: m.id })
+                        }
+                        className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm outline-none data-[highlighted]:bg-hover ${
+                          active ? "text-accent" : "text-ink"
+                        }`}
                       >
-                        <path
-                          d="M20 6 9 17l-5-5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                  </Menu.Item>
-                );
-              })}
+                        <span className="min-w-0 flex-1 truncate">{m.name ?? m.id}</span>
+                        {active && (
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="size-4 shrink-0 fill-none stroke-current stroke-2.5"
+                            aria-hidden
+                          >
+                            <path
+                              d="M20 6 9 17l-5-5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </Menu.Item>
+                    );
+                  })}
+                </div>
+              ))}
               {filtered.length === 0 && (
                 <div className="px-3 py-6 text-center text-sm text-faint">
                   {models && models.length === 0 ? t("noModelsAvailable") : t("noSearchResults")}
