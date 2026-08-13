@@ -29,9 +29,15 @@ pi-kis / pi-toss / pi-twelve-data / pi-finnhub / pi-coingecko / pi-naver-news
 
 ## 키 상태 확인
 
-주입된 키는 `/kis-status`, `/toss-status`, `/twelve-status`, `/finnhub-status`,
-`/coingecko-status`, `/naver-news-status` 로 확인할 수 있다.
-해당 툴이 키 없음으로 실패하면, 사용자에게 키 등록 경로(`/kis-key` 등)를 안내하라.
+- 웹챗 서버가 세션 시작 시 시스템 프롬프트에 "데이터 제공자 키 상태" 블록을
+  주입한다 (API 키 모달 저장 등 런타임 변경이 다음 세션부터 반영) — **미설정
+  제공자의 툴은 호출하지 말 것**.
+- `market_status` 툴로도 설정된 제공자를 한 번에 확인할 수 있다 (headless 포함).
+- 개별 확인: `/kis-status`, `/toss-status`, `/twelve-status`, `/finnhub-status`,
+  `/coingecko-status`, `/naver-news-status`
+- 시세/차트는 `broker_price`/`broker_chart` 우선 — 실패 시 응답의 fallback 지시
+  ({ func, tools, args, why })에서 설치된 `*_price`/`*_chart` 툴을 골라 이어서 호출한다.
+- 해당 툴이 키 없음으로 실패하면, 사용자에게 키 등록 경로(`/kis-key` 등)를 안내하라.
 
 ## 리포트 규칙
 

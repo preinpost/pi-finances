@@ -23,6 +23,8 @@ kis_* 도구의 description을 우선 참고하세요. 이 스킬은 도구 설�
 
 ### KIS 미지원/빈 응답 → fallback 지시대로 `*_price` / `*_chart` 툴 콜 (prefix_name 규칙)
 
+- **작업 시작 시 `market_status` 툴로 설정된 데이터 제공자를 먼저 확인** — 미설정
+  제공자의 `*_price`/`*_chart` 툴은 호출해도 즉시 실패하므로 처음부터 제외한다.
 - KIS 유료 시세 미구독·상장거래소 불일치 등으로 **빈 응답/데이터 없음**이면,
   `broker_price`/`broker_chart` 응답에 **`fallback: { func, tools, args, why }` 지시**가 포함됩니다.
 - **func = 기능 suffix**(price/chart), **tools = 설치된 `*_{func}` 툴 후보** — 동일 기능 툴은 같은

@@ -7,11 +7,13 @@ argument-hint: "[관심종목 (쉼표 구분)]"
 관심종목: ${1:-없음 — 사용자에게 물어보기}
 
 절차:
+0. `market_status`로 사용 가능한 데이터 제공자 확인 (미설정 제공자 툴은 호출 금지)
 1. 지수: `kis_domestic_price` 또는 `broker_price`로 코스피·코스닥 지수와 등락률 확인
 2. 관심종목: `kis-timing` 스킬로 일봉/주봉 차트·기술적 지표 분석
 3. 섹터: `kis-sector-research` 스킬로 업종/테마 흐름 파악
 4. 뉴스: `naver_news_search`로 관련 최신 뉴스 확인
-5. 필요 시 `finnhub_news` / `twelve_*` / `coingecko_*`로 글로벌·코인 흐름 보강
+5. 글로벌·코인 보강 필요 시: market_status에서 설정된 제공자의 툴만
+   (`finnhub_news` / `twelve_*` / `coingecko_*` — 미설정이면 건너뛰고 웹 검색 사용)
 
 출력 형식: 시장 요약 → 관심종목별 분석 → 섹터/테마 → 리스크/유의사항 → 면책 문구
 ("본 리포트는 참고용 정보 제공이며, 투자 결정의 최종 책임은 사용자에게 있습니다.")

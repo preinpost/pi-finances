@@ -5,10 +5,12 @@ argument-hint: "[업종명]"
 ${1:-전체} 섹터 스크리닝 리포트를 작성해줘.
 
 절차:
+0. `market_status`로 사용 가능한 데이터 제공자 확인 (미설정 제공자 툴은 호출 금지)
 1. 시장 전체 흐름 파악 (지수·등락률·거래대금)
 2. `kis-sector-research` 스킬로 업종별 등락·테마 정리
 3. 관심 업종 내 대표 종목 3~5개: `kis-timing` 스킬로 기술적 지표 확인
-4. 추가 후보 발굴 (필요 시): `twelve_search` / `finnhub_*` / `coingecko_market`
+4. 추가 후보 발굴 (필요 시): `market_status`에서 설정됨으로 확인된 제공자만 —
+   `twelve_search` / `finnhub_*` / `coingecko_market` (미설정이면 건너뛰고 `naver_news_search`·웹 검색 사용)
 5. 뉴스 스캔: `naver_news_search`
 
 출력 형식: 업종 요약 → 유망 업종/테마 → 후보 종목(지표 포함) → 리스크/유의사항 →

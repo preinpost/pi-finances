@@ -1,5 +1,5 @@
 /**
- * src/agent/tools.ts — pi 툴 등록 (kis_* 10개 + broker_* 2개).
+ * src/agent/tools.ts — pi 툴 등록 (kis_* 10개 + broker_* 2개 + market_status).
  *
  * 툴 name/label/description/parameters/출력 형태는 변경 불가(하위 호환).
  * execute 내부만 roles/core로 위임한다:
@@ -32,6 +32,7 @@ import {
 	BrokerFallbackError,
 	suggestFallbackTools,
 } from "../roles/broker.ts";
+import { providerStatusSummary } from "../roles/status.ts";
 import {
 	getDerivativesMarketTime,
 	getFuturePrice,
@@ -421,6 +422,20 @@ function brokerErrorResult(pi: ExtensionAPI, e: unknown) {
 }
 
 // ── broker: KIS 우선 — 실패 시 toss_* 툴 콜 지시 (fallback 필드) ────
+	pi.registerTool({
+		name: "market_status",
+		label: "시장 데이터 제공자 상태",
+		description:
+			"키가 설정된 브로커/데이터 제공자 확인 (KIS 실전·모의, 토스증권, Twelve Data, Finnhub, CoinGecko, 네이버 뉴스). " +
+			"시세·차트 조회 전에 먼저 호출하면 사용 가능한 툴을 바로 고를 수 있다. " +
+			"미설정 제공자의 *_price/*_chart 툴은 호출해도 실패하므로 순차 시도하지 말 것. " +
+			"시세/차트는 broker_price / broker_chart 를 우선 사용하고, 실패 시 응답의 fallback 지시를 따른다.",
+		parameters: Type.Object({}),
+		async execute() {
+			return textResult(providerStatusSummary());
+		},
+	});
+
 	pi.registerTool({
 		name: "broker_price",
 		label: "현재가 (KIS 우선, toss 툴 콜 폴백)",
