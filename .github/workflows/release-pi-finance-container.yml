@@ -14,7 +14,7 @@
 # 빌드 컨텍스트는 containers/ (Dockerfile이 web/, agent-config/, docker-entrypoint.sh를
 # 상대 경로로 참조 — containers/compose.yaml의 build: . 과 동일).
 # GITHUB_TOKEN(packages: write)으로 GHCR 인증 — 별도 시크릿 불필요.
-# 멀티아키텍처: linux/amd64 + linux/arm64 (Dockerfile이 uname -m으로 ttyd 바이너리 분기).
+# 멀티아키텍처: linux/amd64 + linux/arm64.
 # GHA 캐시로 재빌드 가속 (web-build npm ci + pi install 레이어).
 
 name: Release pi-finance container

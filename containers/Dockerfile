@@ -22,22 +22,10 @@ FROM node:24-bookworm-slim
 # ── 베이스 ───────────────────────────────────────────────────────────
 # bash/ca-certificates/git/ripgrep: pi 공식 Dockerfile 권장 구성
 # tzdata: 한국 시장 시간(TZ=Asia/Seoul)
-# ttyd: bookworm apt에 없음(arm64 빌드에서 확인) → GitHub 공식 릴리스 정적 바이너리
-#       (설계 §6 — 컨테이너 빌드 검증 중 발견, 2026-08-11)
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-     bash ca-certificates curl git ripgrep tzdata \
+     bash ca-certificates git ripgrep tzdata \
   && rm -rf /var/lib/apt/lists/*
-
-# ttyd 1.7.7 (tsl0922/ttyd) — x86_64/aarch64 정적 바이너리, libwebsockets 번들
-RUN case "$(uname -m)" in \
-      x86_64)  TTYD_ARCH=x86_64 ;; \
-      aarch64) TTYD_ARCH=aarch64 ;; \
-      *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;; \
-    esac \
- && curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" \
-      -o /usr/local/bin/ttyd \
- && chmod +x /usr/local/bin/ttyd
 
 # ── pi 하네스 (글로벌 설치) ─────────────────────────────────────────
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
@@ -85,11 +73,11 @@ ENV HOME=/home/pi \
     HOST=0.0.0.0 \
     PI_WEB_CWD=/workspace
 
-# ── 엔트리포인트 (웹터미널/헤드리스 분기) ───────────────────────────
+# ── 엔트리포인트 (웹챗/헤드리스 분기) ───────────────────────────────
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-EXPOSE 7681
+EXPOSE 8080
 USER 1001
 WORKDIR /workspace
 ENTRYPOINT ["docker-entrypoint.sh"]

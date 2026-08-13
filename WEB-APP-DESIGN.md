@@ -57,7 +57,7 @@ Browser (SPA — React 19 + TanStack Router/Query + Base UI + Tailwind v4)
   ├─ GET  /            → Vite 빌드 산출물 (dist/public)
   ├─ WS   /ws          → 세션별 실시간 이벤트/명령 (세션 허브 — URL /s/:sessionId)
   ├─ GET  /api/health·sessions·models·custom-models·fork-points·extensions·state
-  └─ ⚠️ 인증 없음 (3c에서 토큰 인증 프록시 예정)
+  └─ 비밀번호 게이트 (`PI_WEB_USER`/`PI_WEB_PASSWORD`, HttpOnly 세션 쿠키)
 
 Node 서버 (containers/web/dist/index.js — pi-web-chat 벤더링)
   ├─ @earendil-works/pi-coding-agent SDK (AgentSessionRuntime — rpc 서브프로세스 아님)
@@ -111,10 +111,9 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 
 ## 6. 보안 설계
 
-- `PI_WEB_TOKEN` Bearer 인증 (HTTP + SSE + files 전부). 미설정 시 `openssl rand` 자동 생성,
-  시작 로그 출력 (ttyd 토큰과 동일 패턴). compose에 `PI_WEB_TOKEN` 권장.
-- `PI_WEB_TOKEN` 보유 = 챗 + (rpc 화이트리스트 경유) 셸 간접 접근 — ttyd와 **동등한 위험 수준**
-  (pod-per-user 에페메럴 모델이므로 허용, 설계 §8 참조).
+- `PI_WEB_USER`/`PI_WEB_PASSWORD` 비밀번호 게이트 (HTTP + WS). 미설정 시 서버가 비밀번호를
+  생성해 시작 로그에 출력. compose에 `PI_WEB_PASSWORD` 권장. `PI_WEB_AUTH=0`으로 끌 수 있다.
+- 로그인 세션 보유 = 챗 + 에이전트 제어 — 파드당 단일 공유 계정 (pod-per-user 에페메럴 모델).
 - `/files/*`는 `path.normalize` 후 `/workspace` 접두사 강제, symlink 금지, HTML만 허용.
 - SSE 응답에 `X-Accel-Buffering: no`, CSP 헤더(`default-src 'self'`), `X-Content-Type-Options`.
 - 키·토큰은 백엔드 로그에서 레드랙트 (정규식 `sk-...`/`token=` 마스킹).
@@ -129,12 +128,10 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 - Dockerfile 멀티스테이지: Stage 1(web-build) `npm ci && npm run build`(vite+esbuild) →
   Stage 2 `COPY --from=web-build /build/web/dist /opt/pi-web/dist` + `npm ci --omit=dev`
   (런타임 의존성 `@earendil-works/pi-coding-agent`, `ws`만).
-- 엔트리포인트: `PI_WEB=1` → `exec node /opt/pi-web/dist/index.js` (기본값은 ttyd 유지).
+- 엔트리포인트: 기본이 웹챗 (`exec node /opt/pi-web/dist/index.js`). ttyd는 제거됨.
 - 컨테이너 env: `PORT=8080 HOST=0.0.0.0 PI_WEB_CWD=/workspace`.
   모델 기본값(`PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING`)은 SDK가 설정으로 사용.
-- 로컬 적응(upstream 미포함): **없음** — 2026-08-11 금융 템플릿 버튼·`/api/templates` 제거,
-  업스트림 그대로 사용 (UPSTREAM.md 참조).
-- ⚠️ 인증 없음 — 외부 노출 시 토큰 인증 프록시(3c) 필요.
+- 로컬 적응: 비밀번호 게이트 (`PI_WEB_USER`/`PI_WEB_PASSWORD`) — UPSTREAM.md 참조.
 
 ## 8. 구현 순서 (워커 할당 단위)
 
@@ -142,14 +139,13 @@ stdin(요청)/stdout(이벤트) 단방향이므로 1:1 대응이 자연스러움
 |---|---|---|
 | 3a ✅ | `server.mjs` 골격: rpc spawn + SSE + POST 화이트리스트 + 최소 챗 UI | 호스트/컨테이너 검증 완료 (실제 LLM 왕복 확인) |
 | 3b ✅ | ~~React + Vite + TS + TanStack 전면 개편~~ → **pi-web-chat 소스 벤더링**(세션·모델·확장·fork·i18n 등 전체 기능) + 멀티스테이지 Dockerfile | tsc + vite build + 호스트 왕복(WS) + 컨테이너 스모크 완료 |
-| 3c | 하드닝: 토큰 인증, 재접속 복원 | 토큰 401 검증, 프로세스 kill 테스트 |
+| 3c | 하드닝: 비밀번호 게이트 | 로그인 401/429 검증, 세션 쿠키로 API/WS 통과 |
 
 ## 9. 오픈 이슈
 
 1. **SSE vs WS**: 제로 의존성 위해 SSE+POST 선택 — 이벤트 순서 보장·프록시 호환성은 구현 시
    확인 (nginx/ingress buffering 주의, `X-Accel-Buffering: no`).
-2. **ttyd 유지 여부**: 기본 모드는 ttyd 유지, `PI_WEB=1`로 전환 — Phase 3 안정화 후
-   웹챗을 기본으로 바꿀지 사용자 결정.
+2. **ttyd**: 제거됨. 웹챗이 기본 인터페이스.
 3. **세션 재개**: 파드 재시작 시 `--session-dir`의 세션이 `switch_session`으로 재개 가능 —
    MVP에서는 자동 재개 없이 새 세션 + 경고 표시.
 4. **이미지 태그/레지스트리**: Phase 3c에서 CI 이미지 빌드와 함께 결정.

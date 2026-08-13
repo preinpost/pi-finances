@@ -3,7 +3,7 @@
 # 사용법:
 #   cp compose.example.yaml compose.yaml   # 복사 후 compose.yaml에 실제 키 입력
 #   docker compose up --build
-#   브라우저 → http://localhost:7681  (user=pi, token=$TTYD_TOKEN 또는 시작 로그)
+#   브라우저 → http://localhost:8080  (user=$PI_WEB_USER, password=$PI_WEB_PASSWORD)
 #
 # ⚠️ 실제 키는 compose.yaml에만 입력 — 이 파일은 템플릿이므로 그대로 커밋 유지.
 #    compose.yaml은 .gitignore 대상이며 .dockerignore로 빌드 컨텍스트에서 제외된다.
@@ -14,12 +14,12 @@ services:
     init: true               # PID 1 = tini — 시그널/좀비 처리
     restart: unless-stopped
     ports:
-      - "7681:7681"          # 웹터미널 (ttyd)
-      # - "8080:8080"        # 웹챗 (Phase 3 — 아래 PI_WEB=1 주석 해제 시)
+      - "8080:8080"          # 웹챗
     environment:
-      # [웹챗 Phase 3] — ttyd 대신 브라우저 챗 UI를 쓰려면 주석 해제
-      # PI_WEB: "1"
-      # PI_WEB_TOKEN: ""       # (3c 하드닝에서 적용 예정 — 3a에선 인증 없음)
+      # ── 웹챗 비밀번호 게이트 (PASSWORD 미설정 시 시작 로그에 자동 생성) ──
+      PI_WEB_USER: "pi"
+      # PI_WEB_PASSWORD: "change-me"
+      # PI_WEB_AUTH: "0"      # 로컬 전용 — 인증 끄기 (외부 노출 금지)
 
       # ── LLM 프로바이더 (원하는 프로바이더 블록을 주석 해제해 한 세트로 사용) ──
       # 모델 ID 확인: 컨테이너 안에서 pi --list-models (또는 TUI /model 로 변경 가능)
@@ -78,9 +78,6 @@ services:
       # NAVER_NEWS_API_MODE: "hub"
       # NCP_APIGW_API_KEY_ID: ""
       # NCP_APIGW_API_KEY: ""
-      # ── 웹터미널 basic-auth 토큰 (선택) ────────────────────────────────
-      # 미설정 시 컨테이너 시작마다 자동 생성되어 시작 로그에 출력된다.
-      TTYD_TOKEN: ""
     # ── 선택: 세션·리포트만 보존 (키 파일은 절대 볼륨에 두지 않음 — 설계 §8.6) ──
     # volumes:
     #   - pi-finance-sessions:/opt/pi-agent/sessions
