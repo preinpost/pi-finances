@@ -29,8 +29,9 @@ export const SECRET_FIELDS: SecretField[] = [
   { key: "TWELVE_API_KEY", group: "market", label: "Twelve Data", secret: true },
   { key: "FINNHUB_API_KEY", group: "market", label: "Finnhub", secret: true },
   { key: "COINGECKO_API_KEY", group: "market", label: "CoinGecko", secret: true },
-  { key: "NAVER_CLIENT_ID", group: "market", label: "Naver Client ID" },
-  { key: "NAVER_CLIENT_SECRET", group: "market", label: "Naver Client Secret", secret: true },
+  { key: "NAVER_NEWS_API_MODE", group: "market", label: "Naver API Mode", hint: "hub (기본) 또는 legacy" },
+  { key: "NCP_APIGW_API_KEY_ID", group: "market", label: "Naver API Key ID" },
+  { key: "NCP_APIGW_API_KEY", group: "market", label: "Naver API Key", secret: true },
 ];
 
 export const SECRET_GROUPS: { id: SecretGroup; labelKey: "keysGroupLlm" | "keysGroupBroker" | "keysGroupMarket" }[] = [

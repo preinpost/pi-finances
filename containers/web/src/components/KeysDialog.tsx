@@ -102,6 +102,9 @@ export function KeysDialog({
                             {configured ? t("keysConfigured") : t("keysMissing")}
                           </span>
                         </span>
+                        {field.hint ? (
+                          <span className="text-[10px] text-faint">{field.hint}</span>
+                        ) : null}
                         <input
                           className={inputClass}
                           type="password"

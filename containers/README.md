@@ -79,7 +79,7 @@ docker compose up --build
 | `TWELVE_API_KEY` | Twelve Data | 선택 |
 | `FINNHUB_API_KEY` | Finnhub | 선택 |
 | `COINGECKO_API_KEY` | CoinGecko | 선택 |
-| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | 네이버 뉴스 검색 | 선택 |
+| `NAVER_NEWS_API_MODE` + `NCP_APIGW_API_KEY_ID` / `NCP_APIGW_API_KEY` | 네이버 뉴스 검색 (NAVER API HUB, mode=hub 기본) | 선택 |
 | `PI_DEFAULT_MODEL` | 기본 모델 (`provider/id`, `pi --list-models`로 확인) | 선택 |
 | `PI_DEFAULT_THINKING` | 기본 thinking (`off/minimal/low/medium/high/xhigh/max`) | 선택 |
 | `PI_WEB_USER` | 웹챗 로그인 사용자 (기본 `pi`) | 선택 |
