@@ -62,10 +62,14 @@ services:
       # ── 한국투자증권 OPEN API (선택 — https://apiportal.koreainvestment.com) ──
       KIS_APP_KEY: ""          # 실전투자 App Key
       KIS_APP_SECRET: ""       # 실전투자 App Secret
+      # ⚠️ 조회 가능 범위는 API 신청 계좌의 거래가능시장에 따라 달라집니다.
+      #    해외주식 시세·주문 API는 해외증권 거래신청이 된 계좌 + 한투 홈페이지의
+      #    '해외주식 API 사용 동의'가 있어야 호출됩니다 — 없으면 국내 API는 되는데
+      #    해외 API만 권한 오류가 납니다 (국내 전용 계좌면 해외주식 조회 불가).
       KIS_ACCT_STOCK: ""       # 실전투자 계좌번호 (8자리+2자리, 예: 12345678-01)
       # KIS_PAPER_APP_KEY: ""     # 모의투자 App Key (선택)
       # KIS_PAPER_APP_SECRET: ""  # 모의투자 App Secret (선택)
-      # KIS_PAPER_STOCK: ""       # 모의투자 계좌번호 (선택)
+      # KIS_PAPER_STOCK: ""       # 모의투자 계좌번호 (선택, 거래가능시장 규칙은 실전과 동일)
       # ── 토스증권 OPEN API (선택) ───────────────────────────────────────
       TOSS_CLIENT_ID: ""
       TOSS_CLIENT_SECRET: ""
