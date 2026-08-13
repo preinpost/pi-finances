@@ -67,7 +67,9 @@ docker compose up --build
 
 - 웹앱은 pi-web-chat(SDK 기반 AgentSessionRuntime, WebSocket) 소스 벤더링 — 자세한 내용은 아래
   "웹챗 (Phase 3 — pi-web-chat 소스 벤더링)" 섹션과 [`web/UPSTREAM.md`](web/UPSTREAM.md).
-- `PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING` env는 SDK가 모델 기본값으로 사용한다.
+- `PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING` env는 새 세션의 기본 모델/thinking으로 사용된다
+  (웹챗 서버가 직접 읽음 — TUI/헤드리스는 `--model`/`--thinking` 플래그로 전달).
+  기존 세션(재개/포크)은 저장된 모델·thinking이 우선한다.
 - 세션은 pi CLI와 공유 (`PI_CODING_AGENT_DIR` 기반, 채팅 cwd=`/workspace` — 에페메럴).
 - ⚠️ **웹챗에는 인증이 없다** (HOST=0.0.0.0 바인딩) — 외부 노출 시 토큰 인증 프록시(3c) 필요.
 
@@ -91,8 +93,9 @@ docker compose up --build
 컨테이너 종료 시 소멸**한다. 참고: `compose.example.yaml`이 템플릿 (키 없음, 커밋 유지),
 `compose.yaml`이 실키 파일 (gitignore 대상).
 
-모델/thinking도 키와 한 세트로 지정한다 — `PI_DEFAULT_MODEL`은 `--model` 플래그로,
-`PI_DEFAULT_THINKING`은 `--thinking` 플래그로 전달되며, TUI 안에서 `/model`로 언제든 변경 가능:
+모델/thinking도 키와 한 세트로 지정한다 — TUI/헤드리스 모드는 `PI_DEFAULT_MODEL`을 `--model`
+플래그로, `PI_DEFAULT_THINKING`을 `--thinking` 플래그로 전달하며, 웹챗(`PI_WEB=1`)은
+웹 서버가 env를 직접 읽어 새 세션 기본값으로 쓴다. TUI 안에서는 `/model`로 언제든 변경 가능:
 
 ## 웹챗 (Phase 3 — pi-web-chat 소스 벤더링)
 

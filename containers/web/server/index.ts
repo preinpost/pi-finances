@@ -10,6 +10,7 @@ import {
   createAgentSessionServices,
   getAgentDir,
   ModelRuntime,
+  resolveCliModel,
   SessionManager,
 } from "@earendil-works/pi-coding-agent";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -19,6 +20,7 @@ import type {
   UICustomModelsResponse,
   UICustomProvider,
   UIExtensionInfo,
+  UIModel,
   UISessionInfo,
   UISnapshot,
   UIThinkingLevel,
@@ -68,15 +70,88 @@ const DIST_DIR = (() => {
 })();
 
 // ---------------------------------------------------------------------------
+// 컨테이너 기본 모델/thinking — env 주입 (docker-entrypoint.sh / compose.yaml)
+// ---------------------------------------------------------------------------
+const ALL_THINKING_LEVELS: UIThinkingLevel[] = [
+  "off",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+];
+
+// PI_DEFAULT_MODEL="provider/id", PI_DEFAULT_THINKING="off|minimal|...|max".
+// TUI/헤드리스 모드는 --model/--thinking 플래그로 전달받지만 웹 서버는 세션을
+// 직접 만들기 때문에 여기서 env를 읽는다. 새 세션(메시지 없음)에만 적용하고,
+// 재개/포크 등 메시지가 이미 있는 세션은 저장된 모델·thinking 복원이 우선
+// (SDK 기본 동작과 동일).
+// ⚠️ 업스트림(pi-web-chat)에는 없는 로컬 적응 — UPSTREAM.md 참고.
+const ENV_DEFAULT_MODEL = process.env.PI_DEFAULT_MODEL?.trim() || undefined;
+const ENV_DEFAULT_THINKING = ALL_THINKING_LEVELS.includes(
+  process.env.PI_DEFAULT_THINKING?.trim() as UIThinkingLevel,
+)
+  ? (process.env.PI_DEFAULT_THINKING!.trim() as UIThinkingLevel)
+  : undefined;
+
+// ---------------------------------------------------------------------------
 // pi 세션 런타임
 // ---------------------------------------------------------------------------
 
 let modelRuntime = await ModelRuntime.create();
 
+// env 기본 모델을 시작 시 미리 해석해 둔다 — 부트스트랩 스냅샷(세션 생성 전
+// 헤더 표시용)에서 즉시 사용. 세션 런타임과 무관하게 카탈로그 기준으로 매칭된다.
+const ENV_DEFAULT_RESOLVED = ENV_DEFAULT_MODEL
+  ? resolveCliModel({
+      cliModel: ENV_DEFAULT_MODEL,
+      cliThinking: ENV_DEFAULT_THINKING,
+      modelRuntime,
+    })
+  : undefined;
+if (ENV_DEFAULT_MODEL) {
+  if (ENV_DEFAULT_RESOLVED?.warning) console.warn(`[pi-web-chat] ${ENV_DEFAULT_RESOLVED.warning}`);
+  if (!ENV_DEFAULT_RESOLVED?.model) {
+    console.warn(
+      `[pi-web-chat] PI_DEFAULT_MODEL="${ENV_DEFAULT_MODEL}" not found — falling back to default model resolution`,
+    );
+  }
+}
+
 const createRuntime: CreateAgentSessionRuntimeFactory = async ({ cwd, sessionManager, sessionStartEvent }) => {
   const services = await createAgentSessionServices({ cwd });
+  // env 기본 모델/thinking — 빈 세션(새 초안)에만 적용.
+  // 기존 세션은 SDK가 저장된 모델·thinking을 복원한다.
+  let model: ReturnType<typeof resolveCliModel>["model"];
+  let thinkingLevel: UIThinkingLevel | undefined;
+  if (sessionManager.buildSessionContext().messages.length === 0) {
+    if (ENV_DEFAULT_MODEL) {
+      const resolved = resolveCliModel({
+        cliModel: ENV_DEFAULT_MODEL,
+        cliThinking: ENV_DEFAULT_THINKING,
+        modelRuntime: services.modelRuntime,
+      });
+      model = resolved.model;
+      thinkingLevel = resolved.thinkingLevel ?? ENV_DEFAULT_THINKING;
+      if (resolved.warning) console.warn(`[pi-web-chat] ${resolved.warning}`);
+      if (!model) {
+        console.warn(
+          `[pi-web-chat] PI_DEFAULT_MODEL="${ENV_DEFAULT_MODEL}" not found — falling back to default model resolution`,
+        );
+      }
+    } else {
+      thinkingLevel = ENV_DEFAULT_THINKING;
+    }
+  }
   return {
-    ...(await createAgentSessionFromServices({ services, sessionManager, sessionStartEvent })),
+    ...(await createAgentSessionFromServices({
+      services,
+      sessionManager,
+      sessionStartEvent,
+      model,
+      thinkingLevel,
+    })),
     services,
     diagnostics: services.diagnostics,
   };
@@ -190,16 +265,6 @@ setInterval(() => {
   }
 }, 60_000).unref();
 
-const ALL_THINKING_LEVELS: UIThinkingLevel[] = [
-  "off",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-  "max",
-];
-
 function supportedThinkingLevels(model: unknown): UIThinkingLevel[] {
   const m = model as
     | { reasoning?: boolean; thinkingLevelMap?: Record<string, string | null> }
@@ -213,6 +278,32 @@ function supportedThinkingLevels(model: unknown): UIThinkingLevel[] {
     if ((level === "xhigh" || level === "max") && map?.[level] == null) return false;
     return true;
   });
+}
+
+/**
+ * 세션 생성(수 초 소요)이 끝나기 전에 헤더(모델/thinking)를 바로 채우는
+ * 부트스트랩 스냅샷. env 기본 모델/thinking은 세션 생성과 무관하게 확정적이므로
+ * 새 초안(세션 미지정) 접속 직후에 보낼 수 있다. 실제 스냅샷이 도착하면 교체된다.
+ * 기존 세션(?session=)은 저장된 모델·thinking 복원이 우선이라 대상이 아니다.
+ */
+function bootstrapSnapshot(): UISnapshot | undefined {
+  if (!ENV_DEFAULT_MODEL && !ENV_DEFAULT_THINKING) return undefined;
+  const resolved = ENV_DEFAULT_RESOLVED;
+  const model: UIModel | null = resolved?.model
+    ? {
+        provider: resolved.model.provider,
+        id: resolved.model.id,
+        name: (resolved.model as { name?: string }).name,
+        reasoning: (resolved.model as { reasoning?: boolean }).reasoning,
+      }
+    : null;
+  return {
+    messages: [],
+    isStreaming: false,
+    model,
+    thinkingLevel: resolved?.thinkingLevel ?? ENV_DEFAULT_THINKING ?? "medium",
+    thinkingLevels: resolved?.model ? supportedThinkingLevels(resolved.model) : ALL_THINKING_LEVELS,
+  };
 }
 
 function buildSnapshot(entry: SessionEntry): UISnapshot {
@@ -626,6 +717,12 @@ const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
 
 wss.on("connection", (ws, req) => {
   const requested = new URL(req.url ?? "/ws", "http://localhost").searchParams.get("session");
+  // 새 초안은 세션 생성(수 초) 전에 모델/thinking 헤더가 바로 뜨도록 부트스트랩 전송.
+  // 실제 스냅샷이 도착하면 클라이언트에서 교체된다.
+  if (!requested) {
+    const boot = bootstrapSnapshot();
+    if (boot) sendTo(ws, { type: "snapshot", snapshot: boot });
+  }
   const queue: ClientCommand[] = [];
   let ready = false;
 
