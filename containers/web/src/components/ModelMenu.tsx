@@ -102,12 +102,29 @@ export function ModelMenu({ current }: { current: UIModel | null }) {
                     onClick={() =>
                       chatClient.send({ type: "set_model", provider: m.provider, id: m.id })
                     }
-                    className={`flex cursor-pointer flex-col px-3 py-2 text-sm outline-none data-[highlighted]:bg-hover ${
+                    className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm outline-none data-[highlighted]:bg-hover ${
                       active ? "text-accent" : "text-ink"
                     }`}
                   >
-                    <span className="truncate">{m.name ?? m.id}</span>
-                    <span className="text-xs text-faint">{m.provider}</span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate">{m.name ?? m.id}</span>
+                      <span className="truncate font-mono text-[10.5px] text-faint">
+                        {m.provider}
+                      </span>
+                    </span>
+                    {active && (
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="size-4 shrink-0 fill-none stroke-current stroke-2.5"
+                        aria-hidden
+                      >
+                        <path
+                          d="M20 6 9 17l-5-5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
                   </Menu.Item>
                 );
               })}

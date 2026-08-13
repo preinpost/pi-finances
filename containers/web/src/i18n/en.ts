@@ -90,9 +90,21 @@ export type Messages = {
 
   // messages
   emptyPrompt: string;
+  emptyTitle: string;
+  emptySubtitle: string;
+  suggest1: string;
+  suggest2: string;
+  suggest3: string;
+  suggest4: string;
+  thinking: string;
+  noOutput: string;
+  sendHint: string;
+  copy: string;
+  copied: string;
+  retry: string;
+  sources: string;
   attachedImage: string;
   imagePlaceholder: string;
-  toolRunning: string;
 };
 
 export const en: Messages = {
@@ -180,7 +192,19 @@ export const en: Messages = {
   optional: "optional",
 
   emptyPrompt: "How can I help?",
+  emptyTitle: "What can I help you with?",
+  emptySubtitle: "Ask the pi agent about markets, research, and analysis.",
+  suggest1: "Samsung Electronics price today",
+  suggest2: "Analyze the current KOSPI market",
+  suggest3: "Screen top AI-sector stocks",
+  suggest4: "Review my portfolio",
+  thinking: "Thinking",
+  noOutput: "(no output)",
+  sendHint: "Enter to send · Shift+Enter for newline",
+  copy: "Copy",
+  copied: "Copied",
+  retry: "Retry",
+  sources: "{count} sources",
   attachedImage: "Attached image",
   imagePlaceholder: "[image]",
-  toolRunning: "Running {name}…",
 };

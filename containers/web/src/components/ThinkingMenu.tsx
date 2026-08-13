@@ -15,10 +15,12 @@ export function ThinkingMenu({
   return (
     <Menu.Root>
       <Menu.Trigger
-        className="rounded-lg px-2.5 py-1.5 text-[13px] text-muted transition-colors hover:bg-hover hover:text-ink"
+        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] text-muted transition-colors hover:bg-hover hover:text-ink"
         title="Thinking level"
       >
-        <span className="mr-1">🧠</span>
+        <svg viewBox="0 0 24 24" className="size-3.5 fill-accent" aria-hidden>
+          <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+        </svg>
         {current}
       </Menu.Trigger>
       <Menu.Portal>

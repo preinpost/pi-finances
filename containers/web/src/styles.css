@@ -189,3 +189,165 @@ html.ua-keyboard .composer-bar {
   background-color: var(--c-bubble);
   @apply rounded px-1.5 py-0.5 text-[13px] font-normal before:content-none after:content-none;
 }
+
+/*
+ * ── 폴리싱 유틸리티 ──────────────────────────────────────────────
+ * 입장 애니메이션 / 픽셀 로더 / 쉬머 / 스트리밍 커서.
+ */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pixel-on {
+  0%,
+  100% {
+    opacity: 0.16;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer-text {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes caret-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 스트리밍 단어가 blur에서 또렷하게 해소되는 애니메이션 */
+@keyframes stream-in {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 페이드 인 + 6px 상승. 인라인 style로 delay를 준다. */
+.fade-up {
+  animation: fade-up 480ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* 3x3 픽셀 로더 (beautiful-ui 스타일). 자식 9개가 순차 점등. */
+.pixel-loader {
+  display: grid;
+  grid-template-columns: repeat(3, 4px);
+  gap: 1.5px;
+}
+.pixel-loader > span {
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.16;
+  animation: pixel-on 700ms ease-in-out infinite;
+}
+.pixel-loader > span:nth-child(3n + 1) {
+  animation-delay: 0ms;
+}
+.pixel-loader > span:nth-child(3n + 2) {
+  animation-delay: 90ms;
+}
+.pixel-loader > span:nth-child(3n) {
+  animation-delay: 180ms;
+}
+.pixel-loader > span:nth-child(n + 4) {
+  animation-delay: 45ms;
+}
+.pixel-loader > span:nth-child(n + 7) {
+  animation-delay: 135ms;
+}
+
+/* "생각 중" 라벨의 왕복 쉬머 텍스트 */
+.shimmer-text {
+  background-image: linear-gradient(
+    90deg,
+    var(--c-faint) 35%,
+    var(--c-ink) 50%,
+    var(--c-faint) 65%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-text 1.6s linear infinite;
+}
+
+/* 스트리밍 텍스트 끝의 깜빡이는 커서 */
+.stream-cursor {
+  display: inline-block;
+  width: 1.5px;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: -0.15em;
+  border-radius: 999px;
+  background: var(--c-ink);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+/* 스트리밍 단어 — fade/blur 해소 애니메이션 (reduced-motion에서 정지) */
+.stream-word {
+  display: inline;
+  will-change: filter, opacity;
+  animation: stream-in 260ms ease-out both;
+}
+
+/* 소스 칩/아바타 팝인 */
+.pop-in {
+  animation: pop-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* 모션을 끈 사용자에게는 애니메이션을 전부 정지 */
+@media (prefers-reduced-motion: reduce) {
+  .fade-up,
+  .pixel-loader > span,
+  .shimmer-text,
+  .stream-cursor,
+  .stream-word,
+  .pop-in {
+    animation: none;
+  }
+  .shimmer-text {
+    color: var(--c-ink);
+    background: none;
+  }
+  .stream-word {
+    filter: none;
+  }
+}

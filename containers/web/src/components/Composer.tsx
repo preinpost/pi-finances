@@ -61,7 +61,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
 
   return (
     <div className="composer-bar shrink-0 bg-canvas md:rounded-b-2xl">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-line bg-card px-2 pt-2 pb-2 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-colors focus-within:border-faint">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-line bg-card px-2 pt-2 pb-2 shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-[border-color,box-shadow] duration-150 focus-within:border-faint focus-within:shadow-[0_2px_12px_rgba(0,0,0,0.05),0_0_0_3px_var(--c-accent-soft)]">
         {images.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2 px-1">
             {images.map((img, i) => (
@@ -133,15 +133,26 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
               className="flex size-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-colors hover:bg-hover hover:text-ink"
               aria-label={t("attachImage")}
             >
-              <svg viewBox="0 0 24 24" className="size-[18px] fill-none stroke-current stroke-[1.8]">
-                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+              <svg
+                viewBox="0 0 24 24"
+                className="size-[18px] fill-none stroke-current stroke-[1.8]"
+                aria-hidden
+              >
+                <rect x="3" y="5" width="18" height="14" rx="3" />
+                <circle cx="9" cy="10" r="1.6" />
+                <path d="m5 17 5-4 3 2.5 3-3 3 3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
             <div className="flex-1" />
+            {!isStreaming && (
+              <span className="hidden text-[11px] text-faint select-none md:block">
+                {t("sendHint")}
+              </span>
+            )}
             {isStreaming ? (
               <button
                 onClick={() => chatClient.send({ type: "abort" })}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink text-canvas transition-opacity hover:opacity-85"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink text-canvas transition-[transform,opacity] duration-150 hover:opacity-85 active:scale-95"
                 aria-label={t("abort")}
               >
                 <svg viewBox="0 0 24 24" className="size-3 fill-current">
@@ -152,7 +163,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
               <button
                 onClick={send}
                 disabled={!text.trim() && images.length === 0}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-30"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink transition-[transform,opacity] duration-150 hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
                 aria-label={t("send")}
               >
                 <svg viewBox="0 0 24 24" className="size-[18px] fill-none stroke-current stroke-2">

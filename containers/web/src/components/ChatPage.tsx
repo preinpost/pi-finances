@@ -8,6 +8,7 @@ import { useLeftEdgeSwipe } from "../lib/useEdgeSwipe";
 import { Composer } from "./Composer";
 import { MessageList } from "./MessageList";
 import { ModelMenu } from "./ModelMenu";
+import { PixelLoader } from "./PixelLoader";
 import { SessionsDrawer, SessionsSidebar } from "./SessionsDrawer";
 import { SettingsMenu } from "./SettingsMenu";
 import { ThinkingMenu } from "./ThinkingMenu";
@@ -77,15 +78,24 @@ export function ChatPage() {
       {sidebarPinned && <SessionsSidebar currentSessionFile={snapshot?.sessionFile} />}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-canvas md:my-2 md:mr-2 md:rounded-2xl md:border md:border-line md:shadow-sm">
-        <header className="flex shrink-0 items-center gap-1 px-2.5 py-2 pt-[max(0.5rem,var(--safe-top))]">
+        <header className="flex shrink-0 items-center gap-1 border-b border-line/70 px-2.5 py-2 pt-[max(0.5rem,var(--safe-top))]">
           <SessionsDrawer currentSessionFile={snapshot?.sessionFile} />
           <div className="flex min-w-0 items-center gap-2 px-1">
-            {!sidebarPinned && <span className="truncate text-sm font-medium text-ink">pi</span>}
-            <span
-              className={`size-1.5 shrink-0 rounded-full ${connectionDotClass(connection)}`}
-              title={connectionLabel(connection, t)}
-              aria-label={connectionLabel(connection, t)}
-            />
+            {!sidebarPinned && (
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-soft to-bubble font-serif text-[15px] font-semibold text-accent shadow-[inset_0_0_0_1px_var(--c-line)]">
+                π
+              </span>
+            )}
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span
+                className={`size-1.5 shrink-0 rounded-full ${connectionDotClass(connection)}`}
+                title={connectionLabel(connection, t)}
+                aria-label={connectionLabel(connection, t)}
+              />
+              <span className="hidden truncate text-[12px] text-faint sm:block">
+                {connectionLabel(connection, t)}
+              </span>
+            </span>
           </div>
           <div className="flex-1" />
           <ThinkingMenu
@@ -97,11 +107,8 @@ export function ChatPage() {
         </header>
 
         {showConnectingOverlay ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-            <span
-              className={`size-2.5 rounded-full ${connectionDotClass(connection)}`}
-              aria-hidden
-            />
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+            <PixelLoader className="text-accent" />
             <p className="text-sm text-muted">
               {connection === "disconnected" ? t("connectionLost") : t("connectingHint")}
             </p>
