@@ -166,18 +166,21 @@ function MessageActions({
   return (
     <>
       <div className="mt-2 flex items-center gap-0.5">
-        <button
-          type="button"
-          onClick={() => void copy()}
-          aria-label={copied ? t("copied") : t("copy")}
-          className="flex size-6 items-center justify-center rounded-[6px] text-faint transition-colors duration-100 hover:bg-hover hover:text-ink"
-        >
-          {copied ? (
-            <CheckIcon className="size-3.5 text-emerald-600 dark:text-emerald-500" />
-          ) : (
-            <CopyIcon className="size-3.5" />
-          )}
-        </button>
+        {/* 툴 콜 카드만 있는 메시지처럼 복사할 텍스트가 없으면 복사 버튼을 숨긴다 */}
+        {text && (
+          <button
+            type="button"
+            onClick={() => void copy()}
+            aria-label={copied ? t("copied") : t("copy")}
+            className="flex size-6 items-center justify-center rounded-[6px] text-faint transition-colors duration-100 hover:bg-hover hover:text-ink"
+          >
+            {copied ? (
+              <CheckIcon className="size-3.5 text-emerald-600 dark:text-emerald-500" />
+            ) : (
+              <CopyIcon className="size-3.5" />
+            )}
+          </button>
+        )}
         {canRetry && retryText && (
           <button
             type="button"
