@@ -1,6 +1,6 @@
 {
   "name": "pi-kis",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Korea Investment (KIS) OPEN API direct REST client for pi — 공식 포털 전체 API 규격(338개) 기반 국내/해외 주식 시세·차트·주문·리서치·파생 (v2 키 체계, hashkey 자동, tr_cont 연속조회). 토스증권은 pi-toss 패키지 (v0.3.0부터 분리).",
   "type": "module",
   "license": "MIT",
