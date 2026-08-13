@@ -11,6 +11,7 @@ services:
   pi-finance:
     build: .
     image: ghcr.io/preinpost/pi-finance:latest
+    pull_policy: always
     init: true               # PID 1 = tini — 시그널/좀비 처리
     restart: unless-stopped
     ports:
