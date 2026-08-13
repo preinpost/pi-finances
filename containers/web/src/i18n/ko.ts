@@ -22,6 +22,8 @@ export const ko: Messages = {
   pinSidebar: "사이드바 고정",
   unpinSidebar: "사이드바 고정 해제",
   closeSidebar: "사이드바 닫기",
+  deleteSession: "세션 삭제",
+  confirmDeleteSession: "이 세션을 삭제할까요? 되돌릴 수 없습니다.",
 
   sendMessage: "메시지 보내기",
   streamingPlaceholder: "스트리밍 중… (보내면 steering 됩니다)",

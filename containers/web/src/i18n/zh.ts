@@ -23,6 +23,8 @@ export const zh: Messages = {
   pinSidebar: "固定侧边栏",
   unpinSidebar: "取消固定侧边栏",
   closeSidebar: "关闭侧边栏",
+  deleteSession: "删除会话",
+  confirmDeleteSession: "删除此会话？此操作无法撤销。",
 
   sendMessage: "发送消息",
   streamingPlaceholder: "流式输出中…（发送可进行引导）",

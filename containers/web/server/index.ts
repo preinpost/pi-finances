@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { createServer, type IncomingMessage } from "node:http";
 import { homedir } from "node:os";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
@@ -558,6 +559,36 @@ const httpServer = createServer(async (req, res) => {
         }));
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify(list));
+      return;
+    }
+
+    // 세션 삭제 — 실행 중인 런타임(entry)이 있으면 먼저 정리하고 파일을 지운다
+    if (url.pathname.startsWith("/api/sessions/") && req.method === "DELETE") {
+      const id = decodeURIComponent(url.pathname.slice("/api/sessions/".length));
+      const entry = entries.get(id);
+      if (entry) {
+        entries.delete(id);
+        entry.unsubscribe?.();
+        // 바인딩된 클라이언트에 삭제 통보 → 새 초안으로 재연결하게 한다
+        for (const ws of [...entry.clients]) {
+          wsEntry.delete(ws);
+          if (ws.readyState === ws.OPEN) {
+            const event: ServerEvent = { type: "session_deleted" };
+            ws.send(JSON.stringify(event));
+          }
+        }
+        await entry.runtime.dispose().catch(() => {});
+      }
+      const sessions = await SessionManager.list(AGENT_CWD);
+      const found = sessions.find((s) => sessionIdOf(s.path) === id);
+      if (!found) {
+        res.writeHead(404, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "session not found" }));
+        return;
+      }
+      await rm(found.path, { force: true });
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
       return;
     }
 

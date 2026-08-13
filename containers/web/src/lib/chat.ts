@@ -213,6 +213,10 @@ class ChatClient {
       case "forked":
         if (event.selectedText) this.update({ injectText: event.selectedText });
         break;
+      case "session_deleted":
+        // 다른 탭/사용자가 이 세션을 삭제 → 상태 초기화 후 새 초안에 재연결
+        this.resetToDraft();
+        break;
       case "error":
         console.error("[pi-web-chat]", event.message);
         break;
@@ -221,6 +225,26 @@ class ChatClient {
 
   consumeInjectText() {
     if (this.state.injectText !== null) this.update({ injectText: null });
+  }
+
+  /** 빈 상태 추천 질문 등에서 컴포저에 텍스트 주입 + 포커스 */
+  injectComposerText(text: string) {
+    this.update({ injectText: text });
+    this.requestComposerFocus();
+  }
+
+  /** 세션 삭제 시: 상태 초기화 + 새 초안 연결 (session_deleted 이벤트와 동일 경로) */
+  resetToDraft() {
+    if (this.ws) this.closeSocket();
+    this.clearPendingDeltas();
+    this.update({
+      snapshot: null,
+      sessionId: null,
+      streamText: "",
+      streamThinking: "",
+      activeTools: [],
+    });
+    this.connect(null, { force: true });
   }
 
   /** 드로어 닫힘 등과 겹치지 않도록 약간 늦춰 composer에 포커스 */

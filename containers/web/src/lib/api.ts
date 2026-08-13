@@ -32,6 +32,15 @@ export function useInvalidateSessions() {
   return () => qc.invalidateQueries({ queryKey: SESSIONS_QUERY_KEY });
 }
 
+/** 세션 파일 삭제 (서버에서 실행 중인 런타임도 함께 정리) */
+export async function deleteSession(id: string): Promise<void> {
+  const res = await fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!res.ok) {
+    const json = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(json?.error ?? `delete failed: ${res.status}`);
+  }
+}
+
 export function useForkPoints(sessionId: string | null, enabled = true) {
   return useQuery({
     queryKey: ["fork-points", sessionId],

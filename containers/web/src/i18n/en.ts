@@ -22,6 +22,8 @@ export type Messages = {
   pinSidebar: string;
   unpinSidebar: string;
   closeSidebar: string;
+  deleteSession: string;
+  confirmDeleteSession: string;
 
   // composer
   sendMessage: string;
@@ -115,6 +117,8 @@ export const en: Messages = {
   pinSidebar: "Pin sidebar",
   unpinSidebar: "Unpin sidebar",
   closeSidebar: "Close sidebar",
+  deleteSession: "Delete session",
+  confirmDeleteSession: "Delete this session? This cannot be undone.",
 
   sendMessage: "Send a message",
   streamingPlaceholder: "Streaming… (send to steer)",

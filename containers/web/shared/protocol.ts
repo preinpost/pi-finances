@@ -136,6 +136,8 @@ export type ServerEvent =
   | { type: "agent_start" }
   | { type: "agent_end" }
   | { type: "forked"; selectedText?: string }
+  /** 이 연결에 바인딩된 세션이 삭제됨 — 클라이언트는 새 초안으로 재연결 */
+  | { type: "session_deleted" }
   | { type: "error"; message: string };
 
 export type ClientCommand =

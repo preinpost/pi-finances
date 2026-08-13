@@ -2,7 +2,7 @@ import { Dialog } from "@base-ui-components/react/dialog";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { UISessionInfo } from "../../shared/protocol";
-import { useInvalidateSessions, useSessions } from "../lib/api";
+import { deleteSession, useInvalidateSessions, useSessions } from "../lib/api";
 import { chatClient, useChat } from "../lib/chat";
 import { onRequestOpenSessionsDrawer } from "../lib/drawer";
 import { localeTag, useLocale, useT } from "../lib/i18n";
@@ -35,13 +35,28 @@ function PlusIcon() {
   );
 }
 
-function ChatIcon() {
+function ChatIcon({ active = false }: { active?: boolean }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="size-4 shrink-0 fill-none stroke-current stroke-[1.6] opacity-70"
+      className={`size-4 shrink-0 fill-none stroke-current stroke-[1.6] ${
+        active ? "text-accent" : "opacity-70"
+      }`}
     >
       <path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-5.2A8 8 0 1 1 21 12Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-[1.6]">
+      <path
+        d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M10 11v6M14 11v6" strokeLinecap="round" />
     </svg>
   );
 }
@@ -50,10 +65,12 @@ function SessionRow({
   session,
   active,
   onSelect,
+  onDelete,
 }: {
   session: UISessionInfo;
   active: boolean;
   onSelect: () => void;
+  onDelete: () => void;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -62,16 +79,37 @@ function SessionRow({
     count: session.messageCount,
   })}`;
   return (
-    <button
-      onClick={onSelect}
-      title={`${title}\n${meta}`}
-      className={`group flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${
-        active ? "bg-selected text-ink" : "text-muted hover:bg-hover hover:text-ink"
+    <div
+      className={`group relative flex w-full items-center rounded-lg transition-colors ${
+        active ? "bg-selected" : "hover:bg-hover"
       }`}
     >
-      <ChatIcon />
-      <span className="truncate text-[13.5px]">{title}</span>
-    </button>
+      <button
+        onClick={onSelect}
+        title={`${title}\n${meta}`}
+        className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
+          active ? "text-ink" : "text-muted group-hover:text-ink"
+        }`}
+      >
+        <ChatIcon active={active} />
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className={`truncate text-[13.5px] ${active ? "font-medium" : ""}`}>{title}</span>
+          <span className="truncate text-[11px] text-faint">{meta}</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        title={t("deleteSession")}
+        aria-label={t("deleteSession")}
+        className="mr-1.5 flex size-7 shrink-0 items-center justify-center rounded-md text-faint transition-colors opacity-60 hover:bg-danger/10 hover:text-danger focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+      >
+        <TrashIcon />
+      </button>
+    </div>
   );
 }
 
@@ -150,6 +188,21 @@ function SessionsPanel({
     chatClient.requestComposerFocus();
   };
 
+  const handleDeleteSession = async (session: UISessionInfo) => {
+    if (!window.confirm(t("confirmDeleteSession"))) return;
+    try {
+      await deleteSession(session.id);
+      void refetch();
+      if (session.path === currentSessionFile) {
+        // 현재 보고 있는 세션이면 초안 화면으로 되돌리고 새 연결을 연다
+        chatClient.resetToDraft();
+        void navigate({ to: "/" });
+      }
+    } catch (err) {
+      console.error("[pi-web-chat] delete session failed", err);
+    }
+  };
+
   return (
     <>
       <div
@@ -182,7 +235,7 @@ function SessionsPanel({
       <div className="px-2 pb-1">
         <button
           onClick={startNewSession}
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13.5px] font-medium text-accent transition-colors hover:bg-hover"
+          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13.5px] font-medium text-accent transition-colors hover:bg-accent-soft/60"
         >
           <PlusIcon />
           {t("newSession")}
@@ -203,10 +256,16 @@ function SessionsPanel({
               void navigate({ to: "/s/$sessionId", params: { sessionId: s.id } });
               onSelectSession?.();
             }}
+            onDelete={() => void handleDeleteSession(s)}
           />
         ))}
         {sessions && sessions.length === 0 && (
-          <div className="px-4 py-8 text-center text-sm text-faint">{t("noSavedSessions")}</div>
+          <div className="flex flex-col items-center gap-2.5 px-4 py-10 text-center">
+            <span className="flex size-10 items-center justify-center rounded-full border border-line bg-card/60 text-faint">
+              <ChatIcon />
+            </span>
+            <p className="text-sm text-faint">{t("noSavedSessions")}</p>
+          </div>
         )}
       </div>
     </>

@@ -22,6 +22,8 @@ export const ja: Messages = {
   pinSidebar: "サイドバーを固定",
   unpinSidebar: "サイドバーの固定を解除",
   closeSidebar: "サイドバーを閉じる",
+  deleteSession: "セッションを削除",
+  confirmDeleteSession: "このセッションを削除しますか？元に戻せません。",
 
   sendMessage: "メッセージを送信",
   streamingPlaceholder: "ストリーミング中…（送信でステアリング）",
