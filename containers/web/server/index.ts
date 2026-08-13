@@ -123,6 +123,12 @@ const ENV_DEFAULT_THINKING = ALL_THINKING_LEVELS.includes(
   ? (process.env.PI_DEFAULT_THINKING!.trim() as UIThinkingLevel)
   : undefined;
 
+// PI_DISABLE_MODEL_SELECTION="true|1" — 모델/thinking 선택 UI를 숨긴다.
+// 서버 env로만 제어하므로 사용자가 웹 UI에서 해제할 수 없다.
+const ENV_DISABLE_MODEL_SELECTION =
+  process.env.PI_DISABLE_MODEL_SELECTION?.trim().toLowerCase() === "true" ||
+  process.env.PI_DISABLE_MODEL_SELECTION?.trim() === "1";
+
 // ---------------------------------------------------------------------------
 // pi 세션 런타임
 // ---------------------------------------------------------------------------
@@ -322,7 +328,9 @@ function supportedThinkingLevels(model: unknown): UIThinkingLevel[] {
  * 기존 세션(?session=)은 저장된 모델·thinking 복원이 우선이라 대상이 아니다.
  */
 function bootstrapSnapshot(): UISnapshot | undefined {
-  if (!ENV_DEFAULT_MODEL && !ENV_DEFAULT_THINKING) return undefined;
+  if (!ENV_DEFAULT_MODEL && !ENV_DEFAULT_THINKING && !ENV_DISABLE_MODEL_SELECTION) {
+    return undefined;
+  }
   const resolved = ENV_DEFAULT_RESOLVED;
   const model: UIModel | null = resolved?.model
     ? {
@@ -338,6 +346,7 @@ function bootstrapSnapshot(): UISnapshot | undefined {
     model,
     thinkingLevel: resolved?.thinkingLevel ?? ENV_DEFAULT_THINKING ?? "medium",
     thinkingLevels: resolved?.model ? supportedThinkingLevels(resolved.model) : ALL_THINKING_LEVELS,
+    modelSelectionDisabled: ENV_DISABLE_MODEL_SELECTION,
   };
 }
 
@@ -357,6 +366,7 @@ function buildSnapshot(entry: SessionEntry): UISnapshot {
       : null,
     thinkingLevel: session.thinkingLevel as UIThinkingLevel,
     thinkingLevels: supportedThinkingLevels(model),
+    modelSelectionDisabled: ENV_DISABLE_MODEL_SELECTION,
     sessionFile: session.sessionFile,
     sessionId: entry.id,
   };

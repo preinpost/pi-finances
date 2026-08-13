@@ -110,11 +110,15 @@ export function ChatPage() {
             </span>
           </div>
           <div className="flex-1" />
-          <ThinkingMenu
-            current={snapshot?.thinkingLevel ?? "off"}
-            levels={snapshot?.thinkingLevels ?? ["off"]}
-          />
-          <ModelMenu current={snapshot?.model ?? null} />
+          {!snapshot?.modelSelectionDisabled && (
+            <>
+              <ThinkingMenu
+                current={snapshot?.thinkingLevel ?? "off"}
+                levels={snapshot?.thinkingLevels ?? ["off"]}
+              />
+              <ModelMenu current={snapshot?.model ?? null} />
+            </>
+          )}
           <SettingsMenu />
         </header>
 

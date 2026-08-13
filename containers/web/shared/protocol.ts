@@ -35,6 +35,8 @@ export interface UISnapshot {
   thinkingLevel: UIThinkingLevel;
   /** 현재 모델이 지원하는 thinking level 목록 */
   thinkingLevels: UIThinkingLevel[];
+  /** 서버 env(PI_DISABLE_MODEL_SELECTION)로 모델/thinking 선택 UI 숨김 — 사용자 수정 불가 */
+  modelSelectionDisabled?: boolean;
   sessionFile?: string;
   /** URL(/s/:id)에 쓰는 세션 식별자 */
   sessionId?: string;

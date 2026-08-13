@@ -82,6 +82,7 @@ docker compose up --build
 | `NAVER_NEWS_API_MODE` + `NCP_APIGW_API_KEY_ID` / `NCP_APIGW_API_KEY` | 네이버 뉴스 검색 (NAVER API HUB, mode=hub 기본) | 선택 |
 | `PI_DEFAULT_MODEL` | 기본 모델 (`provider/id`, `pi --list-models`로 확인) | 선택 |
 | `PI_DEFAULT_THINKING` | 기본 thinking (`off/minimal/low/medium/high/xhigh/max`) | 선택 |
+| `PI_DISABLE_MODEL_SELECTION` | `true`/`1`이면 모델·thinking 선택 UI 숨김 (env로만 제어 — 사용자가 UI에서 해제 불가) | 선택 |
 | `PI_WEB_USER` | 웹챗 로그인 사용자 (기본 `pi`) | 선택 |
 | `PI_WEB_PASSWORD` | 웹챗 로그인 비밀번호 | 권장 (미설정 시 자동 생성) |
 | `PI_WEB_AUTH` | `0`이면 인증 끄기 (로컬 전용) | 선택 |
@@ -93,6 +94,8 @@ docker compose up --build
 모델/thinking도 키와 한 세트로 지정한다 — 헤드리스 모드는 `PI_DEFAULT_MODEL`을 `--model`
 플래그로, `PI_DEFAULT_THINKING`을 `--thinking` 플래그로 전달하며, 웹챗은
 웹 서버가 env를 직접 읽어 새 세션 기본값으로 쓴다. UI에서 모델/thinking은 언제든 변경 가능.
+`PI_DISABLE_MODEL_SELECTION=true`면 헤더의 모델/thinking 메뉴가 아예 사라진다
+(서버 env 결정 — 사용자가 웹 UI에서 되돌릴 수 없다).
 
 ## 웹챗 (Phase 3 — pi-web-chat 소스 벤더링)
 

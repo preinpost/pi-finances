@@ -29,6 +29,7 @@ services:
       ANTHROPIC_API_KEY: ""
       # PI_DEFAULT_MODEL: "anthropic/claude-sonnet-4"
       # PI_DEFAULT_THINKING: "medium"
+      # PI_DISABLE_MODEL_SELECTION: "true"  # true면 모델/thinking 선택 UI 숨김 (env로만 제어, 사용자 변경 불가)
       #
       # [OpenRouter — 여러 모델을 하나의 키로 라우팅]
       # OPENROUTER_API_KEY: ""
