@@ -23,6 +23,10 @@
   --color-bubble: var(--c-bubble);
   --color-hover: var(--c-hover);
   --color-selected: var(--c-selected);
+  --color-inset: var(--c-inset);
+  --color-danger: var(--c-danger);
+  --color-up: var(--c-up);
+  --color-down: var(--c-down);
 
   --font-sans:
     ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
@@ -36,36 +40,46 @@
   --composer-pad-top: 0.5rem;
   --composer-safe-bottom-max: 34px;
 
-  /* light — Claude 특유의 따뜻한 아이보리 */
-  --c-canvas: #faf9f5;
-  --c-sidebar: #f2f0e9;
+  /* light — 프리미엄 네이비 (토스·키움 스타일): 쿨 그레이-화이트 + 로열 블루 */
+  --c-canvas: #f6f8fb;
+  --c-sidebar: #edf1f7;
   --c-card: #ffffff;
-  --c-line: #e6e3da;
-  --c-ink: #1f1e1d;
-  --c-muted: #6f6d66;
-  --c-faint: #9c9a93;
-  --c-accent: #c96442;
+  --c-line: #e1e7f0;
+  --c-ink: #0f172a;
+  --c-muted: #4f5e77;
+  --c-faint: #5d6d87;
+  --c-accent: #2563eb;
   --c-accent-ink: #ffffff;
-  --c-accent-soft: #f2e3dc;
-  --c-bubble: #f0eee6;
-  --c-hover: rgba(0, 0, 0, 0.045);
-  --c-selected: rgba(0, 0, 0, 0.075);
+  --c-accent-soft: #e3ecfb;
+  --c-bubble: #eef2f8;
+  --c-hover: rgba(15, 23, 42, 0.05);
+  --c-selected: rgba(15, 23, 42, 0.08);
+  --c-inset: #f0f4fa;
+  --c-danger: #dc2626;
+  /* 한국 주식 컨벤션: 상승=레드, 하락=블루 (카드 위 4.5:1 확보) */
+  --c-up: #d43c36;
+  --c-down: #2a72db;
 }
 
 .dark {
-  --c-canvas: #262624;
-  --c-sidebar: #1c1c1b;
-  --c-card: #30302e;
-  --c-line: #3c3c39;
-  --c-ink: #f2f0e9;
-  --c-muted: #a3a099;
-  --c-faint: #7d7a73;
-  --c-accent: #d97757;
-  --c-accent-ink: #1f1e1d;
-  --c-accent-soft: #3a2d27;
-  --c-bubble: #373734;
+  /* dark — 딥 네이비 (터미널·HTS 감성) */
+  --c-canvas: #0e1622;
+  --c-sidebar: #0a111b;
+  --c-card: #16202e;
+  --c-line: #232f40;
+  --c-ink: #e6ecf5;
+  --c-muted: #94a3b8;
+  --c-faint: #7d8ba3;
+  --c-accent: #60a5fa;
+  --c-accent-ink: #0b1120;
+  --c-accent-soft: #1c2a44;
+  --c-bubble: #1a2434;
   --c-hover: rgba(255, 255, 255, 0.06);
   --c-selected: rgba(255, 255, 255, 0.1);
+  --c-inset: #111a28;
+  --c-danger: #f87171;
+  --c-up: #ff5f56;
+  --c-down: #4d9fff;
 }
 
 /*
