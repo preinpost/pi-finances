@@ -1,5 +1,5 @@
 /**
- * server/providerStatus.ts — 시장 데이터 제공자 키 상태 (세션 시스템 프롬프트 주입용).
+ * server/providerStatus.ts — 시장 데이터 제공자 키 상태 · 응답 규칙 (세션 시스템 프롬프트 주입용).
  *
  * 웹챗 서버가 세션을 생성할 때 process.env(=.env 파일 저장 포함 런타임 반영)를 읽어
  * "데이터 제공자 키 상태" 블록을 만들어 resourceLoaderOptions.appendSystemPrompt로
@@ -83,6 +83,16 @@ export function providerStatuses(env: NodeJS.ProcessEnv): ProviderStatus[] {
       note: "한국 증권 뉴스",
     },
   ];
+}
+
+/** 세션 시스템 프롬프트에 주입할 응답 규칙 블록. */
+export function responseRulesBlock(): string {
+  return [
+    "## 응답 규칙",
+    "",
+    "- 응답 본문에 도구(tool) 이름을 노출하지 않는다. (`kis_api로 조회했습니다`, `broker_price 호출 결과` 같은 표현 금지)",
+    "- 도구 이름 대신 데이터 내용과 해석만 자연스럽게 전달한다. (예: \"현재가 기준으로 …\", \"최근 조회한 시세에 따르면 …\")",
+  ].join("\n");
 }
 
 /** 세션 시스템 프롬프트에 주입할 마크다운 블록. */
