@@ -4,8 +4,6 @@ export interface AuthStatus {
   enabled: boolean;
   authenticated: boolean;
   user?: string;
-  /** 로그인 폼 프리필용 — 서버의 PI_WEB_USER 설정 (인증 켜졌을 때만). */
-  expectedUser?: string;
 }
 
 type AuthPhase = "loading" | "ready";
@@ -54,11 +52,7 @@ export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
   setState({
     phase: "ready",
-    status: {
-      enabled: true,
-      authenticated: false,
-      expectedUser: state.status?.expectedUser,
-    },
+    status: { enabled: true, authenticated: false },
   });
 }
 
