@@ -20,6 +20,16 @@ kis_* 도구의 description을 우선 참고하세요. 이 스킬은 도구 설�
 
 - 국내 현재가: `kis_domestic_price { symb: "005930" }`
 - 해외 현재가: `kis_overseas_price { excd: "NAS", symb: "RKLB" }`
+
+### KIS 미지원/빈 응답 → fallback 지시대로 `*_price` / `*_chart` 툴 콜 (prefix_name 규칙)
+
+- KIS 유료 시세 미구독·상장거래소 불일치 등으로 **빈 응답/데이터 없음**이면,
+  `broker_price`/`broker_chart` 응답에 **`fallback: { func, tools, args, why }` 지시**가 포함됩니다.
+- **func = 기능 suffix**(price/chart), **tools = 설치된 `*_{func}` 툴 후보** — 동일 기능 툴은 같은
+  함수명 suffix를 쓰므로(toss_price/twelve_price/finnhub_price 등) **tools 중 하나를 이어서 호출**하세요.
+- 직접 kis_* 툴이 빈 응답/실패면 **broker_* 툴로 재시도** → 같은 fallback 지시를 받아 이어집니다.
+- 후보 전부 실패하면 why의 안내를 따르세요 (키 등록: /toss-key 등, 미설치 패키지: pi install npm:pi-toss 등).
+- 기간 구분: broker_chart의 1m는 *_chart의 1m 지원 툴 전용, W/M은 why가 1d 조정을 안내.
 - 52주 고점/저점 등 장기 집계: `kis_overseas_chart { excd, symb, gubn: "0", bymd: 오늘 }`
   → `output2`가 최대 100행이므로, 그 이전 구간은 `bymd`를 과거 날짜로 지정해 여러 번 호출해 합산
 - 실시간 체결가(웹소켓): `kis_realtime { tr_id, tr_key }`

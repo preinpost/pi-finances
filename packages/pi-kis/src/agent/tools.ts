@@ -26,7 +26,12 @@ import {
 	getIncomeStatement,
 	getNews,
 } from "../roles/research.ts";
-import { getCandles as brokerGetCandles, getPrice as brokerGetPrice } from "../roles/broker.ts";
+import {
+	getCandles as brokerGetCandles,
+	getPrice as brokerGetPrice,
+	BrokerFallbackError,
+	suggestFallbackTools,
+} from "../roles/broker.ts";
 import {
 	getDerivativesMarketTime,
 	getFuturePrice,
@@ -198,7 +203,8 @@ export function registerTools(pi: ExtensionAPI): void {
 			"excd: NAS(나스닥)/NYS(뉴욕)/AMS(아멕스), symb: 종목코드(예: RKLB, AAPL). " +
 			"rt_cd=0이면 성공이며 output에 현재가/전일대비 등이 담깁니다. " +
 			"⚠️ 종목이 실제 상장된 거래소 코드로만 데이터가 반환됩니다 (ORCL=NYS, AAPL=NAS) — 빈 응답이면 excd 재확인. " +
-			"실시간 시세는 유료 구독일 수 있습니다. broker_price는 NAS→NYS→AMS 자동 폴백.",
+			"실시간 시세는 유료 구독일 수 있습니다 (빈 응답 = 미구독 가능성). " +
+			"**미지원 종목은 broker_price 재시도 시 fallback.tools에서 `*_price` 툴 발견 후 툴 콜**.",
 		parameters: Type.Object({
 			excd: Type.String({ description: "거래소: NAS(나스닥)/NYS(뉴욕)/AMS(아멕스) — 종목 상장 거래소로 지정 (ORCL=NYS)" }),
 			symb: Type.String({ description: "종목코드, 예: RKLB, AAPL" }),
@@ -235,6 +241,7 @@ export function registerTools(pi: ExtensionAPI): void {
 			"gubn: 0=일별, 1=주별, 2=월별. bymd: 조회기준일(YYYYMMDD, 기본 오늘). modp: 0=미반영(기본), 1=수정주가 반영. " +
 			"output2에 기간별 시세 목록(최대 100행)이 담기므로 52주 고점/저점 계산 등에 활용. " +
 			"100행 초과 구간이 필요하면 bymd를 과거 날짜로 지정해 여러 번 호출. " +
+			"**미지원 종목은 broker_chart 재시도 시 fallback.tools에서 `*_chart` 툴 발견 후 툴 콜** (일봉만). " +
 			"(지수/환율용 inquire_daily_chartprice는 kis_api로 호출 가능)",
 		parameters: Type.Object({
 			excd: Type.String({ description: "거래소: NAS/NYS/AMS" }),
@@ -378,7 +385,7 @@ export function registerTools(pi: ExtensionAPI): void {
 					const out = res.data as Record<string, unknown>;
 					const bars = pickChartBars(out, normalizeDomesticChart);
 					if (bars.length === 0) {
-						return jsonResult({ ok: false, error: "차트 데이터 없음 — 종목코드/기간을 확인하거나 장 마감 후 재시도하세요." });
+						return jsonResult({ ok: false, error: "차트 데이터 없음 — 종목코드/기간을 확인하거나 장 마감 후 재시도하세요. (broker_chart 재시도 시 fallback.tools에서 *_chart 툴 발견 후 툴 콜)" });
 					}
 					return jsonResult({ ok: true, market: "domestic", symb: params.symb, period, ...analyze(bars) });
 				}
@@ -390,7 +397,7 @@ export function registerTools(pi: ExtensionAPI): void {
 				const out = res.data as Record<string, unknown>;
 				const bars = pickChartBars(out, normalizeOverseasChart);
 				if (bars.length === 0) {
-					return jsonResult({ ok: false, error: "차트 데이터 없음 — 티커/거래소(excd)를 확인하거나 장 마감 후 재시도하세요." });
+					return jsonResult({ ok: false, error: "차트 데이터 없음 — 티커/거래소(excd)를 확인하거나 장 마감 후 재시도하세요. (broker_chart 재시도 시 fallback.tools에서 *_chart 툴 발견 후 툴 콜)" });
 				}
 				return jsonResult({ ok: true, market: "overseas", symb: params.symb, excd: params.excd ?? "NAS", period, ...analyze(bars) });
 			} catch (e) {
@@ -399,18 +406,33 @@ export function registerTools(pi: ExtensionAPI): void {
 		},
 	});
 
-	// ── broker: KIS 우선 (에이전트 중재 폴백 — 토스는 pi-toss 패키지) ───
+	/** 툴 실행 공통 에러 래퍼 — BrokerFallbackError면 fallback 지시를 직렬화한다.
+ * prefix_name 규칙: pi.getAllTools()에서 `*_{func}` 툴을 발견해 fallback.tools에 채운다
+ * (동일 기능 = 같은 suffix — toss_price/twelve_price/finnhub_price 등). */
+function brokerErrorResult(pi: ExtensionAPI, e: unknown) {
+	if (e instanceof BrokerFallbackError) {
+		const tools = suggestFallbackTools(
+			pi.getAllTools().map((t) => t.name),
+			e.fallback.func,
+		);
+		return jsonResult({ ok: false, error: e.message, fallback: { ...e.fallback, tools } });
+	}
+	return jsonResult({ ok: false, error: (e as Error).message });
+}
+
+// ── broker: KIS 우선 — 실패 시 toss_* 툴 콜 지시 (fallback 필드) ────
 	pi.registerTool({
 		name: "broker_price",
-		label: "현재가 (KIS 우선)",
+		label: "현재가 (KIS 우선, toss 툴 콜 폴백)",
 		description:
-			"현재가 조회 — KIS 우선 (v0.3.0부터 토스는 pi-toss 패키지). " +
-			"국내 6자리(005930) 또는 해외 티커(RKLB) 모두 지원. KIS 키 미등록/실패 시 에러에 toss_price 사용 안내 포함. " +
-			"시세 전용 — 계좌·주문은 각 브로커 툴(kis_*/toss_*)을 명시적으로 사용하세요. " +
-			"KIS 키가 없으면 /kis-key 안내.",
+			"현재가 조회 — KIS 우선 (국내 6자리/해외 티커, 해외는 NAS→NYS→AMS 순 자동 재시도). " +
+			"**KIS 미지원/실패(키 미등록·유료 시세 미구독 빈 응답 등) 시 응답에 fallback: { func, tools, args, why } 지시가 포함됩니다** — " +
+			"tools는 설치된 `*_price` 툴 후보(toss_price/twelve_price/finnhub_price 등 — prefix_name 규칙의 동일 suffix)이므로 " +
+			"**그 중 하나를 이어서 호출하세요**. 전부 실패면 why의 등록/설치 안내를 따르세요. " +
+			"시세 전용 — 계좌·주문은 각 브로커 툴(kis_*/toss_*)을 명시적으로 사용하세요.",
 		parameters: Type.Object({
-			symbol: Type.String({ description: "종목 심볼: 6자리 국내코드 또는 해외 티커, 예: 005930 / RKLB" }),
-			prefer: Type.Optional(Type.Union([Type.Literal("kis"), Type.Literal("toss")], { description: "우선 브로커 (KIS만 지원 — toss 지정 시 안내 에러)" })),
+			symbol: Type.String({ description: "종목 심볼: 6자리 국내코드 또는 해외 티커, 예: 005930 / SOXL / RKLB" }),
+			prefer: Type.Optional(Type.Union([Type.Literal("kis"), Type.Literal("toss")], { description: "KIS 전용 — toss 지정 시 toss_price 툴 직접 호출 안내" })),
 			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")], {
 				description: "real(실전)/paper(모의)/auto(기본) — KIS 호출에만 적용",
 			})),
@@ -420,23 +442,26 @@ export function registerTools(pi: ExtensionAPI): void {
 				const price = await brokerGetPrice(params.symbol, { prefer: params.prefer, env: params.env ?? "auto" });
 				return jsonResult({ ok: true, ...price });
 			} catch (e) {
-				return jsonResult({ ok: false, error: (e as Error).message });
+				return brokerErrorResult(pi, e);
 			}
 		},
 	});
 
 	pi.registerTool({
 		name: "broker_chart",
-		label: "차트·지표 (KIS 우선)",
+		label: "차트·지표 (KIS 우선, toss 툴 콜 폴백)",
 		description:
-			"차트 조회 + 기술지표 — KIS 우선. period: D/W/M/1d=일·주·월봉(KIS), " +
-			"1m=KIS 미지원 (toss_chart 툴 안내 — pi-toss 패키지). bars는 공용 지표(MA/RSI/ATR/볼린저/지지저항/추세)로 계산해 함께 반환합니다. " +
+			"차트 조회 + 기술지표 — KIS 우선. period: D/W/M/1d=일·주·월봉(KIS), 1m=1분봉(KIS 미지원). " +
+			"**KIS 미지원/실패 시 응답에 fallback: { func, tools, args, why } 지시가 포함됩니다** — " +
+			"tools는 설치된 `*_chart` 툴 후보(toss_chart/twelve_chart/finnhub_chart 등)이므로 그 중 하나를 이어서 호출하세요 " +
+			"(1m는 *_chart의 1m 지원 툴 전용, W/M은 why가 1d 조정을 안내). " +
+			"bars는 공용 지표(MA/RSI/ATR/볼린저/지지저항/추세)로 계산해 함께 반환합니다. " +
 			"참고용 분석이며 투자 결정의 책임은 사용자에게 있습니다.",
 		parameters: Type.Object({
-			symbol: Type.String({ description: "종목 심볼: 6자리 국내코드 또는 해외 티커, 예: 005930 / RKLB" }),
-			period: Type.Optional(Type.Union([Type.Literal("D"), Type.Literal("W"), Type.Literal("M"), Type.Literal("1d"), Type.Literal("1m")], { description: "봉 단위 (기본 D, 1m는 pi-toss에서 지원)" })),
-			count: Type.Optional(Type.Number({ description: "조회 봉 수 (pi-toss의 toss_chart에서 사용)" })),
-			prefer: Type.Optional(Type.Union([Type.Literal("kis"), Type.Literal("toss")], { description: "우선 브로커 (KIS만 지원 — toss 지정 시 안내 에러)" })),
+			symbol: Type.String({ description: "종목 심볼: 6자리 국내코드 또는 해외 티커, 예: 005930 / SOXL / RKLB" }),
+			period: Type.Optional(Type.Union([Type.Literal("D"), Type.Literal("W"), Type.Literal("M"), Type.Literal("1d"), Type.Literal("1m")], { description: "봉 단위 (기본 D. 1m는 toss_chart 전용, W/M은 KIS 전용)" })),
+			count: Type.Optional(Type.Number({ description: "조회 봉 수 (기본 100, 최대 200 — toss_chart 폴백 지시에 전달)" })),
+			prefer: Type.Optional(Type.Union([Type.Literal("kis"), Type.Literal("toss")], { description: "KIS 전용 — toss 지정 시 toss_chart 툴 직접 호출 안내" })),
 			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")], {
 				description: "real(실전)/paper(모의)/auto(기본) — KIS 호출에만 적용",
 			})),
@@ -452,7 +477,7 @@ export function registerTools(pi: ExtensionAPI): void {
 				const indicators = analyze(result.bars);
 				return jsonResult({ ok: true, broker: result.broker, period: result.period, source: result.source, bars: result.bars, indicators });
 			} catch (e) {
-				return jsonResult({ ok: false, error: (e as Error).message });
+				return brokerErrorResult(pi, e);
 			}
 		},
 	});

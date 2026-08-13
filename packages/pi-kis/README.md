@@ -63,17 +63,21 @@ pi remove npm:pi-kis    # 제거
 | `kis_research` | 주식 리서치 — 재무제표/뉴스/컨센서스 (`kind: income\|ratios\|news\|consensus`, `symb`) |
 | `kis_technical` | 기술적 분석(타점) — MA/RSI/ATR/볼린저/지지저항/추세 (`market`, `symb`, `period`) |
 | `kis_derivatives` | 해외 선물/옵션 — 종목코드(SRS_CD) 단위 시세/상품정보/분봉/장운영시간 + **option-greeks**(IV 역산 → Black-Scholes 델타/감마/세타/베가/로) |
-| `broker_price` | 현재가 (KIS 우선) — 국내 6자리/해외 티커. KIS 불가 시 toss_price 사용 안내 (pi-toss 패키지) |
-| `broker_chart` | 차트·지표 (KIS 우선) — D/W/M/1d. 1m는 KIS 미지원 → toss_chart 안내 (pi-toss) |
+| `broker_price` | 현재가 (KIS 우선 + **fallback 툴 콜 폴백**) — 국내 6자리/해외 티커. KIS 미지원/실패 시 `fallback: { func, tools, args, why }` 지시 — tools에 설치된 `*_price` 후보를 찾아 툴 콜 |
+| `broker_chart` | 차트·지표 (KIS 우선 + **fallback 툴 콜 폴백**) — D/W/M/1d(KIS), 1m(KIS 미지원). KIS 미지원/실패 시 `fallback` 지시 — tools에 설치된 `*_chart` 후보를 찾아 툴 콜 |
 
 토스증권 툴(`toss_price`/`toss_chart`/`toss_market`/`toss_balance`/`toss_order`/`toss_orders`/`toss_conditional`)은
 [pi-toss](https://github.com/preinpost/pi-finances/tree/main/packages/pi-toss) 패키지에서 제공합니다.
 
-## 브로커 폴백 (KIS 우선, 에이전트 중재)
+## 브로커 폴백 (KIS 우선 → fallback 툴 콜)
 
-- v0.3.0부터 pi-kis는 **KIS 전용** — `broker_*` 툴은 KIS 키/데이터 우선이고, KIS가 불가능하면
-  (키 미등록·실패·1분봉 미지원) 에러 메시지에 **toss_* 툴 사용 안내**를 담아 반환한다.
-  pi는 패키지별 module root를 분리하므로 코드 레벨 폴백 대신 **에이전트가 pi-toss 툴을 호출**하는 구조.
+- `broker_*` 툴은 KIS 우선이고, KIS가 불가능하면(키 미등록·실패·유료 시세 미구독 빈 응답) **코드로 다른 브로커를 호출하지 않고**,
+  응답에 **구조화된 폴백 지시**를 담아 반환한다: `fallback: { func, tools, args, why }`.
+- **prefix_name 규칙의 suffix 발견**: 동일 기능 툴은 같은 함수명 suffix를 공유하므로(toss_price/twelve_price/finnhub_price),
+  `pi.getAllTools()`에서 `*_{func}` 툴을 찾아 `tools`에 실어준다 (broker_*/kis_* 제외).
+- 에이전트는 `tools` 후보 중 하나를 **그대로 툴 콜로 수행**한다 (툴 콜 레벨의 느슨한 결합 — pi 패키지 간 코드 의존성 없음).
+- 후보 전부 실패면 `why`의 안내를 따른다 (키 등록: `/toss-key` 등, 패키지 설치: `pi install npm:pi-toss` 등).
+- 기간 구분: 1m는 *_chart의 1m 지원 툴 전용, W/M은 why가 1d 조정을 안내.
 - **계좌·주문·자산은 브로커 간 폴백 불가** — 증권사별 계좌에 묶여 있으므로 `kis_*`/`toss_*` 툴로 명시적으로 선택.
 
 ## 에이전트 디버깅 가이드 (툴 발견·파라미터 확인)

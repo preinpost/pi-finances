@@ -1,11 +1,15 @@
 /**
  * src/roles/broker.ts — KIS 우선 시장 데이터 퍼사드 (broker_price/broker_chart).
  *
- * v0.3.0부터 토스증권은 pi-toss 패키지로 분리되어, 이 모듈은 **KIS만** 호출한다.
- * KIS 키 미등록/실패/미지원(1분봉) 시 에러 메시지에 폴백 힌트를 담아
- * 에이전트가 toss_* 툴(pi-toss 패키지)을 직접 호출하도록 안내한다.
- * (pi는 패키지별 module root를 분리하므로 pi-kis가 설치된 pi-toss를
- *  런타임에 import할 수 없다 — 코드 폴백 대신 에이전트 중재 폴백.)
+ * v0.3.0부터 토스증권은 pi-toss 패키지로 분리됐고, pi는 패키지별 module root를
+ * 분리하며 툴은 LLM이 호출한다. 따라서 pi-kis는 **코드로 다른 브로커를 호출하지 않는다** —
+ * KIS 미지원/실패 시 `BrokerFallbackError`에 **구조화된 폴백 지시**
+ * ({ func: "price" | "chart", args, why })를 담아 반환한다.
+ *
+ * 폴백 툴 발견은 **prefix_name 규칙의 suffix**를 쓴다: 동일 기능 툴은 같은 함수명
+ * suffix를 공유하므로(toss_price/twelve_price/finnhub_price), tools.ts가
+ * pi.getAllTools()에서 `*_{func}` 툴을 찾아 fallback.tools로 실어준다.
+ * 에이전트는 그 후보 중 설치된 툴을 그대로 툴 콜한다 (툴 콜 레벨의 느슨한 결합).
  *
  * 툴 이름/파라미터 계약은 유지 (tools.ts 주석: 이름 변경 불가).
  */
@@ -20,7 +24,7 @@ export interface BrokerPrice {
 	symbol: string;
 	price: string;
 	currency?: string;
-	source: "primary" | "fallback";
+	source: "primary";
 	quote?: Record<string, unknown>;
 }
 
@@ -28,10 +32,46 @@ export interface BrokerCandles {
 	broker: BrokerId;
 	period: string;
 	bars: Bar[];
-	source: "primary" | "fallback";
+	source: "primary";
 }
 
-/** 에이전트 중재 폴백 힌트 — pi-toss 패키지 설치 시 toss_* 툴 사용 가능. */
+/** 에이전트가 이어서 호출할 폴백 지시. func는 prefix_name 규칙의 **suffix(함수명)** —
+ * 동일 기능 툴은 같은 suffix를 쓰므로(toss_price/twelve_price/finnhub_price),
+ * tools.ts가 pi.getAllTools()에서 `*_{func}` 툴을 발견해 tools에 채운다. */
+export interface ToolFallback {
+	func: string;
+	/** 설치된 `*_{func}` 툴 후보 (tools.ts가 pi.getAllTools()로 채움 — pi 비의존 유지 위해 broker.ts는 비워둠). */
+	tools?: string[];
+	args: Record<string, unknown>;
+	why: string;
+}
+
+/** KIS 미지원/실패 — 폴백 지시를 담은 에러. tools.ts가 { fallback } 필드로 직렬화한다. */
+export class BrokerFallbackError extends Error {
+	fallback: ToolFallback;
+	constructor(message: string, fallback: ToolFallback) {
+		super(message);
+		this.name = "BrokerFallbackError";
+		this.fallback = fallback;
+	}
+}
+
+/**
+ * 등록된 툴 이름에서 `*_{func}` 후보를 고른다 (prefix_name 규칙 활용).
+ * broker_*(자기 자신)와 kis_*(같은 소스라 함께 실패)는 제외.
+ * 예: func="price" → ["finnhub_price", "toss_price", "twelve_price", ...]
+ */
+export function suggestFallbackTools(names: string[], func: string): string[] {
+	return [...new Set(names)]
+		.filter(
+			(name) =>
+				name.endsWith(`_${func}`) &&
+				!name.startsWith("broker_") &&
+				!name.startsWith("kis_"),
+		)
+		.sort();
+}
+
 const TOSS_HINT = " → toss_price/toss_chart 툴 사용 (pi-toss 패키지 설치 시, /toss-key로 키 등록)";
 
 /** KIS 키 등록 여부. */
@@ -119,21 +159,30 @@ export interface BrokerPriceOptions {
 	env?: EnvArg;
 }
 
-/** 현재가 조회 — KIS 우선. KIS 불가 시 toss_* 툴 사용을 안내하는 에러. */
+/**
+ * 현재가 조회 — KIS 우선 (해외는 NAS→NYS→AMS 순 자동 재시도).
+ * KIS 불가(키 미등록·데이터 없음·API 실패) 시 toss_price 툴 콜을 지시하는
+ * BrokerFallbackError를 던진다 — 에이전트가 fallback 지시대로 이어서 호출.
+ */
 export async function getPrice(symbol: string, opts: BrokerPriceOptions = {}): Promise<BrokerPrice> {
 	if (opts.prefer === "toss") {
-		throw new Error(`broker_price는 KIS 전용입니다 (v0.3.0부터 토스는 pi-toss 패키지)${TOSS_HINT}`);
+		throw new BrokerFallbackError(
+			`broker_price는 KIS 전용입니다 — toss 우선이면 toss_price 툴을 직접 호출하세요.${TOSS_HINT}`,
+			{ func: "price", args: { symbols: symbol }, why: "broker_price는 KIS 전용 — *_price 툴(toss_price 등)을 직접 호출" },
+		);
 	}
 	if (!keysRegistered("kis")) {
-		throw new Error(`KIS 키 미등록 — /kis-key로 등록하세요.${TOSS_HINT}`);
+		throw new BrokerFallbackError(
+			`KIS 키 미등록 — /kis-key로 등록하세요.${TOSS_HINT}`,
+			{ func: "price", args: { symbols: symbol }, why: "KIS 키 미등록 — *_price 툴로 재시도" },
+		);
 	}
-	const domestic = isDomesticSymbol(symbol);
+
 	try {
-		// 해외는 NAS→NYS→AMS 순으로 시도 (차트와 동일한 순회)
 		let q: { price: string; currency?: string } | null = null;
 		let raw: Record<string, unknown> | undefined;
 		let last: unknown;
-		if (domestic) {
+		if (isDomesticSymbol(symbol)) {
 			const res = await getDomesticPrice(symbol, opts.env);
 			q = extractDomesticPrice(res);
 			raw = res.data;
@@ -152,11 +201,13 @@ export async function getPrice(symbol: string, opts: BrokerPriceOptions = {}): P
 			}
 		}
 		if (q) return { broker: "kis", symbol, price: q.price, currency: q.currency, source: "primary", quote: raw ?? q };
-		throw (last instanceof Error ? last : new Error(`KIS 현재가 데이터 없음 (${symbol})`));
+		throw last instanceof Error ? last : new Error(`KIS 현재가 데이터 없음 (${symbol})`);
 	} catch (e) {
-		const err = e instanceof Error ? e : new Error(`현재가 조회 실패 (${symbol})`);
-		if (!err.message.includes("pi-toss")) err.message += TOSS_HINT;
-		throw err;
+		const msg = e instanceof Error ? e.message : `현재가 조회 실패 (${symbol})`;
+		throw new BrokerFallbackError(
+			`${msg}${TOSS_HINT}`,
+			{ func: "price", args: { symbols: symbol }, why: "KIS 데이터 없음/실패 — *_price 툴(toss_price/twelve_price/finnhub_price 등)로 재시도" },
+		);
 	}
 }
 
@@ -166,29 +217,41 @@ export type BrokerCandlePeriod = "D" | "W" | "M" | "1d" | "1m";
 
 export interface BrokerCandlesOptions {
 	period?: BrokerCandlePeriod;
-	/** 조회 봉 수 (KIS는 미사용 — 1m는 pi-toss에서 사용). */
+	/** 조회 봉 수 (KIS는 미사용 — toss_chart 폴백 지시에 그대로 전달). */
 	count?: number;
 	prefer?: BrokerId;
 	env?: EnvArg;
 }
 
 /**
- * 차트 조회 (KIS 우선):
- *  - D/W/M/1d: KIS 일·주·월봉
- *  - 1m: KIS 미지원 → toss_chart 툴 안내 (pi-toss 패키지)
+ * 차트 조회 — KIS 우선.
+ *  - D/W/M/1d: KIS 일·주·월봉, 실패 시 toss_chart(1d) 툴 콜 지시
+ *  - 1m: KIS 미지원 → toss_chart(1m) 툴 콜 지시
+ *  - W/M 폴백은 toss 미지원(일봉만)이므로 why에 명시 — 에이전트가 1d로 조정 가능
  */
 export async function getCandles(symbol: string, opts: BrokerCandlesOptions = {}): Promise<BrokerCandles> {
 	const period = opts.period ?? "D";
 	if (opts.prefer === "toss") {
-		throw new Error(`broker_chart는 KIS 전용입니다 (v0.3.0부터 토스는 pi-toss 패키지)${TOSS_HINT}`);
-	}
-	if (!keysRegistered("kis")) {
-		throw new Error(`KIS 키 미등록 — /kis-key로 등록하세요.${TOSS_HINT}`);
+		throw new BrokerFallbackError(
+			`broker_chart는 KIS 전용입니다 — toss 우선이면 toss_chart 툴을 직접 호출하세요.${TOSS_HINT}`,
+			{
+				func: "chart",
+				args: { symbol, interval: period === "1m" ? "1m" : "1d", ...(opts.count ? { count: opts.count } : {}) },
+				why: "broker_chart는 KIS 전용 — *_chart 툴(toss_chart 등)을 직접 호출",
+			},
+		);
 	}
 
 	// 1m: Toss 전용 (KIS 분봉은 미구현)
 	if (period === "1m") {
-		throw new Error(`1분봉은 KIS 미지원${TOSS_HINT}`);
+		throw new BrokerFallbackError(
+			`1분봉은 KIS 미지원${TOSS_HINT}`,
+			{
+				func: "chart",
+				args: { symbol, interval: "1m", ...(opts.count ? { count: opts.count } : {}) },
+				why: "KIS는 분봉 미지원 — *_chart 툴로 1m 조회 (toss_chart 등)",
+			},
+		);
 	}
 
 	try {
@@ -198,8 +261,22 @@ export async function getCandles(symbol: string, opts: BrokerCandlesOptions = {}
 		if (bars.length === 0) throw new Error(`KIS 차트 데이터 없음 (${symbol}, ${period})`);
 		return { broker: "kis", period, bars, source: "primary" };
 	} catch (e) {
-		const err = e instanceof Error ? e : new Error(`차트 조회 실패 (${symbol})`);
-		if (!err.message.includes("pi-toss")) err.message += TOSS_HINT;
-		throw err;
+		const msg = e instanceof Error ? e.message : `차트 조회 실패 (${symbol})`;
+		const wmNote =
+			period === "W" || period === "M"
+				? " (참고: toss는 주봉/월봉 미지원 — 일봉이면 interval: \"1d\"로 조회)"
+				: "";
+		throw new BrokerFallbackError(
+			`${msg}${TOSS_HINT}${wmNote}`,
+			{
+				func: "chart",
+				args: {
+					symbol,
+					interval: "1d",
+					...(opts.count ? { count: opts.count } : {}),
+				},
+				why: `KIS 차트 데이터 없음/실패 — *_chart 툴(toss_chart/twelve_chart 등)로 재시도${wmNote}`,
+			},
+		);
 	}
 }
