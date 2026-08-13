@@ -25,9 +25,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon-64.png", "apple-touch-icon.png"],
       manifest: {
-        name: "pi web chat",
-        short_name: "pi chat",
-        description: "pi coding agent web client",
+        name: "AlphaFolio",
+        short_name: "AlphaFolio",
+        description: "Alpha-seeking finance research agent",
         theme_color: "#faf9f5",
         background_color: "#faf9f5",
         display: "standalone",

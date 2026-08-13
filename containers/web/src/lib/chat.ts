@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { ClientCommand, ServerEvent, UISnapshot } from "../../shared/protocol";
+import { refreshAuth } from "./auth";
 
 export interface ActiveTool {
   toolCallId: string;
@@ -84,6 +85,7 @@ class ChatClient {
 
     const proto = location.protocol === "https:" ? "wss" : "ws";
     const query = sessionId ? `?session=${encodeURIComponent(sessionId)}` : "";
+    // Cookie (HttpOnly session) is sent automatically on same-origin WS.
     const ws = new WebSocket(`${proto}://${location.host}/ws${query}`);
     this.ws = ws;
 
@@ -100,9 +102,15 @@ class ChatClient {
         /* ignore */
       }
     };
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
       this.ws = null;
       if (this.intentionalClose) return;
+      // 세션 쿠키가 없거나 만료되면 재연결하지 않는다 (로그인 게이트로 넘김).
+      if (ev.code === 4401) {
+        this.update({ connection: "disconnected" });
+        void refreshAuth();
+        return;
+      }
 
       // Soft state while retrying — don't flash red on first paint / brief blips.
       if (this.state.connection === "connected") {
@@ -245,6 +253,25 @@ class ChatClient {
       activeTools: [],
     });
     this.connect(null, { force: true });
+  }
+
+  /** 로그아웃: 재연결 없이 소켓만 끊고 화면 상태를 비운다 */
+  disconnect() {
+    this.intentionalClose = true;
+    this.closeSocket();
+    this.clearPendingDeltas();
+    this.clearDisconnectTimer();
+    this.target = null;
+    this.everConnected = false;
+    this.intentionalClose = false;
+    this.update({
+      connection: "disconnected",
+      snapshot: null,
+      sessionId: null,
+      streamText: "",
+      streamThinking: "",
+      activeTools: [],
+    });
   }
 
   /** 드로어 닫힘 등과 겹치지 않도록 약간 늦춰 composer에 포커스 */

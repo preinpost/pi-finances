@@ -44,3 +44,16 @@
     두 번 보이던 문제 — 마지막 assistant 메시지의 실행 중 카드와 toolCallId가 같은 칩은
     숨김 (SDK의 tool_execution_start toolCallId = toolCall 블록 id 확인 완료)
 - 컨테이너 전용 설정은 코드 기본값이 아니라 env(PORT/HOST/PI_WEB_CWD)로 주입 (Dockerfile 참조)
+- 로컬 적응(업스트림 미포함): **브랜드 AlphaFolio** — 헤더/로그인/빈화면 배지 `α`,
+  탭·PWA 이름, favicon/PWA 아이콘 (`scripts/generate-icons.mjs`). npm 패키지명·서버 로그는 업스트림 유지.
+- 로컬 적응(업스트림 미포함): **설정 > 프로바이더** — pi `/login`/`/logout`과 동일.
+  `ModelRuntime.login/logout` → `~/.pi/agent/auth.json`. OAuth·API 키 프롬프트는 웹 다이얼로그.
+- 로컬 적응(업스트림 미포함): **설정 > API 키** — `/api/secrets`로 LLM/브로커/시세 키를
+  프로세스 env에 반영하고, 로컬이면 `.env`에도 병합. 컨테이너(`/opt/pi-web`)는 메모리만.
+  모델 관리는 Ollama/LM Studio/OpenRouter 프리셋 버튼 + 헤더 모델 메뉴 프로바이더 그룹화.
+- 로컬 적응(업스트림 미포함): **`.env` 로드** — `server/env.ts`가 패키지 루트 `.env`를 읽음
+  (기존 process.env 우선). 템플릿은 `.env.example`.
+- 로컬 적응(업스트림 미포함): **비밀번호 게이트** — `PI_WEB_USER`/`PI_WEB_PASSWORD`
+  (`server/auth.ts` + `server/index.ts`). HttpOnly 세션 쿠키(`pi_web_sid`),
+  `/api/*`·`/ws` 잠금, `/api/health`·`/api/auth/*`만 공개. 미설정 시 비밀번호 자동 생성·시작 로그 출력.
+  `PI_WEB_AUTH=0`으로 끌 수 있다. 프론트는 로그인 화면(`LoginPage`) + 설정 메뉴 로그아웃.

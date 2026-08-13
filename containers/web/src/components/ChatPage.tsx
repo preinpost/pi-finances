@@ -83,7 +83,7 @@ export function ChatPage() {
           <div className="flex min-w-0 items-center gap-2 px-1">
             {!sidebarPinned && (
               <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-soft to-bubble font-serif text-[15px] font-semibold text-accent shadow-[inset_0_0_0_1px_var(--c-line)]">
-                π
+                α
               </span>
             )}
             <span className="flex min-w-0 items-center gap-1.5">

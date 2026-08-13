@@ -211,7 +211,7 @@ function SessionsPanel({
         }`}
       >
         {docked ? (
-          <h2 className="px-1 text-[15px] font-semibold tracking-tight text-ink">pi</h2>
+          <h2 className="px-1 text-[15px] font-semibold tracking-tight text-ink">AlphaFolio</h2>
         ) : (
           <Dialog.Title className="px-1 text-[15px] font-semibold tracking-tight text-ink">
             {t("sessions")}

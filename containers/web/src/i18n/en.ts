@@ -31,6 +31,7 @@ export type Messages = {
   attachImage: string;
   removeImage: string;
   send: string;
+  steer: string;
   abort: string;
 
   // model
@@ -88,6 +89,33 @@ export type Messages = {
   cancel: string;
   optional: string;
 
+  // keys
+  manageKeys: string;
+  manageKeysEllipsis: string;
+  keysGroupLlm: string;
+  keysGroupBroker: string;
+  keysGroupMarket: string;
+  keysConfigured: string;
+  keysMissing: string;
+  keysKeepPlaceholder: string;
+  keysPersistHint: string;
+  keysMemoryHint: string;
+  keysSaveHint: string;
+  keysNothingToSave: string;
+
+  manageProviders: string;
+  manageProvidersEllipsis: string;
+  manageProvidersHint: string;
+  searchProviders: string;
+  providerSignedIn: string;
+  providerSignedOut: string;
+  providerLoginOAuth: string;
+  providerLoginKey: string;
+  providerLogout: string;
+  providerCancel: string;
+  providerLoginDone: string;
+  noProviders: string;
+
   // messages
   emptyPrompt: string;
   emptyTitle: string;
@@ -105,12 +133,23 @@ export type Messages = {
   sources: string;
   attachedImage: string;
   imagePlaceholder: string;
+
+  // auth
+  loginTitle: string;
+  loginSubtitle: string;
+  loginUser: string;
+  loginPassword: string;
+  loginSubmit: string;
+  loginSubmitting: string;
+  loginFailed: string;
+  loginTooMany: string;
+  logout: string;
 };
 
 export const en: Messages = {
   connected: "Connected",
   connecting: "Connecting…",
-  connectingHint: "Connecting to pi…",
+  connectingHint: "Connecting to AlphaFolio…",
   connectionLost: "Can't reach the server. Retrying…",
   disconnected: "Disconnected",
   settings: "Settings",
@@ -137,6 +176,7 @@ export const en: Messages = {
   attachImage: "Attach image",
   removeImage: "Remove image",
   send: "Send",
+  steer: "Steer",
   abort: "Stop",
 
   selectModel: "Select model",
@@ -191,9 +231,35 @@ export const en: Messages = {
   cancel: "Cancel",
   optional: "optional",
 
+  manageKeys: "API keys",
+  manageKeysEllipsis: "API keys…",
+  keysGroupLlm: "LLM providers",
+  keysGroupBroker: "Brokers",
+  keysGroupMarket: "Market data",
+  keysConfigured: "Set",
+  keysMissing: "Missing",
+  keysKeepPlaceholder: "Leave blank to keep",
+  keysPersistHint: "Saved to the local .env file. Existing values stay hidden.",
+  keysMemoryHint: "No .env file — keys apply to this process only.",
+  keysSaveHint: "Only filled fields are written. Blank keeps the current value.",
+  keysNothingToSave: "Enter at least one new value.",
+
+  manageProviders: "Providers",
+  manageProvidersEllipsis: "Providers…",
+  manageProvidersHint: "Same as /login and /logout in pi. Keys go to ~/.pi/agent/auth.json.",
+  searchProviders: "Search providers…",
+  providerSignedIn: "Signed in",
+  providerSignedOut: "Not signed in",
+  providerLoginOAuth: "Subscribe / OAuth",
+  providerLoginKey: "API key",
+  providerLogout: "Log out",
+  providerCancel: "Cancel login",
+  providerLoginDone: "Signed in.",
+  noProviders: "No providers",
+
   emptyPrompt: "How can I help?",
   emptyTitle: "What can I help you with?",
-  emptySubtitle: "Ask the pi agent about markets, research, and analysis.",
+  emptySubtitle: "Ask AlphaFolio about markets, research, and analysis.",
   suggest1: "Samsung Electronics price today",
   suggest2: "Analyze the current KOSPI market",
   suggest3: "Screen top AI-sector stocks",
@@ -207,4 +273,14 @@ export const en: Messages = {
   sources: "{count} sources",
   attachedImage: "Attached image",
   imagePlaceholder: "[image]",
+
+  loginTitle: "AlphaFolio",
+  loginSubtitle: "Enter the password for this workspace.",
+  loginUser: "Username",
+  loginPassword: "Password",
+  loginSubmit: "Continue",
+  loginSubmitting: "Signing in…",
+  loginFailed: "Wrong username or password.",
+  loginTooMany: "Too many attempts. Try again in a few minutes.",
+  logout: "Sign out",
 };

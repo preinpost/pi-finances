@@ -46,10 +46,10 @@ function encodePNG(size, pixels) {
   ]);
 }
 
-// --- 아이콘 그리기: 어두운 배경 + π 글리프 ---
-const BG = [10, 10, 10]; // #0a0a0a
-const FG = [250, 250, 250]; // π 색상
-const ACCENT = [96, 165, 250]; // 하단 포인트 (#60a5fa)
+// --- 아이콘 그리기: 네이비 배경 + A 마크 ---
+const BG = [14, 22, 34]; // #0e1622
+const FG = [230, 236, 245];
+const ACCENT = [96, 165, 250]; // 가로획
 
 function drawIcon(size, { paddingRatio, rounded }) {
   const px = Buffer.alloc(size * size * 4);
@@ -77,22 +77,37 @@ function drawIcon(size, { paddingRatio, rounded }) {
   for (let y = 0; y < size; y++)
     for (let x = 0; x < size; x++) if (inRoundedRect(x, y)) set(x, y, BG);
 
-  // π 글리프 (safe zone 안에 배치)
-  const p = size * paddingRatio; // 패딩
-  const gw = size - p * 2; // 글리프 영역 너비
-  const gh = gw * 0.82; // 글리프 영역 높이
+  // A 마크 — 작은 favicon에서도 알파가 바로 읽힘
+  const p = size * paddingRatio;
+  const gw = size - p * 2;
   const gx = p;
-  const gy = p + (size - p * 2 - gh) / 2;
-  const stroke = gw * 0.16;
-
-  // 상단 가로 획
-  rect(gx, gy, gw, stroke, FG);
-  // 왼쪽 다리
-  rect(gx + gw * 0.18, gy, stroke, gh, FG);
-  // 오른쪽 다리
-  rect(gx + gw - gw * 0.18 - stroke, gy, stroke, gh, FG);
-  // 왼쪽 다리 아래 액센트 점
-  rect(gx + gw * 0.18, gy + gh + stroke * 0.6, stroke, stroke, ACCENT);
+  const gy = p + gw * 0.04;
+  const stroke = Math.max(2, Math.round(gw * 0.16));
+  const half = stroke / 2;
+  const line = (x0, y0, x1, y1, color = FG, w = half) => {
+    const tdx = x1 - x0;
+    const tdy = y1 - y0;
+    const len = Math.hypot(tdx, tdy) || 1;
+    const minX = Math.max(0, Math.floor(Math.min(x0, x1) - w - 1));
+    const maxX = Math.min(size - 1, Math.ceil(Math.max(x0, x1) + w + 1));
+    const minY = Math.max(0, Math.floor(Math.min(y0, y1) - w - 1));
+    const maxY = Math.min(size - 1, Math.ceil(Math.max(y0, y1) + w + 1));
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const t = ((x - x0) * tdx + (y - y0) * tdy) / (len * len);
+        if (t < 0 || t > 1) continue;
+        if (Math.hypot(x - (x0 + t * tdx), y - (y0 + t * tdy)) <= w) set(x, y, color);
+      }
+    }
+  };
+  const apexX = gx + gw * 0.50;
+  const apexY = gy + gw * 0.06;
+  const leftX = gx + gw * 0.08;
+  const rightX = gx + gw * 0.92;
+  const baseY = gy + gw * 0.92;
+  line(apexX, apexY, leftX, baseY);
+  line(apexX, apexY, rightX, baseY);
+  line(gx + gw * 0.28, gy + gw * 0.58, gx + gw * 0.72, gy + gw * 0.58, ACCENT, half * 0.9);
 
   return px;
 }

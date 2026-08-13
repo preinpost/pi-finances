@@ -400,7 +400,7 @@ function EmptyState() {
       <div
         className="fade-up flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-soft via-card to-bubble shadow-[inset_0_0_0_1px_var(--c-line)]"
       >
-        <span className="font-serif text-[26px] font-semibold text-accent">π</span>
+        <span className="font-serif text-[26px] font-semibold text-accent">α</span>
       </div>
       <h2 className="fade-up mt-5 text-xl font-semibold tracking-tight text-ink" style={{ animationDelay: "60ms" }}>
         {t("emptyTitle")}

@@ -1,5 +1,7 @@
 import { Menu } from "@base-ui-components/react/menu";
 import { useState } from "react";
+import { logout, useAuth } from "../lib/auth";
+import { chatClient } from "../lib/chat";
 import { isLocale, LOCALES, setLocale, useLocale, useT } from "../lib/i18n";
 import {
   setThemePreference,
@@ -8,7 +10,9 @@ import {
 } from "../lib/theme";
 import { ExtensionsDialog } from "./ExtensionsDialog";
 import { ForkDialog } from "./ForkDialog";
+import { KeysDialog } from "./KeysDialog";
 import { ModelsDialog } from "./ModelsDialog";
+import { ProvidersDialog } from "./ProvidersDialog";
 
 const itemClass =
   "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-ink outline-none data-[highlighted]:bg-hover";
@@ -20,6 +24,10 @@ export function SettingsMenu() {
   const [forkOpen, setForkOpen] = useState(false);
   const [extensionsOpen, setExtensionsOpen] = useState(false);
   const [modelsOpen, setModelsOpen] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false);
+  const [providersOpen, setProvidersOpen] = useState(false);
+  const { status } = useAuth();
+  const showLogout = Boolean(status?.enabled);
 
   const themeOptions: { value: ThemePreference; label: string }[] = [
     { value: "system", label: t("themeSystem") },
@@ -109,6 +117,28 @@ export function SettingsMenu() {
 
               <div className="my-1 border-t border-line" />
 
+              <Menu.Item className={itemClass} onClick={() => setProvidersOpen(true)}>
+                <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
+                  <path
+                    d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Zm0 6v12"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {t("manageProvidersEllipsis")}
+              </Menu.Item>
+
+              <Menu.Item className={itemClass} onClick={() => setKeysOpen(true)}>
+                <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
+                  <path
+                    d="M21 2l-2 2m-7.6 7.6a5 5 0 1 1-3 3L3 21v-4h4v-4h4l2.4-2.4Z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {t("manageKeysEllipsis")}
+              </Menu.Item>
+
               <Menu.Item className={itemClass} onClick={() => setModelsOpen(true)}>
                 <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
                   <path
@@ -144,15 +174,34 @@ export function SettingsMenu() {
                 {t("activeExtensionsEllipsis")}
               </Menu.Item>
 
-              <div className="my-1 border-t border-line" />
-              <div className="px-3 pt-1 pb-2 text-[11px] text-faint">
-                pi-web-chat v{__APP_VERSION__}
-              </div>
+              {showLogout && (
+                <>
+                  <div className="my-1 border-t border-line" />
+                  <Menu.Item
+                    className={itemClass}
+                    onClick={() => {
+                      chatClient.disconnect();
+                      void logout();
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
+                      <path
+                        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    {t("logout")}
+                  </Menu.Item>
+                </>
+              )}
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>
       </Menu.Root>
 
+      <ProvidersDialog open={providersOpen} onOpenChange={setProvidersOpen} />
+      <KeysDialog open={keysOpen} onOpenChange={setKeysOpen} />
       <ModelsDialog open={modelsOpen} onOpenChange={setModelsOpen} />
       <ForkDialog open={forkOpen} onOpenChange={setForkOpen} />
       <ExtensionsDialog open={extensionsOpen} onOpenChange={setExtensionsOpen} />

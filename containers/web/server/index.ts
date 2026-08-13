@@ -1,3 +1,4 @@
+import "./env.ts";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { createServer, type IncomingMessage } from "node:http";
@@ -18,6 +19,11 @@ import { WebSocketServer, type WebSocket } from "ws";
 import type {
   ClientCommand,
   ServerEvent,
+  UIAuthCatalog,
+  UIAuthEvent,
+  UIAuthProvider,
+  UIAuthSession,
+  UIAuthType,
   UICustomModelsResponse,
   UICustomProvider,
   UIExtensionInfo,
@@ -26,13 +32,33 @@ import type {
   UISnapshot,
   UIThinkingLevel,
 } from "../shared/protocol.ts";
+import {
+  applyAuthSecret,
+  clearSessionCookieHeader,
+  clientIp,
+  consumeLoginAttempt,
+  createSession,
+  destroySession,
+  isSecureRequest,
+  loadAuthConfig,
+  parseCookie,
+  resetLoginAttempts,
+  SESSION_COOKIE,
+  sessionCookieHeader,
+  sessionFromRequest,
+  verifyCredentials,
+} from "./auth.ts";
+import { envFilePath, upsertDotEnv } from "./env.ts";
 import { readCustomModels, validateProviders, writeCustomModels } from "./models-config.ts";
 import { serializeMessages } from "./serialize.ts";
+import { SECRET_FIELDS, SECRET_KEY_SET, type UISecretsResponse } from "../shared/secrets.ts";
 
 const PORT = Number(process.env.PORT ?? 3141);
-// Default to loopback — this server has no auth and can drive a coding agent.
-// Override with HOST=0.0.0.0 only on trusted networks.
+// Default to loopback. Password gate is on by default (PI_WEB_AUTH=0 to disable).
+// Override with HOST=0.0.0.0 only behind TLS or on a trusted network.
 const HOST = process.env.HOST ?? "127.0.0.1";
+const AUTH = loadAuthConfig();
+applyAuthSecret(AUTH);
 const HOME = homedir();
 // 개인 채팅 워크스페이스 (프로젝트 cwd와 분리). PI_WEB_CWD로 오버라이드 가능
 const DEFAULT_AGENT_CWD = join(HOME, ".pi", "web-chat");
@@ -515,6 +541,131 @@ async function reloadModelProviders(providers: UICustomProvider[]): Promise<stri
 
 let knownCustomProviderKeys = new Set(readCustomModels().providers.map((p) => p.key));
 
+interface LoginWaiter {
+  session: UIAuthSession;
+  prompt?: (value: string) => void;
+  reject?: (err: Error) => void;
+  abort: AbortController;
+}
+
+const loginWaiters = new Map<string, LoginWaiter>();
+
+function newLoginId(): string {
+  return randomId();
+}
+
+function randomId(): string {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+async function buildAuthCatalog(): Promise<UIAuthCatalog> {
+  const providers: UIAuthProvider[] = [];
+  for (const p of modelRuntime.getProviders()) {
+    const methods: UIAuthType[] = [];
+    if (p.auth.apiKey?.login) methods.push("api_key");
+    if (p.auth.oauth) methods.push("oauth");
+    if (methods.length === 0) continue;
+    const status = await modelRuntime.checkAuth(p.id).catch(() => undefined);
+    providers.push({
+      id: p.id,
+      name: p.name,
+      methods,
+      status: status ? { type: status.type, source: status.source } : undefined,
+      loggedIn: Boolean(status),
+    });
+  }
+  providers.sort((a, b) => Number(b.loggedIn) - Number(a.loggedIn) || a.name.localeCompare(b.name));
+  return { providers };
+}
+
+function startProviderLogin(providerId: string, method: UIAuthType): UIAuthSession {
+  const provider = modelRuntime.getProvider(providerId);
+  if (!provider) throw new Error(`unknown provider: ${providerId}`);
+  if (method === "oauth" && !provider.auth.oauth) throw new Error("oauth not supported");
+  if (method === "api_key" && !provider.auth.apiKey?.login) throw new Error("api key login not supported");
+  const id = newLoginId();
+  const abort = new AbortController();
+  const session: UIAuthSession = {
+    id,
+    providerId,
+    providerName: provider.name,
+    method,
+    events: [],
+  };
+  const waiter: LoginWaiter = { session, abort };
+  loginWaiters.set(id, waiter);
+  void modelRuntime
+    .login(providerId, method, {
+      signal: abort.signal,
+      prompt: (prompt) =>
+        new Promise<string>((resolve, reject) => {
+          if (abort.signal.aborted) {
+            reject(new Error("Login cancelled"));
+            return;
+          }
+          waiter.prompt = resolve;
+          waiter.reject = reject;
+          waiter.session = {
+            ...waiter.session,
+            prompt: {
+              type: prompt.type,
+              message: prompt.message,
+              placeholder: "placeholder" in prompt ? prompt.placeholder : undefined,
+              options: prompt.type === "select" ? [...prompt.options] : undefined,
+            },
+          };
+        }),
+      notify: (event) => {
+        const mapped: UIAuthEvent =
+          event.type === "auth_url"
+            ? { type: "auth_url", url: event.url, instructions: event.instructions }
+            : event.type === "device_code"
+              ? {
+                  type: "device_code",
+                  userCode: event.userCode,
+                  verificationUri: event.verificationUri,
+                }
+              : event.type === "info"
+                ? {
+                    type: "info",
+                    message: event.message,
+                    links: event.links ? [...event.links] : undefined,
+                  }
+                : { type: "progress", message: event.message };
+        waiter.session = { ...waiter.session, events: [...waiter.session.events, mapped] };
+      },
+    })
+    .then(async () => {
+      waiter.session = { ...waiter.session, done: true, prompt: undefined };
+      try {
+        await modelRuntime.getAvailable();
+      } catch {
+        /* catalog refresh is best-effort */
+      }
+    })
+    .catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      waiter.session = {
+        ...waiter.session,
+        done: true,
+        prompt: undefined,
+        error: message === "Login cancelled" ? undefined : message,
+      };
+    });
+  return session;
+}
+
+function secretsSnapshot(): UISecretsResponse {
+  return {
+    persistable: Boolean(envFilePath()),
+    fields: SECRET_FIELDS.map((f) => ({
+      key: f.key,
+      configured: Boolean(process.env[f.key]?.trim()),
+      source: process.env[f.key]?.trim() ? "env" : "none",
+    })),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // HTTP 서버 (API + 정적 파일)
 // ---------------------------------------------------------------------------
@@ -530,17 +681,81 @@ const MIME: Record<string, string> = {
   ".webmanifest": "application/manifest+json",
 };
 
+function writeJson(
+  res: import("node:http").ServerResponse,
+  status: number,
+  body: unknown,
+  extraHeaders?: Record<string, string>,
+) {
+  res.writeHead(status, {
+    "content-type": "application/json",
+    "cache-control": "no-store",
+    ...extraHeaders,
+  });
+  res.end(JSON.stringify(body));
+}
+
 const httpServer = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
 
   try {
     // Lightweight readiness probe (used by `pi --web` before opening the browser).
     if (url.pathname === "/api/health") {
-      res.writeHead(200, {
-        "content-type": "application/json",
-        "cache-control": "no-store",
+      writeJson(res, 200, { ok: true, version: PACKAGE_VERSION });
+      return;
+    }
+
+    if (url.pathname === "/api/auth/status") {
+      const session = sessionFromRequest(req);
+      writeJson(res, 200, {
+        enabled: AUTH.enabled,
+        authenticated: AUTH.enabled ? Boolean(session) : true,
+        user: AUTH.enabled ? session?.user : undefined,
       });
-      res.end(JSON.stringify({ ok: true, version: PACKAGE_VERSION }));
+      return;
+    }
+
+    if (url.pathname === "/api/auth/login" && req.method === "POST") {
+      if (!AUTH.enabled) {
+        writeJson(res, 200, { ok: true, enabled: false });
+        return;
+      }
+      const ip = clientIp(req);
+      if (!consumeLoginAttempt(ip)) {
+        writeJson(res, 429, { error: "too many attempts" });
+        return;
+      }
+      let body: { user?: unknown; password?: unknown };
+      try {
+        body = JSON.parse(await readBody(req, 8_192)) as { user?: unknown; password?: unknown };
+      } catch {
+        writeJson(res, 400, { error: "invalid JSON" });
+        return;
+      }
+      const user = typeof body.user === "string" ? body.user : "";
+      const pass = typeof body.password === "string" ? body.password : "";
+      if (!verifyCredentials(user, pass, AUTH.user)) {
+        writeJson(res, 401, { error: "invalid credentials" });
+        return;
+      }
+      resetLoginAttempts(ip);
+      const token = createSession(AUTH.user);
+      writeJson(res, 200, { ok: true, user: AUTH.user }, {
+        "set-cookie": sessionCookieHeader(token, isSecureRequest(req)),
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/auth/logout" && req.method === "POST") {
+      destroySession(parseCookie(req, SESSION_COOKIE));
+      writeJson(res, 200, { ok: true }, {
+        "set-cookie": clearSessionCookieHeader(isSecureRequest(req)),
+      });
+      return;
+    }
+
+    if (AUTH.enabled && url.pathname.startsWith("/api/") && !sessionFromRequest(req)) {
+      writeJson(res, 401, { error: "unauthorized" });
       return;
     }
 
@@ -605,6 +820,145 @@ const httpServer = createServer(async (req, res) => {
           })),
         ),
       );
+      return;
+    }
+
+    if (url.pathname === "/api/providers" && req.method === "GET") {
+      writeJson(res, 200, await buildAuthCatalog());
+      return;
+    }
+
+    if (url.pathname === "/api/providers/login" && req.method === "POST") {
+      let body: { providerId?: unknown; method?: unknown };
+      try {
+        body = JSON.parse(await readBody(req, 8_192)) as { providerId?: unknown; method?: unknown };
+      } catch {
+        writeJson(res, 400, { error: "invalid JSON" });
+        return;
+      }
+      const providerId = typeof body.providerId === "string" ? body.providerId : "";
+      const method = body.method === "oauth" || body.method === "api_key" ? body.method : "";
+      if (!providerId || !method) {
+        writeJson(res, 400, { error: "providerId and method required" });
+        return;
+      }
+      try {
+        writeJson(res, 200, startProviderLogin(providerId, method));
+      } catch (err) {
+        writeJson(res, 400, { error: err instanceof Error ? err.message : String(err) });
+      }
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/providers/login/") && req.method === "GET") {
+      const id = decodeURIComponent(url.pathname.slice("/api/providers/login/".length));
+      const waiter = loginWaiters.get(id);
+      if (!waiter) {
+        writeJson(res, 404, { error: "login session not found" });
+        return;
+      }
+      writeJson(res, 200, waiter.session);
+      if (waiter.session.done) loginWaiters.delete(id);
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/providers/login/") && url.pathname.endsWith("/answer") && req.method === "POST") {
+      const id = decodeURIComponent(url.pathname.slice("/api/providers/login/".length, -"/answer".length));
+      const waiter = loginWaiters.get(id);
+      if (!waiter) {
+        writeJson(res, 404, { error: "login session not found" });
+        return;
+      }
+      let body: { value?: unknown };
+      try {
+        body = JSON.parse(await readBody(req, 16_000)) as { value?: unknown };
+      } catch {
+        writeJson(res, 400, { error: "invalid JSON" });
+        return;
+      }
+      const value = typeof body.value === "string" ? body.value : "";
+      if (!waiter.prompt) {
+        writeJson(res, 409, { error: "no pending prompt" });
+        return;
+      }
+      const resolve = waiter.prompt;
+      waiter.prompt = undefined;
+      waiter.reject = undefined;
+      waiter.session = { ...waiter.session, prompt: undefined };
+      resolve(value);
+      writeJson(res, 200, waiter.session);
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/providers/login/") && url.pathname.endsWith("/cancel") && req.method === "POST") {
+      const id = decodeURIComponent(url.pathname.slice("/api/providers/login/".length, -"/cancel".length));
+      const waiter = loginWaiters.get(id);
+      if (waiter) {
+        waiter.abort.abort();
+        waiter.reject?.(new Error("Login cancelled"));
+        loginWaiters.delete(id);
+      }
+      writeJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/providers/") && url.pathname.endsWith("/logout") && req.method === "POST") {
+      const providerId = decodeURIComponent(
+        url.pathname.slice("/api/providers/".length, -"/logout".length),
+      );
+      try {
+        await modelRuntime.logout(providerId);
+        writeJson(res, 200, { ok: true });
+      } catch (err) {
+        writeJson(res, 400, { error: err instanceof Error ? err.message : String(err) });
+      }
+      return;
+    }
+
+    if (url.pathname === "/api/secrets") {
+      if (req.method === "GET") {
+        writeJson(res, 200, secretsSnapshot());
+        return;
+      }
+      if (req.method === "PUT") {
+        let body: { values?: Record<string, unknown> };
+        try {
+          body = JSON.parse(await readBody(req, 32_000)) as { values?: Record<string, unknown> };
+        } catch {
+          writeJson(res, 400, { error: "invalid JSON" });
+          return;
+        }
+        const values = body.values ?? {};
+        const updates: Record<string, string> = {};
+        for (const [key, raw] of Object.entries(values)) {
+          if (!SECRET_KEY_SET.has(key)) {
+            writeJson(res, 400, { error: `unknown key: ${key}` });
+            return;
+          }
+          if (typeof raw !== "string") {
+            writeJson(res, 400, { error: `invalid value for ${key}` });
+            return;
+          }
+          updates[key] = raw.trim();
+        }
+        for (const [key, value] of Object.entries(updates)) {
+          if (value) process.env[key] = value;
+          else delete process.env[key];
+        }
+        const persisted = upsertDotEnv(updates);
+        let warning: string | undefined;
+        try {
+          modelRuntime = await ModelRuntime.create();
+        } catch (err) {
+          warning = `keys saved, but model reload failed: ${String(err)}`;
+        }
+        writeJson(res, 200, {
+          ...secretsSnapshot(),
+          warning: persisted ? warning : (warning ?? "keys applied in this process only (no .env file)"),
+        });
+        return;
+      }
+      writeJson(res, 405, { error: "method not allowed" });
       return;
     }
 
@@ -747,6 +1101,10 @@ const httpServer = createServer(async (req, res) => {
 const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
 
 wss.on("connection", (ws, req) => {
+  if (AUTH.enabled && !sessionFromRequest(req)) {
+    ws.close(4401, "unauthorized");
+    return;
+  }
   const requested = new URL(req.url ?? "/ws", "http://localhost").searchParams.get("session");
   // 새 초안은 세션 생성(수 초) 전에 모델/thinking 헤더가 바로 뜨도록 부트스트랩 전송.
   // 실제 스냅샷이 도착하면 클라이언트에서 교체된다.
@@ -813,4 +1171,14 @@ httpServer.listen(PORT, HOST, () => {
   console.log(
     `pi-web-chat server: http://${displayHost}:${PORT}  (bind ${HOST}, chat cwd: ${AGENT_CWD})`,
   );
+  if (!AUTH.enabled) {
+    console.log("[pi-web-chat] auth disabled (PI_WEB_AUTH=0)");
+  } else if (AUTH.generatedPassword) {
+    console.log(
+      `[pi-web-chat] auth enabled — generated password (set PI_WEB_PASSWORD to pin it)`,
+    );
+    console.log(`[pi-web-chat] user=${AUTH.user}  password=${AUTH.generatedPassword}`);
+  } else {
+    console.log(`[pi-web-chat] auth enabled (user=${AUTH.user})`);
+  }
 });
