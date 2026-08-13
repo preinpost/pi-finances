@@ -21,6 +21,7 @@ const EXPECTED_TOOLS = [
 	"kis_derivatives",
 	"broker_price",
 	"broker_chart",
+	"market_status",
 ];
 const EXPECTED_COMMANDS = ["kis-key", "kis-status", "kis-watch"];
 
