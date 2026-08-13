@@ -11,7 +11,6 @@ import {
 import { ExtensionsDialog } from "./ExtensionsDialog";
 import { ForkDialog } from "./ForkDialog";
 import { KeysDialog } from "./KeysDialog";
-import { ModelsDialog } from "./ModelsDialog";
 import { ProvidersDialog } from "./ProvidersDialog";
 
 const itemClass =
@@ -23,7 +22,6 @@ export function SettingsMenu() {
   const locale = useLocale();
   const [forkOpen, setForkOpen] = useState(false);
   const [extensionsOpen, setExtensionsOpen] = useState(false);
-  const [modelsOpen, setModelsOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
   const [providersOpen, setProvidersOpen] = useState(false);
   const { status } = useAuth();
@@ -139,17 +137,6 @@ export function SettingsMenu() {
                 {t("manageKeysEllipsis")}
               </Menu.Item>
 
-              <Menu.Item className={itemClass} onClick={() => setModelsOpen(true)}>
-                <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
-                  <path
-                    d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 0v9m0 0 8-4.5M12 12l-8-4.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                {t("manageModelsEllipsis")}
-              </Menu.Item>
-
               <Menu.Item className={itemClass} onClick={() => setForkOpen(true)}>
                 <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
                   <circle cx="6" cy="5" r="2" />
@@ -202,7 +189,6 @@ export function SettingsMenu() {
 
       <ProvidersDialog open={providersOpen} onOpenChange={setProvidersOpen} />
       <KeysDialog open={keysOpen} onOpenChange={setKeysOpen} />
-      <ModelsDialog open={modelsOpen} onOpenChange={setModelsOpen} />
       <ForkDialog open={forkOpen} onOpenChange={setForkOpen} />
       <ExtensionsDialog open={extensionsOpen} onOpenChange={setExtensionsOpen} />
     </>
