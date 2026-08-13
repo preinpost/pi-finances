@@ -16,7 +16,7 @@ import { ProvidersDialog } from "./ProvidersDialog";
 const itemClass =
   "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-ink outline-none data-[highlighted]:bg-hover";
 
-export function SettingsMenu() {
+export function SettingsMenu({ modelSelectionDisabled = false }: { modelSelectionDisabled?: boolean }) {
   const t = useT();
   const preference = useThemePreference();
   const locale = useLocale();
@@ -115,16 +115,18 @@ export function SettingsMenu() {
 
               <div className="my-1 border-t border-line" />
 
-              <Menu.Item className={itemClass} onClick={() => setProvidersOpen(true)}>
-                <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
-                  <path
-                    d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Zm0 6v12"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                {t("manageProvidersEllipsis")}
-              </Menu.Item>
+              {!modelSelectionDisabled && (
+                <Menu.Item className={itemClass} onClick={() => setProvidersOpen(true)}>
+                  <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
+                    <path
+                      d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Zm0 6v12"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {t("manageProvidersEllipsis")}
+                </Menu.Item>
+              )}
 
               <Menu.Item className={itemClass} onClick={() => setKeysOpen(true)}>
                 <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">

@@ -119,7 +119,7 @@ export function ChatPage() {
               <ModelMenu current={snapshot?.model ?? null} />
             </>
           )}
-          <SettingsMenu />
+          <SettingsMenu modelSelectionDisabled={snapshot?.modelSelectionDisabled ?? false} />
         </header>
 
         {showConnectingOverlay ? (
