@@ -275,12 +275,9 @@ function ToolCallCard({
       }`}>
         {label}
       </span>
-      {!running &&
-        (isError ? (
-          <span className="text-[10px] font-bold text-red-500">!</span>
-        ) : (
-          <CheckIcon className="size-3 shrink-0 text-emerald-600 dark:text-emerald-500" />
-        ))}
+      {!running && isError && (
+        <span className="text-[10px] font-bold text-red-500">!</span>
+      )}
     </div>
   );
 }
@@ -399,7 +396,7 @@ function EmptyState() {
     { label: t("suggest4"), delay: 410 },
   ];
   return (
-    <div className="mt-[max(2.5rem,9vh)] flex flex-col items-center px-4 text-center">
+    <div className="flex min-h-full flex-col items-center justify-center px-4 text-center">
       <div
         className="fade-up flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-soft via-card to-bubble shadow-[inset_0_0_0_1px_var(--c-line)]"
       >
@@ -417,14 +414,16 @@ function EmptyState() {
             key={s.label}
             type="button"
             onClick={() => chatClient.injectComposerText(s.label)}
-            className="fade-up group flex items-center gap-2.5 rounded-xl border border-line bg-card px-3.5 py-2.5 text-left text-[13.5px] text-muted transition-all duration-150 hover:border-faint hover:text-ink hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)]"
+            className="fade-up group flex items-center gap-2.5 rounded-xl border border-line bg-card px-3.5 py-2.5 text-left text-[13.5px] text-muted transition-all duration-150 hover:-translate-y-0.5 hover:border-faint hover:text-ink hover:shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:translate-y-0"
             style={{ animationDelay: `${s.delay}ms` }}
           >
-            <SparkleIcon className="size-3.5 shrink-0 text-accent/80" />
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent transition-colors duration-150 group-hover:bg-accent group-hover:text-accent-ink">
+              <SparkleIcon className="size-3.5" />
+            </span>
             <span className="min-w-0 flex-1 truncate">{s.label}</span>
             <svg
               viewBox="0 0 24 24"
-              className="size-3.5 shrink-0 text-faint opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+              className="size-3.5 shrink-0 text-faint opacity-0 transition-[opacity,transform] duration-150 group-hover:translate-x-0.5 group-hover:opacity-100"
               fill="none"
               stroke="currentColor"
               strokeWidth="2.2"
@@ -567,7 +566,13 @@ export function MessageList({
       onTouchMove={handleTouchMove}
       className="thin-scroll min-h-0 flex-1 overflow-y-auto"
     >
-      <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6">
+      <div
+        className={`mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6 ${
+          messages.length === 0 && !streamText && !streamThinking && !isStreaming
+            ? "min-h-full justify-center"
+            : ""
+        }`}
+      >
         {messages.length === 0 && !streamText && !streamThinking && !isStreaming ? (
           <EmptyState />
         ) : (

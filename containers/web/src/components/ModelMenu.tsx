@@ -48,8 +48,15 @@ export function ModelMenu({ current }: { current: UIModel | null }) {
 
   return (
     <Menu.Root open={open} onOpenChange={setOpen}>
-      <Menu.Trigger className="max-w-[40vw] truncate rounded-lg px-2.5 py-1.5 text-[13px] text-muted transition-colors hover:bg-hover hover:text-ink sm:max-w-xs">
-        {current ? (current.name ?? current.id) : t("selectModel")}
+      <Menu.Trigger className="flex max-w-[40vw] items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] text-muted transition-colors hover:bg-hover hover:text-ink sm:max-w-xs">
+        <span className="truncate">{current ? (current.name ?? current.id) : t("selectModel")}</span>
+        <svg
+          viewBox="0 0 24 24"
+          className="size-3 shrink-0 fill-none stroke-current stroke-2 text-faint"
+          aria-hidden
+        >
+          <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner sideOffset={6} align="end">

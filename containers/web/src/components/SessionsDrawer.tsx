@@ -92,8 +92,10 @@ function SessionRow({
   })}`;
   return (
     <div
-      className={`group relative flex w-full items-center rounded-lg transition-colors ${
-        active ? "bg-selected" : "hover:bg-hover"
+      className={`group relative flex w-full items-center rounded-lg transition-colors before:absolute before:left-0 before:top-1/2 before:h-0 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-accent before:transition-[height] ${
+        active
+          ? "bg-accent-soft before:h-5"
+          : "hover:bg-hover"
       }`}
     >
       <button

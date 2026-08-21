@@ -54,7 +54,8 @@
   --c-accent: #2563eb;
   --c-accent-ink: #ffffff;
   --c-accent-soft: #e3ecfb;
-  --c-bubble: #eef2f8;
+  /* 유저 버블 — 캔버스·사이드바·인셋보다 확실히 어두운 톤으로 대비 강화 */
+  --c-bubble: #e2eaf7;
   --c-hover: rgba(15, 23, 42, 0.05);
   --c-selected: rgba(15, 23, 42, 0.08);
   --c-inset: #f0f4fa;
@@ -79,9 +80,10 @@
   --c-accent: #60a5fa;
   --c-accent-ink: #0b1120;
   --c-accent-soft: #1c2a44;
-  --c-bubble: #1a2434;
+  /* 유저 버블 — 카드·캔버스보다 밝은 네이비로 확실히 뜨게 */
   --c-hover: rgba(255, 255, 255, 0.06);
   --c-selected: rgba(255, 255, 255, 0.1);
+  --c-bubble: #223554;
   --c-inset: #111a28;
   --c-code-bg: rgba(96, 165, 250, 0.14);
   --c-code-border: rgba(96, 165, 250, 0.32);
@@ -153,6 +155,18 @@ body {
 }
 .thin-scroll::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/*
+ * 키보드 포커스 링 — 마우스 클릭엔 나오지 않고(:focus-visible) 탭 네비게이션에만.
+ * 컴포저 textarea는 감싼 컨테이너의 focus-within 링이 이미 있어서 제외.
+ */
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+.composer-textarea:focus-visible {
+  outline: none;
 }
 
 /*

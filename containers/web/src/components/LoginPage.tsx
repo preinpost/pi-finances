@@ -25,10 +25,22 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 items-center justify-center bg-sidebar px-4">
+    <div className="relative flex h-full min-h-0 w-full flex-1 items-center justify-center overflow-hidden bg-sidebar px-4">
+      {/* 은은한 배경 장식 — 영역 차지 없이 포커스 주지 않는 데코 */}
+      <div aria-hidden className="pointer-events-none absolute -top-28 -left-24 size-80 rounded-full bg-accent-soft blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -right-24 -bottom-32 size-96 rounded-full bg-bubble blur-3xl" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, var(--c-ink) 1px, transparent 0)",
+          backgroundSize: "28px 28px",
+        }}
+      />
       <form
         onSubmit={(e) => void submit(e)}
-        className="w-full max-w-sm rounded-2xl border border-line bg-card p-6 shadow-sm md:p-7"
+        className="fade-up relative w-full max-w-sm rounded-2xl border border-line bg-card p-6 shadow-[0_8px_30px_rgba(15,23,42,0.06)] md:p-7"
       >
         <div className="mb-6 flex flex-col items-center text-center">
           <span className="mb-3 flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent-soft to-bubble font-serif text-[22px] font-semibold text-accent shadow-[inset_0_0_0_1px_var(--c-line)]">
