@@ -117,4 +117,5 @@ export const ja: Messages = {
   loginFailed: "ユーザー名またはパスワードが正しくありません。",
   loginTooMany: "試行回数が多すぎます。しばらくしてから再試行してください。",
   logout: "ログアウト",
+  appVersion: "バージョン",
 };

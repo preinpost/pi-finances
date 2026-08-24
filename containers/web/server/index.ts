@@ -83,7 +83,29 @@ function readPackageVersion(): string {
   }
   return "unknown";
 }
+
+/** 컨테이너 VERSION 우선 — 설정 메뉴에 표시. 로컬 웹은 containers/VERSION. */
+function readAppVersion(): string {
+  const fromEnv = process.env.PI_FINANCE_VERSION?.trim();
+  if (fromEnv) return fromEnv;
+  for (const candidate of [
+    "/tmp/pi-finance.VERSION",
+    join(HERE, "..", "..", "VERSION"),
+    join(process.cwd(), "VERSION"),
+    join(process.cwd(), "..", "VERSION"),
+  ]) {
+    try {
+      if (!existsSync(candidate)) continue;
+      const v = readFileSync(candidate, "utf8").trim();
+      if (v) return v;
+    } catch {
+      /* ignore */
+    }
+  }
+  return readPackageVersion();
+}
 const PACKAGE_VERSION = readPackageVersion();
+const APP_VERSION = readAppVersion();
 const DIST_DIR = (() => {
   const candidates = [
     join(HERE, "public"), // dist/index.js → dist/public
@@ -719,7 +741,7 @@ const httpServer = createServer(async (req, res) => {
   try {
     // Lightweight readiness probe (used by `pi --web` before opening the browser).
     if (url.pathname === "/api/health") {
-      writeJson(res, 200, { ok: true, version: PACKAGE_VERSION });
+      writeJson(res, 200, { ok: true, version: PACKAGE_VERSION, appVersion: APP_VERSION });
       return;
     }
 
@@ -729,6 +751,7 @@ const httpServer = createServer(async (req, res) => {
         enabled: AUTH.enabled,
         authenticated: AUTH.enabled ? Boolean(session) : true,
         user: AUTH.enabled ? session?.user : undefined,
+        appVersion: APP_VERSION,
       });
       return;
     }

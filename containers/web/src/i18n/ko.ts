@@ -117,4 +117,5 @@ export const ko: Messages = {
   loginFailed: "사용자 이름 또는 비밀번호가 올바르지 않습니다.",
   loginTooMany: "시도가 너무 많습니다. 잠시 후 다시 시도하세요.",
   logout: "로그아웃",
+  appVersion: "버전",
 };

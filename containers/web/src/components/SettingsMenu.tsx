@@ -184,6 +184,15 @@ export function SettingsMenu({ modelSelectionDisabled = false }: { modelSelectio
                   </Menu.Item>
                 </>
               )}
+
+              {status?.appVersion && (
+                <>
+                  <div className="my-1 border-t border-line" />
+                  <div className="px-3 py-2 text-[11px] tabular-nums text-faint" title={t("appVersion")}>
+                    {t("appVersion")} {status.appVersion}
+                  </div>
+                </>
+              )}
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>

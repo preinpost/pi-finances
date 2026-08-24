@@ -123,6 +123,7 @@ export type Messages = {
   loginFailed: string;
   loginTooMany: string;
   logout: string;
+  appVersion: string;
 };
 
 export const en: Messages = {
@@ -242,4 +243,5 @@ export const en: Messages = {
   loginFailed: "Wrong username or password.",
   loginTooMany: "Too many attempts. Try again in a few minutes.",
   logout: "Sign out",
+  appVersion: "Version",
 };

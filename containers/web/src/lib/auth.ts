@@ -4,6 +4,7 @@ export interface AuthStatus {
   enabled: boolean;
   authenticated: boolean;
   user?: string;
+  appVersion?: string;
 }
 
 type AuthPhase = "loading" | "ready";

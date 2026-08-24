@@ -117,4 +117,5 @@ export const zh: Messages = {
   loginFailed: "用户名或密码不正确。",
   loginTooMany: "尝试次数过多，请稍后再试。",
   logout: "退出登录",
+  appVersion: "版本",
 };
