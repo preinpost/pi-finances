@@ -38,11 +38,16 @@ ENV TZ=Asia/Seoul \
     KIS_SECRET_STORE=file
 
 # ── 금융 패키지 설치 (빌드 타임, 유저 스코프 → /opt/pi-agent) ───────
+# VERSION을 먼저 COPY — 컨테이너 버전 범프마다 이 레이어 캐시가 깨져
+# npm:pi-* 최신(예: pi-binance 0.2.0 평단가·주문이력)이 다시 설치된다.
+# (RUN 줄만 같고 VERSION만 오르면 Docker는 옛 pi-binance@0.1.0 레이어를 재사용했음)
+COPY VERSION /tmp/pi-finance.VERSION
 # pi install은 소스를 한 번에 하나만 받는다 (CLI 제약) — 패키지별로 실행.
 # 빌드 시점 HOME은 /root(기본) — npm 캐시 사용 가능. 런타임 HOME은 아래 useradd 후 설정.
 # pi-finance-core(공용 스킬 kis-timing 포함)는 pi-kis/pi-toss에 번들로 자동 포함
 # pi-web-access: 웹 검색·URL 페치·GitHub 클론·PDF/유튜브 분석 (금융 리서치 보강, 외부 패키지)
-RUN pi install npm:pi-kis \
+RUN echo "pi-finance $(cat /tmp/pi-finance.VERSION)" \
+ && pi install npm:pi-kis \
  && pi install npm:pi-toss \
  && pi install npm:pi-twelve-data \
  && pi install npm:pi-finnhub \
