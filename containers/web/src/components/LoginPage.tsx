@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
+import { useAppVersion } from "../lib/appVersion";
 import { login, refreshAuth } from "../lib/auth";
 import { useT } from "../lib/i18n";
 
 export function LoginPage() {
   const t = useT();
+  const appVersion = useAppVersion();
   // 아이디는 빈 칸으로 시작 — 사용자가 직접 입력한다.
   const [user, setUser] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +83,11 @@ export function LoginPage() {
         >
           {busy ? t("loginSubmitting") : t("loginSubmit")}
         </button>
+        {appVersion && (
+          <p className="mt-4 text-center font-mono text-[11px] tabular-nums text-muted">
+            {t("appVersion")} {appVersion}
+          </p>
+        )}
       </form>
     </div>
   );

@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -8,11 +10,27 @@ const pkg = JSON.parse(
   readFileSync(new URL("./package.json", import.meta.url), "utf8"),
 ) as { version: string };
 
+function resolveAppVersion(): string {
+  const fromEnv = process.env.PI_FINANCE_VERSION?.trim();
+  if (fromEnv) return fromEnv;
+  const here = dirname(fileURLToPath(import.meta.url));
+  for (const candidate of [join(here, "..", "VERSION"), join(here, "VERSION")]) {
+    try {
+      if (!existsSync(candidate)) continue;
+      const v = readFileSync(candidate, "utf8").trim();
+      if (v) return v;
+    } catch {
+      /* ignore */
+    }
+  }
+  return pkg.version;
+}
+
 const DEV_SERVER_PORT = process.env.PI_WEB_DEV_PORT ?? "3141";
 
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(resolveAppVersion()),
   },
   build: {
     outDir: "dist/public",

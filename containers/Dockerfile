@@ -12,7 +12,8 @@ WORKDIR /build/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
-RUN npm run build   # vite(프론트 dist/public) + esbuild(서버 dist/index.js)
+COPY VERSION /build/VERSION
+RUN npm run build   # vite(프론트 dist/public) + esbuild(서버 dist/index.js) — VERSION → __APP_VERSION__
 
 # ════════════════════════════════════════════════════════════════════
 # 런타임 이미지

@@ -1,5 +1,6 @@
 import { Menu } from "@base-ui-components/react/menu";
 import { useState } from "react";
+import { useAppVersion } from "../lib/appVersion";
 import { logout, useAuth } from "../lib/auth";
 import { chatClient } from "../lib/chat";
 import { isLocale, LOCALES, setLocale, useLocale, useT } from "../lib/i18n";
@@ -26,6 +27,8 @@ export function SettingsMenu({ modelSelectionDisabled = false }: { modelSelectio
   const [providersOpen, setProvidersOpen] = useState(false);
   const { status } = useAuth();
   const showLogout = Boolean(status?.enabled);
+  const healthVersion = useAppVersion();
+  const appVersion = status?.appVersion || healthVersion;
 
   const themeOptions: { value: ThemePreference; label: string }[] = [
     { value: "system", label: t("themeSystem") },
@@ -185,14 +188,10 @@ export function SettingsMenu({ modelSelectionDisabled = false }: { modelSelectio
                 </>
               )}
 
-              {status?.appVersion && (
-                <>
-                  <div className="my-1 border-t border-line" />
-                  <div className="px-3 py-2 text-[11px] tabular-nums text-faint" title={t("appVersion")}>
-                    {t("appVersion")} {status.appVersion}
-                  </div>
-                </>
-              )}
+              <div className="my-1 border-t border-line" />
+              <div className="px-3 py-2 font-mono text-[11px] tabular-nums text-muted">
+                {t("appVersion")} {appVersion || "dev"}
+              </div>
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>
