@@ -12,6 +12,7 @@ finance용 **pi packages 모노레포** (pnpm workspace). 한국 투자·시장 
 | [pi-twelve-data](packages/pi-twelve-data) | Twelve Data (공식 API) — 전 세계 주식·지수·외환·암호 시세·차트·검색·환율 (무료 키) | `pi install npm:pi-twelve-data` |
 | [pi-finnhub](packages/pi-finnhub) | Finnhub (공식 API) — 미국 주식 시세·차트·뉴스·펀더멘털·컨센서스 (무료 키) | `pi install npm:pi-finnhub` |
 | [pi-coingecko](packages/pi-coingecko) | CoinGecko (공식 API) — 암호화폐 시세·차트·시장 랭킹·코인 상세·검색 (무료 키) | `pi install npm:pi-coingecko` |
+| [pi-binance](packages/pi-binance) | Binance REST — 현물(Spot)·USDT-M 선물 시세·차트·잔고·주문 (HMAC, live/testnet). 출금 없음 | `pi install npm:pi-binance` |
 | [pi-naver-news](packages/pi-naver-news) | 네이버 검색 API (NAVER API HUB) — 한국 증권·종목 뉴스 검색 (무료·월 775,000건) | `pi install npm:pi-naver-news` |
 | [pi-finance-core](packages/pi-finance-core) | 공용 라이브러리(기술적 지표·시크릿 스토어) + **공용 스킬**(kis-timing — 차트분석·타점). pi-kis/pi-toss가 번들(bundledDependencies)로 포함 | 직접 설치 불필요 (자동 의존) |
 
@@ -19,11 +20,12 @@ finance용 **pi packages 모노레포** (pnpm workspace). 한국 투자·시장 
   모두 설치하세요. 키 저장소는 공용이라 재등록이 필요 없습니다.
 - **무료 시장 데이터 3종 (pi-twelve-data / pi-finnhub / pi-coingecko)** — 공식 API 기반,
   각각 무료 키 등록 후 사용 (`/twelve-key`, `/finnhub-key`, `/coingecko-key`). 리서치·스크리닝용이며
-  실시간·주문은 pi-kis / pi-toss를 사용하세요. kis-timing 스킬이 이들의 차트 툴도 지원합니다.
+  주식 실시간·주문은 pi-kis / pi-toss, 크립토 주문은 pi-binance를 사용하세요. kis-timing 스킬이 이들의 차트 툴도 지원합니다.
+- **크립토 거래 (pi-binance)** — 현물 + USDT-M 선물. `/binance-key`로 HMAC 키 등록. 출금·이체는 없습니다.
 - **공용 스킬은 core가 번들로 제공** — pi-kis/pi-toss 어느 쪽을 설치해도 kis-timing(차트분석) 스킬이
   따라옵니다 (core를 직접 `pi install`할 필요 없음).
 - **스킬 네이밍 규칙 (필수)**: 모든 스킬 이름은 `{패키지}-{기능}` 접두사를 붙인다 (예: `kis-trading`,
-  `kis-timing`, `kis-stock-research`, `kis-sector-research`). prefix 덕분에 **각 패키지가 같은 기능
+  `kis-timing`, `kis-stock-research`, `kis-sector-research`, `binance-trading`). prefix 덕분에 **각 패키지가 같은 기능
   이름을 가져도 충돌하지 않는다** (예: pi-toss가 자체 타점 스킬을 만들면 `toss-timing` — `kis-timing`과
   공존 가능). 새 스킬 추가 시 반드시 패키지 이름을 접두사로 붙일 것.
 - 향후 finance 패키지(스크리너·리포트·자산관리 등)도 `packages/*`에 추가 예정.
@@ -54,6 +56,7 @@ pnpm typecheck      # 전체 패키지 타입체크 (tsc --noEmit)
 ```bash
 pi install /absolute/path/to/packages/pi-kis
 pi install /absolute/path/to/packages/pi-toss
+pi install /absolute/path/to/packages/pi-binance
 # (로컬 경로 설치는 소스를 그대로 로드 — 개발 중엔 설정 파일을 직접 수정해도 됨)
 ```
 

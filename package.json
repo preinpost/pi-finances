@@ -2,7 +2,7 @@
   "name": "pi-finances",
   "version": "0.0.0",
   "private": true,
-  "description": "finance pi packages monorepo — pi-kis (한국투자증권), pi-toss (토스증권), pi-finance-core (공용)",
+  "description": "finance pi packages monorepo — pi-kis, pi-toss, pi-binance, pi-finance-core 및 시장 데이터 패키지",
   "license": "MIT",
   "engines": {
     "node": ">=22.6"

@@ -76,6 +76,13 @@ export function providerStatuses(env: NodeJS.ProcessEnv): ProviderStatus[] {
       note: "암호화폐",
     },
     {
+      id: "binance",
+      label: "Binance",
+      configured: hasPair(env, "BINANCE_API_KEY", "BINANCE_API_SECRET"),
+      tools: ["binance_price", "binance_chart", "binance_account", "binance_order", "binance_orders", "binance_futures"],
+      note: "현물·USDT-M 선물 (시세·차트는 키 없이 가능)",
+    },
+    {
       id: "naver-news",
       label: `네이버 뉴스 (${naverMode})`,
       configured: naverConfigured,

@@ -81,6 +81,16 @@ services:
       TWELVE_API_KEY: ""     # https://twelvedata.com   전 세계 시세·차트·환율
       FINNHUB_API_KEY: ""    # https://finnhub.io       미국 주식·뉴스·펀더멘털
       COINGECKO_API_KEY: ""  # https://www.coingecko.com 암호화폐
+      # ── Binance (선택 — 현물 Spot + USDT-M 선물) ──────────────────
+      # https://www.binance.com → API Management 에서 HMAC 키 발급
+      # 권한: Enable Reading + Enable Spot + Enable Futures
+      # ⚠️ Enable Withdrawals 는 반드시 OFF. IP 제한 권장.
+      # BINANCE_ENV: live (실전) | testnet
+      #   현물 테스트넷 https://testnet.binance.vision
+      #   선물 테스트넷 https://testnet.binancefuture.com  — 키가 서로 다름
+      BINANCE_API_KEY: ""
+      BINANCE_API_SECRET: ""
+      BINANCE_ENV: "live"
       # ── 네이버 뉴스 (선택 — NAVER API HUB, 한국 증권 뉴스) ──────────
       # 신규 키(기본): mode=hub + NCP_APIGW_API_KEY_ID/KEY (console.ncloud.com/naver-api-hub)
       NAVER_NEWS_API_MODE: "hub"

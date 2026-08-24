@@ -9,7 +9,7 @@
 ## 1. 목표 / 비목표
 
 **목표**
-- pi 하네스 + 7개 금융 패키지(pi-kis/toss/twelve-data/finnhub/coingecko/naver-news) +
+- pi 하네스 + 8개 금융 패키지(pi-kis/toss/twelve-data/finnhub/coingecko/binance/naver-news) +
   금융분석 스킬(kis-trading/stock-research/sector-research/timing)이 **이미지에 bake**된
   컨테이너 이미지 1개.
 - pod-per-user 세션 모델: 브라우저 폼 → 키 env 주입 → 파드 스핀업 → 웹 인터랙션.
@@ -91,7 +91,7 @@ ENV TZ=Asia/Seoul \
 
 # 금융 패키지 설치 (빌드 타임, 유저 스코프 → /opt/pi-agent)
 RUN pi install npm:pi-kis npm:pi-toss npm:pi-twelve-data \
-               npm:pi-finnhub npm:pi-coingecko npm:pi-naver-news
+               npm:pi-finnhub npm:pi-coingecko npm:pi-binance npm:pi-naver-news
 
 # 금융분석 포커스 설정 (§4.2)
 COPY agent-config/ /opt/pi-agent/
@@ -109,7 +109,7 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 
 | 구성 | 내용 | 근거 |
 |---|---|---|
-| 패키지 8개 | pi-kis, pi-toss, pi-twelve-data, pi-finnhub, pi-coingecko, pi-naver-news (+core 자동 번들), pi-web-access(외부 — 웹 검색·URL 페치·PDF/유튜브 분석) | 모노레포 README의 설치 목록 + 금융 리서치 보강 |
+| 패키지 9개 | pi-kis, pi-toss, pi-twelve-data, pi-finnhub, pi-coingecko, pi-binance, pi-naver-news (+core 자동 번들), pi-web-access(외부 — 웹 검색·URL 페치·PDF/유튜브 분석) | 모노레포 README의 설치 목록 + 금융 리서치 보강 |
 | 스킬 4개 | kis-trading, kis-stock-research, kis-sector-research, kis-timing | 패키지 번들 스킬, 설치 시 자동 등록 |
 | TZ | `Asia/Seoul` | 한국 시장 운영 시간 기준 |
 | AGENTS.md | 전역 금융분석 컨벤션 (리포트 형식, 키 미등록 시 안내 멘트, 주의문구) | pi 컨텍스트 파일 메커니즘 |
@@ -130,6 +130,7 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 | Twelve Data | `TWELVE_API_KEY` | `pi-twelve-data/src/secret.ts:32` |
 | Finnhub | `FINNHUB_API_KEY` | `pi-finnhub/src/agent/commands.ts:53` |
 | CoinGecko | `COINGECKO_API_KEY` | `pi-coingecko/src/secret.ts:32` |
+| Binance | `BINANCE_API_KEY` / `BINANCE_API_SECRET` / `BINANCE_ENV` | `pi-binance/src/secret.ts` |
 | Naver News | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` (또는 `NCP_APIGW_API_KEY_ID`/`KEY` + `NAVER_NEWS_API_MODE=hub`) | `pi-naver-news/src/secret.ts:52` |
 
 **우선순위 주의**: 시크릿 스토어 파일 값이 env보다 우선(`file ?? env`). 에페메럴 파드에선

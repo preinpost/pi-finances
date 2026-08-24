@@ -9,7 +9,7 @@ pi 에이전트 하네스 + pi-finances 금융 패키지를 묶은 **금융분�
 | 구성 | 내용 |
 |---|---|
 | 하네스 | `@earendil-works/pi-coding-agent` (pi CLI) |
-| 패키지 | pi-kis, pi-toss, pi-twelve-data, pi-finnhub, pi-coingecko, pi-naver-news (+ core 자동 번들), **pi-web-access**(웹 검색·URL 페치·PDF/유튜브 분석) |
+| 패키지 | pi-kis, pi-toss, pi-twelve-data, pi-finnhub, pi-coingecko, pi-binance, pi-naver-news (+ core 자동 번들), **pi-web-access**(웹 검색·URL 페치·PDF/유튜브 분석) |
 | 스킬 | kis-trading, kis-stock-research, kis-sector-research, kis-timing |
 | 설정 | `agent-config/AGENTS.md`(전역 지침), `APPEND_SYSTEM.md`(금융 persona), `prompts/`(템플릿 3종) |
 | 웹챗 | pi-web-chat 소스 벤더링 (포트 8080, 비밀번호 게이트 — WEB-APP-DESIGN.md, UPSTREAM.md) |
@@ -79,6 +79,7 @@ docker compose up --build
 | `TWELVE_API_KEY` | Twelve Data | 선택 |
 | `FINNHUB_API_KEY` | Finnhub | 선택 |
 | `COINGECKO_API_KEY` | CoinGecko | 선택 |
+| `BINANCE_API_KEY` / `BINANCE_API_SECRET` / `BINANCE_ENV` | Binance 현물·USDT-M (`live`/`testnet`) | 선택 |
 | `NAVER_NEWS_API_MODE` + `NCP_APIGW_API_KEY_ID` / `NCP_APIGW_API_KEY` | 네이버 뉴스 검색 (NAVER API HUB, mode=hub 기본) | 선택 |
 | `PI_DEFAULT_MODEL` | 기본 모델 (`provider/id`, `pi --list-models`로 확인) | 선택 |
 | `PI_DEFAULT_THINKING` | 기본 thinking (`off/minimal/low/medium/high/xhigh/max`) | 선택 |

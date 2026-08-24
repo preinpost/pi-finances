@@ -1,19 +1,19 @@
 ---
 name: pi-finances-release
-description: pi-finances 모노레포(7개 pi-* npm 패키지 + Docker 컨테이너 GHCR) 배포·릴리스 절차. "배포", "릴리스", "배포하자", "publish", "npm에 올려", "버전 올려", "Docker 빌드", "GHCR" 등 요청 시 이 스킬의 절차를 따른다. 로컬 수동 npm publish 금지 — GitHub Actions가 담당.
+description: pi-finances 모노레포(8개 pi-* npm 패키지 + Docker 컨테이너 GHCR) 배포·릴리스 절차. "배포", "릴리스", "배포하자", "publish", "npm에 올려", "버전 올려", "Docker 빌드", "GHCR" 등 요청 시 이 스킬의 절차를 따른다. 로컬 수동 npm publish 금지 — GitHub Actions가 담당.
 ---
 
 # pi-finances 배포/릴리스
 
 ## 구조
 
-- **npm 패키지 7개**: `packages/{pi-coingecko, pi-finance-core, pi-finnhub, pi-kis, pi-naver-news, pi-toss, pi-twelve-data}`
+- **npm 패키지 8개**: `packages/{pi-binance, pi-coingecko, pi-finance-core, pi-finnhub, pi-kis, pi-naver-news, pi-toss, pi-twelve-data}`
 - **Docker 컨테이너**: `containers/` → `ghcr.io/preinpost/pi-finance` (amd64+arm64)
 
 ## 핵심 원칙
 
 1. **로컬에서 수동 `npm publish` 금지** — GitHub Actions가 전담. 로컬 역할 = 작업·검증·커밋·푸시.
-2. 패키지 워크플로우 `.github/workflows/release-<pkg>.yml` (7개 전부 동일 템플릿):
+2. 패키지 워크플로우 `.github/workflows/release-<pkg>.yml` (8개 전부 동일 템플릿):
    `main` 푸시(`packages/<pkg>/**` 변경) 또는 `workflow_dispatch` →
    typecheck → 스모크 → **버전 범프(커밋 메시지 기반)** → `npm publish` → 태그 `pi-<pkg>@V` + GitHub Release
    (컨테이너 관련 코드 없음 — 릴리스 성공이 workflow_run 후속 이벤트로 컨테이너를 트리거)

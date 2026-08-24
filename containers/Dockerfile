@@ -1,6 +1,6 @@
 # pi 금융분석 에이전트 컨테이너
 #
-# pi 하네스 + pi-finances 패키지(pi-kis/toss/twelve-data/finnhub/coingecko/naver-news) +
+# pi 하네스 + pi-finances 패키지(pi-kis/toss/twelve-data/finnhub/coingecko/binance/naver-news) +
 # 금융분석 설정(AGENTS.md, persona, 프롬프트 템플릿)을 bake한 이미지.
 # 설계 근거: 루트 CONTAINER-DESIGN.md (§4 이미지 설계)
 # pi 공식 컨테이너화 패턴: pi docs/containerization.md (node:24-bookworm-slim 기준)
@@ -47,6 +47,7 @@ RUN pi install npm:pi-kis \
  && pi install npm:pi-twelve-data \
  && pi install npm:pi-finnhub \
  && pi install npm:pi-coingecko \
+ && pi install npm:pi-binance \
  && pi install npm:pi-naver-news \
  && pi install npm:pi-web-access
 

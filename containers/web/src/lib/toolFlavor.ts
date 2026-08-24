@@ -28,6 +28,7 @@ const EXACT: Record<string, ToolFlavor> = {
   twelve_price: "quote",
   finnhub_price: "quote",
   coingecko_price: "quote",
+  binance_price: "quote",
 
   kis_domestic_chart: "chart",
   kis_overseas_chart: "chart",
@@ -36,6 +37,7 @@ const EXACT: Record<string, ToolFlavor> = {
   twelve_chart: "chart",
   finnhub_chart: "chart",
   coingecko_chart: "chart",
+  binance_chart: "chart",
   kis_technical: "chart",
 
   naver_news_search: "rumor",
@@ -52,12 +54,16 @@ const EXACT: Record<string, ToolFlavor> = {
   kis_realtime: "pulse",
 
   toss_balance: "vault",
+  binance_account: "vault",
 
   toss_order: "order",
   toss_orders: "order",
   toss_conditional: "order",
+  binance_order: "order",
+  binance_orders: "order",
 
   kis_derivatives: "omen",
+  binance_futures: "omen",
 
   twelve_search: "grimoire",
   coingecko_search: "grimoire",
