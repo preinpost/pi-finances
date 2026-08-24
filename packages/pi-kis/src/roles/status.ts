@@ -8,7 +8,7 @@
  * 키 소스:
  *  - 컨테이너 모델: env가 유일 (docker-entrypoint.sh가 스토어 파일을 제거).
  *  - 로컬 pi: KIS는 loadKeys()로 스토어+env를 모두 확인. 타 제공자(토스·twelve·
- *    finnhub·coingecko·naver)는 스토어가 패키지별 분리되어 있어 env만 확인
+ *    finnhub·coingecko·binance·naver)는 스토어가 패키지별 분리되어 있어 env만 확인
  *    (모든 패키지가 env 폴백을 지원하므로 컨테이너/CI 기준으로 충분).
  */
 import { loadKeys } from "../auth.ts";
@@ -80,6 +80,13 @@ export function providerStatuses(): ProviderStatus[] {
 			configured: has("COINGECKO_API_KEY"),
 			tools: ["coingecko_price", "coingecko_chart", "coingecko_market", "coingecko_coin", "coingecko_search"],
 			note: "암호화폐",
+		},
+		{
+			id: "binance",
+			label: "Binance",
+			configured: hasPair("BINANCE_API_KEY", "BINANCE_API_SECRET"),
+			tools: ["binance_price", "binance_chart", "binance_account", "binance_order", "binance_orders", "binance_futures"],
+			note: "현물·USDT-M 선물 (시세·차트는 키 없이 가능)",
 		},
 		{
 			id: "naver-news",

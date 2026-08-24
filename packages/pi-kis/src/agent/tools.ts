@@ -426,7 +426,7 @@ function brokerErrorResult(pi: ExtensionAPI, e: unknown) {
 		name: "market_status",
 		label: "시장 데이터 제공자 상태",
 		description:
-			"키가 설정된 브로커/데이터 제공자 확인 (KIS 실전·모의, 토스증권, Twelve Data, Finnhub, CoinGecko, 네이버 뉴스). " +
+			"키가 설정된 브로커/데이터 제공자 확인 (KIS 실전·모의, 토스증권, Twelve Data, Finnhub, CoinGecko, Binance, 네이버 뉴스). " +
 			"시세·차트 조회 전에 먼저 호출하면 사용 가능한 툴을 바로 고를 수 있다. " +
 			"미설정 제공자의 *_price/*_chart 툴은 호출해도 실패하므로 순차 시도하지 말 것. " +
 			"시세/차트는 broker_price / broker_chart 를 우선 사용하고, 실패 시 응답의 fallback 지시를 따른다.",
