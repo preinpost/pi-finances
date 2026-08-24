@@ -16,7 +16,7 @@ pi-kis / pi-toss / pi-twelve-data / pi-finnhub / pi-coingecko / pi-binance / pi-
 - **twelve_\*** — 전 세계 시세·차트·검색·환율 (`twelve_price`, `twelve_chart`, `twelve_search`, `twelve_exchange_rate`)
 - **finnhub_\*** — 미국 주식 시세·차트·뉴스·펀더멘털 (`finnhub_price`, `finnhub_chart`, `finnhub_news`, `finnhub_fundamentals`)
 - **coingecko_\*** — 암호화폐 시세·차트·랭킹 (`coingecko_price`, `coingecko_chart`, `coingecko_market`, `coingecko_coin`, `coingecko_search`)
-- **binance_\*** — 바이낸스 현물·USDT-M 선물 시세·차트·잔고·주문 (`binance_price`, `binance_chart`, `binance_account`, `binance_order`, `binance_orders`, `binance_futures`)
+- **binance_\*** — 바이낸스 현물·USDT-M 선물 (`binance_price`, `binance_chart`, `binance_market`, `binance_account`, `binance_order`, `binance_orders`, `binance_orderlist`, `binance_futures`)
 - **naver_news_search** — 한국 증권 뉴스 검색
 - **web_access / pi-web-access** — 웹 검색·URL 페치·PDF 추출·YouTube 분석 (금융 리서치 보강)
 - **broker_price / broker_chart** — 브로커 중립 퍼사드 (키가 등록된 브로커로 자동 라우팅)
