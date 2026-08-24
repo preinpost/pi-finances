@@ -1,0 +1,60 @@
+{
+  "name": "pi-binance",
+  "version": "0.1.0",
+  "description": "Binance REST client for pi — 현물(Spot)·USDT-M 선물 시세·차트·잔고·주문 (HMAC SHA256, live/testnet). 출금·이체는 포함하지 않음.",
+  "type": "module",
+  "license": "MIT",
+  "author": "minsoo.lee <preinpost@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/preinpost/pi-finances.git"
+  },
+  "bugs": {
+    "url": "https://github.com/preinpost/pi-finances/issues"
+  },
+  "homepage": "https://github.com/preinpost/pi-finances#readme",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "binance",
+    "crypto",
+    "spot",
+    "futures",
+    "trading",
+    "market-data"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "skills": [
+      "./skills"
+    ]
+  },
+  "files": [
+    "index.ts",
+    "src",
+    "skills",
+    "README.md"
+  ],
+  "dependencies": {
+    "pi-finance-core": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "bundledDependencies": [
+    "pi-finance-core"
+  ]
+}
