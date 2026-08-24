@@ -1,6 +1,6 @@
 ---
 name: kis-timing
-description: 매수/매도 타점 분석 — "매수 타이밍", "타점 분석", "진입/청산 시점", "손절 라인", "기술적 분석" 등 요청 시 차트 툴(설치된 브로커/데이터 제공자 기준 — kis_technical · toss_chart · twelve_chart · finnhub_chart · coingecko_chart)로 지표(MA/RSI/ATR/볼린저/지지저항/추세)를 계산하고 아래 판단 규칙대로 매수·매도·관망을 제시하며, 결론에 맞는 실행 시나리오(조건부 대응 계획)까지 제공한다. 실전 주문은 사용자 확인 후에만.
+description: 매수/매도 타점 분석 — "매수 타이밍", "타점 분석", "진입/청산 시점", "손절 라인", "기술적 분석" 등 요청 시 차트 툴(설치된 브로커/데이터 제공자 기준 — kis_technical · toss_chart · twelve_chart · finnhub_chart · coingecko_chart · binance_chart)로 지표(MA/RSI/ATR/볼린저/지지저항/추세)를 계산하고 아래 판단 규칙대로 매수·매도·관망을 제시하며, 결론에 맞는 실행 시나리오(조건부 대응 계획)까지 제공한다. 실전 주문은 사용자 확인 후에만.
 ---
 
 # Timing (매수/매도 타점 분석)
@@ -13,6 +13,7 @@ description: 매수/매도 타점 분석 — "매수 타이밍", "타점 분석"
 - **pi-twelve-data 설치 시**: `twelve_chart` (글로벌 주식/지수/외환/암호, 무료 키)
 - **pi-finnhub 설치 시**: `finnhub_chart` (미국 주식, 무료 키)
 - **pi-coingecko 설치 시**: `coingecko_chart` (암호화폐 OHLC — **volume 없음**)
+- **pi-binance 설치 시**: `binance_chart` (현물/USDT-M 캔들 + volume)
 
 ## 0. 실행 시퀀스
 
