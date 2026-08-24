@@ -85,7 +85,7 @@ export function providerStatuses(): ProviderStatus[] {
 			id: "binance",
 			label: "Binance",
 			configured: hasPair("BINANCE_API_KEY", "BINANCE_API_SECRET"),
-			tools: ["binance_price", "binance_chart", "binance_account", "binance_order", "binance_orders", "binance_futures"],
+			tools: ["binance_price", "binance_chart", "binance_market", "binance_account", "binance_order", "binance_orders", "binance_orderlist", "binance_futures"],
 			note: "현물·USDT-M 선물 (시세·차트는 키 없이 가능)",
 		},
 		{
