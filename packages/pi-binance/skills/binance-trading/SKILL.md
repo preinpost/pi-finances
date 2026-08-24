@@ -1,6 +1,6 @@
 ---
 name: binance-trading
-description: Binance 현물·USDT-M 선물 조회·주문. "바이낸스", "BTCUSDT", "선물 포지션", "펀딩비", "레버리지", "코인 매수/매도" 등 요청 시 binance_* 툴을 사용한다. 키 미등록 시 /binance-key 안내. 실전 주문은 사용자 확인 후에만. 출금·이체는 하지 않는다.
+description: Binance 현물·USDT-M 선물 조회·주문. "바이낸스", "BTCUSDT", "선물 포지션", "펀딩비", "레버리지", "코인 매수/매도", "평단가", "원가", "손익" 등 요청 시 binance_* 툴을 사용한다. 현물 평단가는 binance_account(costBasis). 키 미등록 시 /binance-key 안내. 실전 주문은 사용자 확인 후에만. 출금·이체는 하지 않는다.
 ---
 
 # Binance Trading (pi-binance)
@@ -29,10 +29,16 @@ Binance.com REST (HMAC SHA256). MCP 서버 없음.
 - 현재가: `binance_price { symbols: "BTCUSDT,ETHUSDT", market: "spot" }`
 - 일봉+지표: `binance_chart { symbol: "BTCUSDT", interval: "1d", limit: 100 }`
 - 선물 4시간봉: `binance_chart { symbol: "BTCUSDT", market: "usdm", interval: "4h" }`
-- 현물 잔고: `binance_account { market: "spot" }`
-- 선물 잔고+포지션: `binance_account { market: "usdm" }` 또는 `binance_futures { kind: "positions" }`
+- 현물 잔고+평단가: `binance_account { market: "spot" }` 또는 `{ market: "spot", symbols: "ETH" }`
+  - `balances[].costBasis.avgPrice` = FIFO 평단 (USDT). `unexplainedQty` > 0 이면 입금/컨버트 등 체결 밖 수량
+  - 잔고 API만으로는 평단가가 없음 — **반드시 includeCostBasis(기본 true)**
+- 체결 이력: `binance_orders { action: "trades", symbol: "ETHUSDT", market: "spot" }`
+- 선물 잔고+포지션: `binance_account { market: "usdm" }` — 선물 평단은 `positions[].entryPrice`
 - 마크가/펀딩: `binance_futures { kind: "mark", symbol: "BTCUSDT" }` / `kind: "funding"`
-- 미체결: `binance_orders { action: "list", market: "usdm", symbol: "BTCUSDT" }`
+- 미체결: `binance_orders { action: "list", market: "spot", symbol: "ETHUSDT" }`
+- 전체 주문이력: `binance_orders { action: "history", symbol: "ETHUSDT" }`
+- 호가/규칙: `binance_market { kind: "depth"|"exchange-info"|"book-ticker", symbol: "ETHUSDT" }`
+- 현물 OCO(익절+손절): `binance_orderlist { action: "create", type: "OCO", symbol: "ETHUSDT", side: "SELL", quantity, aboveType: "LIMIT_MAKER", abovePrice, belowType: "STOP_LOSS_LIMIT", belowStopPrice, belowPrice, belowTimeInForce: "GTC" }`
 
 ## 주문 안전 규칙
 

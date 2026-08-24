@@ -36,10 +36,14 @@ pi install npm:pi-binance
 |---|---|
 | `binance_price` | 24h 티커 — 복수 심볼(최대 10), spot/usdm, **키 없이 가능** |
 | `binance_chart` | 캔들·지표 — 1m/5m/15m/1h/4h/1d/1w, 공용 지표(pi-finance-core), **키 없이 가능** |
-| `binance_account` | 현물 잔고 / 선물 지갑·미실현·포지션 (서명) |
-| `binance_order` | 주문 생성 — LIMIT/MARKET/STOP_MARKET/TAKE_PROFIT_MARKET (서명, 사용자 확인 후) |
-| `binance_orders` | 미체결/상세/취소/일괄취소 |
+| `binance_market` | 현물 호가창·최근체결·평균가·북티커·거래소규칙(틱/롯)·롤링티커 |
+| `binance_account` | 현물 잔고 + **평단가(FIFO)** / 수수료·계정필터·미체결한도 / 선물 포지션 |
+| `binance_order` | 주문 생성·테스트주문 — LIMIT/LIMIT_MAKER/MARKET/스탑 계열 |
+| `binance_orders` | 미체결/상세/취소/체결이력/전체주문이력 |
+| `binance_orderlist` | 현물 OCO / OTO / OTOCO |
 | `binance_futures` | 펀딩·마크가·OI·포지션·레버리지·마진타입 (USDT-M) |
+
+현물 카탈로그에서 **의도적으로 뺀 것**: 출금/이체, SOR, OPO/OPOCO, pegged, amend-keep-priority, cancelReplace, User Data Stream(WS).
 
 > ⚠️ 주문·취소·레버리지 변경은 사용자 확인 후에만. 선물은 청산 위험이 있습니다.
 > 참고용 분석이며 투자 결정의 책임은 사용자에게 있습니다.

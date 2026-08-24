@@ -9,9 +9,11 @@
 const EXPECTED_TOOLS = [
 	"binance_price",
 	"binance_chart",
+	"binance_market",
 	"binance_account",
 	"binance_order",
 	"binance_orders",
+	"binance_orderlist",
 	"binance_futures",
 ];
 const EXPECTED_COMMANDS = ["binance-key", "binance-status"];
@@ -53,7 +55,7 @@ if (gotSig !== officialSig) {
 	failures.push(`HMAC 공식 예제 불일치\n  expected: ${officialSig}\n  actual  : ${gotSig}`);
 }
 
-const { normalizeSymbol } = await import("../src/roles/binance.ts");
+const { normalizeSymbol, costBasisFromTrades } = await import("../src/roles/binance.ts");
 const cases = [
 	["btc/usdt", "BTCUSDT"],
 	["BTC-USDT", "BTCUSDT"],
@@ -64,6 +66,28 @@ for (const [input, want] of cases) {
 	const got = normalizeSymbol(input);
 	if (got !== want) failures.push(`normalizeSymbol(${JSON.stringify(input)}) → ${got}, expected ${want}`);
 }
+
+const fifo1 = costBasisFromTrades(
+	[
+		{ time: 1, price: 100, qty: 1, isBuyer: true },
+		{ time: 2, price: 200, qty: 1, isBuyer: true },
+		{ time: 3, price: 180, qty: 1, isBuyer: false },
+	],
+	1,
+);
+if (fifo1.avgPrice !== 200) failures.push(`FIFO remaining lot avg expected 200, got ${fifo1.avgPrice}`);
+
+const fifo2 = costBasisFromTrades(
+	[
+		{ time: 1, price: 100, qty: 2, isBuyer: true },
+		{ time: 2, price: 150, qty: 1, isBuyer: false },
+	],
+	1,
+);
+if (Math.abs((fifo2.avgPrice ?? 0) - 100) > 1e-9) failures.push(`FIFO leftover avg expected 100, got ${fifo2.avgPrice}`);
+
+const fifo3 = costBasisFromTrades([{ time: 1, price: 2500, qty: 0.01, isBuyer: true }], 0.0143);
+if (fifo3.unexplainedQty < 0.004) failures.push(`expected unexplained deposit qty, got ${fifo3.unexplainedQty}`);
 
 if (failures.length > 0) {
 	console.error(`[pi-binance smoke] FAIL\n${failures.join("\n")}`);
