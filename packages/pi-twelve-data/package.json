@@ -1,23 +1,55 @@
 {
   "name": "pi-twelve-data",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Twelve Data (공식 API) 클라이언트 for pi — 무료 키로 전 세계 주식·지수·외환·암호화폐 시세·차트·검색·환율 (직접 REST, 의존성 0).",
   "type": "module",
   "license": "MIT",
   "author": "minsoo.lee <preinpost@gmail.com>",
-  "repository": { "type": "git", "url": "git+https://github.com/preinpost/pi-finances.git" },
-  "bugs": { "url": "https://github.com/preinpost/pi-finances/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/preinpost/pi-finances.git"
+  },
+  "bugs": {
+    "url": "https://github.com/preinpost/pi-finances/issues"
+  },
   "homepage": "https://github.com/preinpost/pi-finances#readme",
-  "engines": { "node": ">=22.6" },
-  "publishConfig": { "access": "public" },
-  "keywords": ["pi-package", "pi", "pi-coding-agent", "twelve-data", "market-data", "stock", "forex", "crypto"],
+  "engines": {
+    "node": ">=22.6"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "twelve-data",
+    "market-data",
+    "stock",
+    "forex",
+    "crypto"
+  ],
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "typebox": "*"
   },
-  "pi": { "extensions": ["./index.ts"] },
-  "files": ["index.ts", "src", "README.md"],
-  "dependencies": { "pi-finance-core": "workspace:*" },
-  "scripts": { "typecheck": "tsc --noEmit -p ." },
-  "bundledDependencies": ["pi-finance-core"]
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "files": [
+    "index.ts",
+    "src",
+    "README.md"
+  ],
+  "dependencies": {
+    "pi-finance-core": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "bundledDependencies": [
+    "pi-finance-core"
+  ]
 }
