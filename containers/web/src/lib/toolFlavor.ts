@@ -33,6 +33,7 @@ const EXACT: Record<string, ToolFlavor> = {
   kis_domestic_chart: "chart",
   kis_overseas_chart: "chart",
   broker_chart: "chart",
+  broker_chart_card: "chart",
   toss_chart: "chart",
   twelve_chart: "chart",
   finnhub_chart: "chart",

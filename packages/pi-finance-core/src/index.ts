@@ -6,6 +6,8 @@
  *
  *   src/store.ts      — 범용 시크릿 스토어 (namespace별 keyring/file 적응형)
  *   src/indicators.ts — 기술적 지표 (Bar, MA/RSI/ATR/볼린저/지지저항/추세)
+ *   src/chart-card.ts — 웹챗 차트 카드 payload (OHLCV details)
  */
 export * from "./indicators.ts";
 export * from "./store.ts";
+export * from "./chart-card.ts";

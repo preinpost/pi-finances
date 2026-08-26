@@ -7,6 +7,7 @@ import type { ActiveTool } from "../lib/chat";
 import { chatClient } from "../lib/chat";
 import { useLocale, useT } from "../lib/i18n";
 import { pickThinkingLine, pickToolFlavorLine } from "../lib/toolFlavor";
+import { ChartCard } from "./ChartCard";
 import { Markdown } from "./Markdown";
 import { PixelLoader } from "./PixelLoader";
 import { StreamingText } from "./StreamingText";
@@ -305,8 +306,20 @@ function Blocks({
           case "thinking":
             // 사고 토큰은 사용자에게 노출하지 않는다
             return null;
-          case "toolCall":
+          case "toolCall": {
+            const cards = b.result?.charts ?? (b.result?.chart ? [b.result.chart] : []);
+            if (cards.length > 0) {
+              return (
+                <div key={i} className="flex flex-col">
+                  {cards.map((card, j) => (
+                    <ChartCard key={`${card.template ?? "candle"}-${j}`} data={card} />
+                  ))}
+                </div>
+              );
+            }
             return <ToolCallCard key={i} block={b} />;
+          }
+
           case "image":
             return b.dataUrl ? (
               <img

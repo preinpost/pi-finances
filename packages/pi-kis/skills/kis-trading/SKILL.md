@@ -18,8 +18,10 @@ kis_* 도구의 description을 우선 참고하세요. 이 스킬은 도구 설�
 
 ## 사용 패턴
 
-- 국내 현재가: `kis_domestic_price { symb: "005930" }`
-- 해외 현재가: `kis_overseas_price { excd: "NAS", symb: "RKLB" }`
+- 국내 현재가: `kis_domestic_price { symb: "005930" }` 또는 `broker_price { symbol: "005930" }`
+- 해외 현재가: `kis_overseas_price { excd: "NAS", symb: "RKLB" }` 또는 `broker_price { symbol: "RKLB" }`
+- **「차트 보여줘」만 있으면**: 일봉 캔들 카드 하나(`broker_chart` 또는 `broker_chart_card { kinds: ["candle"] }`). 주봉·지표 표·타점·mermaid 금지. 카드 뒤에 이 문장만: 「이 밖에 RSI, 일목균형표, 볼린저밴드를 같은 형식으로 보여드릴 수 있습니다. 원하는 종류를 말씀해 주세요.」
+- **종류를 말한 차트**: 「RSI/볼린저/일목 보여줘」→ `broker_chart_card` 또는 `kis_technical`에 `kinds`. ASCII/mermaid 금지.
 
 ### KIS 미지원/빈 응답 → fallback 지시대로 `*_price` / `*_chart` 툴 콜 (prefix_name 규칙)
 

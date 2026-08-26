@@ -65,6 +65,7 @@ pi remove npm:pi-kis    # 제거
 | `kis_derivatives` | 해외 선물/옵션 — 종목코드(SRS_CD) 단위 시세/상품정보/분봉/장운영시간 + **option-greeks**(IV 역산 → Black-Scholes 델타/감마/세타/베가/로) |
 | `broker_price` | 현재가 (KIS 우선 + **fallback 툴 콜 폴백**) — 국내 6자리/해외 티커. KIS 미지원/실패 시 `fallback: { func, tools, args, why }` 지시 — tools에 설치된 `*_price` 후보를 찾아 툴 콜 |
 | `broker_chart` | 차트·지표 (KIS 우선 + **fallback 툴 콜 폴백**) — D/W/M/1d(KIS), 1m(KIS 미지원). KIS 미지원/실패 시 `fallback` 지시 — tools에 설치된 `*_chart` 후보를 찾아 툴 콜 |
+| `broker_chart_card` | 채팅용 캔들 차트 카드 — 시세는 툴이 직접 조회. LLM에는 요약만, `details.kind=chart-card`로 웹챗이 렌더. 분석 숫자는 `broker_chart` / `kis_technical` |
 
 토스증권 툴(`toss_price`/`toss_chart`/`toss_market`/`toss_balance`/`toss_order`/`toss_orders`/`toss_conditional`)은
 [pi-toss](https://github.com/preinpost/pi-finances/tree/main/packages/pi-toss) 패키지에서 제공합니다.

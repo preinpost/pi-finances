@@ -7,12 +7,12 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { analyze } from "pi-finance-core";
+import { analyze, chartCardDetails } from "pi-finance-core";
 import { getCoin, getMarkets, getOhlc, getPrices, searchCoins } from "../roles/coingecko.ts";
 
 /** 툴 결과 공통 래퍼 — { ok, ... } JSON 문자열. */
-export function jsonResult(value: unknown) {
-	return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }], details: {} };
+export function jsonResult(value: unknown, details: object = {}) {
+	return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }], details };
 }
 
 export function registerTools(pi: ExtensionAPI): void {
@@ -83,6 +83,9 @@ export function registerTools(pi: ExtensionAPI): void {
 				if (bars.length === 0) {
 					return jsonResult({ ok: false, error: "차트 데이터 없음 — 코인 id를 확인하거나 days 값을 조정하세요." });
 				}
+				const card = days !== "1"
+					? chartCardDetails({ symbol: params.id, period: days === "max" ? "전체" : `${days}일`, bars })
+					: undefined;
 				return jsonResult({
 					ok: true,
 					source: "coingecko",
@@ -93,7 +96,7 @@ export function registerTools(pi: ExtensionAPI): void {
 					lastBar: bars[bars.length - 1],
 					recentBars: bars.slice(-10),
 					...analyze(bars),
-				});
+				}, card ?? {});
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
 			}

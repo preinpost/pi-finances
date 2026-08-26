@@ -36,7 +36,7 @@ import {
 	placeConditionalOrder,
 	placeOrder,
 } from "../roles/toss.ts";
-import { analyze } from "pi-finance-core";
+import { analyze, chartCardDetails, chartPeriodLabel } from "pi-finance-core";
 
 /** 툴 결과 공통 래퍼 — 기존 index.ts와 동일 형태. */
 export function textResult(text: string) {
@@ -44,8 +44,8 @@ export function textResult(text: string) {
 }
 
 /** execute 공통 에러 래퍼 — 기존 { ok: false, error } 형태 유지. */
-function jsonResult(value: unknown) {
-	return textResult(JSON.stringify(value, null, 2));
+function jsonResult(value: unknown, details: object = {}) {
+	return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }], details };
 }
 
 export function registerTools(pi: ExtensionAPI): void {
@@ -94,7 +94,11 @@ export function registerTools(pi: ExtensionAPI): void {
 				if (bars.length === 0) {
 					return jsonResult({ ok: false, error: "차트 데이터 없음 — 심볼을 확인하거나 장 마감 후 재시도하세요." });
 				}
-				return jsonResult({ ok: true, broker: "toss", symbol: params.symbol, interval: params.interval ?? "1d", nextBefore, ...analyze(bars) });
+				const interval = params.interval ?? "1d";
+				const card = interval === "1d"
+					? chartCardDetails({ symbol: params.symbol, period: chartPeriodLabel(interval), bars })
+					: undefined;
+				return jsonResult({ ok: true, broker: "toss", symbol: params.symbol, interval, nextBefore, ...analyze(bars) }, card ?? {});
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
 			}

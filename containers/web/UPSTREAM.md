@@ -60,3 +60,5 @@
   (`server/auth.ts` + `server/index.ts`). HttpOnly 세션 쿠키(`pi_web_sid`),
   `/api/*`·`/ws` 잠금, `/api/health`·`/api/auth/*`만 공개. 미설정 시 비밀번호 자동 생성·시작 로그 출력.
   `PI_WEB_AUTH=0`으로 끌 수 있다. 프론트는 로그인 화면(`LoginPage`) + 설정 메뉴 로그아웃.
+- 로컬 적응(업스트림 미포함): **차트 카드** — `broker_chart_card` 툴 결과 `details.kind=chart-card`를
+  웹챗이 Lightweight Charts React 카드로 렌더 (`ChartCard.tsx`, `serialize.ts`). HTML 생성 없음.

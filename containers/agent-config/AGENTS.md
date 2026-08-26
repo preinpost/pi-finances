@@ -19,7 +19,7 @@ pi-kis / pi-toss / pi-twelve-data / pi-finnhub / pi-coingecko / pi-binance / pi-
 - **binance_\*** — 바이낸스 현물·USDT-M 선물 (`binance_price`, `binance_chart`, `binance_market`, `binance_account`, `binance_order`, `binance_orders`, `binance_orderlist`, `binance_futures`)
 - **naver_news_search** — 한국 증권 뉴스 검색
 - **web_access / pi-web-access** — 웹 검색·URL 페치·PDF 추출·YouTube 분석 (금융 리서치 보강)
-- **broker_price / broker_chart** — 브로커 중립 퍼사드 (키가 등록된 브로커로 자동 라우팅)
+- **broker_price / broker_chart / broker_chart_card** — 브로커 중립 퍼사드. `broker_chart`는 일봉 조회 시 웹챗 캔들 카드도 붙인다. 차트만 띄울 때 `broker_chart_card`.
 
 ## 스킬
 
@@ -40,6 +40,12 @@ pi-kis / pi-toss / pi-twelve-data / pi-finnhub / pi-coingecko / pi-binance / pi-
 - 시세/차트는 `broker_price`/`broker_chart` 우선 — 실패 시 응답의 fallback 지시
   ({ func, tools, args, why })에서 설치된 `*_price`/`*_chart` 툴을 골라 이어서 호출한다.
 - 해당 툴이 키 없음으로 실패하면, 사용자에게 키 등록 경로(`/kis-key` 등)를 안내하라.
+
+## 차트 (필수)
+
+- **금지**: mermaid, xychart, ascii, RSI 텍스트 바, 볼린저 텍스트 도식.
+- 「차트 보여줘」(종류 없음): 일봉 캔들 카드만. 주봉/타점/표 금지. 카드 다음 문장: 「이 밖에 RSI, 일목균형표, 볼린저밴드를 같은 형식으로 보여드릴 수 있습니다. 원하는 종류를 말씀해 주세요.」
+- 「RSI/볼린저/일목 보여줘」: 즉시 `broker_chart_card` 또는 `kis_technical`에 `kinds`. 설명만 하고 카드를 빼먹지 말 것.
 
 ## 리포트 규칙
 

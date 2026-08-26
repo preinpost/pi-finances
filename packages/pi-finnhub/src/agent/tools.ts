@@ -7,7 +7,7 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { analyze } from "pi-finance-core";
+import { analyze, chartCardDetails, chartPeriodLabel } from "pi-finance-core";
 import { getCandles, getFundamentals, getNews, getQuote, type FinnhubResolution } from "../roles/finnhub.ts";
 
 /** 툴 결과 공통 래퍼 — { content: [text] } 형태 (pi-toss와 동일). */
@@ -15,8 +15,8 @@ export function textResult(text: string) {
 	return { content: [{ type: "text" as const, text }], details: {} };
 }
 
-function jsonResult(value: unknown) {
-	return textResult(JSON.stringify(value, null, 2));
+function jsonResult(value: unknown, details: object = {}) {
+	return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }], details };
 }
 
 /** compact — null/undefined/빈 문자열 재귀 제거 (공통 응답 정규화). */
@@ -91,6 +91,10 @@ export function registerTools(pi: ExtensionAPI): void {
 				if (bars.length === 0) {
 					return jsonResult({ ok: false, error: "차트 데이터 없음 — 조회 기간에 거래일이 없습니다." });
 				}
+				const resolution = String(meta.resolution ?? params.resolution ?? "D");
+				const card = ["D", "W", "M"].includes(resolution)
+					? chartCardDetails({ symbol: params.symbol, period: chartPeriodLabel(resolution), bars })
+					: undefined;
 				return jsonResult(
 					compact({
 						ok: true,
@@ -102,6 +106,7 @@ export function registerTools(pi: ExtensionAPI): void {
 						recentBars: bars.slice(-10),
 						...analyze(bars),
 					}),
+					card ?? {},
 				);
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });

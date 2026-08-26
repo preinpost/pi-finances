@@ -1,7 +1,8 @@
-import { memo } from "react";
+import { Children, isValidElement, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
+import { looksLikeMermaid, MermaidBlock } from "./MermaidBlock";
 
 /**
  * remark-gfm의 취소선(~~, ~) 문법만 제거한다.
@@ -65,12 +66,21 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
         remarkPlugins={[remarkGfm, remarkNoStrikethrough]}
         rehypePlugins={[rehypeHighlight]}
         components={{
-          // 모바일에서 넓은 표가 화면을 뚫고 나가지 않도록 가로 스크롤 컨테이너로 감싼다.
           table: ({ node: _node, ...props }) => (
             <div className="overflow-x-auto">
               <table {...props} />
             </div>
           ),
+          pre: ({ children }) => {
+            const child = Children.toArray(children)[0];
+            if (isValidElement(child)) {
+              const props = child.props as { className?: string; children?: unknown };
+              const text = String(props.children ?? "").replace(/\n$/, "");
+              const lang = /language-([\w-]+)/.exec(props.className ?? "")?.[1];
+              if (looksLikeMermaid(lang, text)) return <MermaidBlock source={text} />;
+            }
+            return <pre>{children}</pre>;
+          },
         }}
       >
         {text}

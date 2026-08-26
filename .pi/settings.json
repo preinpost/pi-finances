@@ -1,0 +1,12 @@
+{
+  "subagents": {
+    "agentOverrides": {
+      "researcher": {
+        "extensions": []
+      },
+      "worker": {
+        "extensions": []
+      }
+    }
+  }
+}

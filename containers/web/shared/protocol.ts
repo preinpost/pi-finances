@@ -1,5 +1,39 @@
 /** 서버 <-> 클라이언트 공용 프로토콜 타입 */
 
+export interface UIChartBar {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+}
+
+export type UIChartTemplate =
+  | "candle"
+  | "rsi"
+  | "ichimoku"
+  | "bollinger"
+  | "macd"
+  | "stochastic"
+  | "atr"
+  | "drawdown"
+  | "adx";
+
+export interface UIChartCard {
+  kind: "chart-card";
+  template?: UIChartTemplate;
+  meta: {
+    name: string;
+    symbol: string;
+    period: string;
+    price: number;
+    change: number;
+    changePct: number;
+  };
+  bars: UIChartBar[];
+}
+
 export type UIContentBlock =
   | { type: "text"; text: string }
   | { type: "thinking"; text: string }
@@ -9,7 +43,7 @@ export type UIContentBlock =
       name: string;
       args: unknown;
       /** 페어링된 tool result (있으면) */
-      result?: { text: string; isError: boolean };
+      result?: { text: string; isError: boolean; chart?: UIChartCard; charts?: UIChartCard[] };
     }
   | { type: "image"; dataUrl?: string };
 

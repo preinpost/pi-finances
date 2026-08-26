@@ -1,5 +1,5 @@
 /**
- * src/agent/tools.ts — pi 툴 등록 (kis_* 10개 + broker_* 2개 + market_status).
+ * src/agent/tools.ts — pi 툴 등록 (kis_* 10개 + broker_* 3개 + market_status).
  *
  * 툴 name/label/description/parameters/출력 형태는 변경 불가(하위 호환).
  * execute 내부만 roles/core로 위임한다:
@@ -19,7 +19,7 @@ import {
 	getOverseasChart,
 	getOverseasPrice,
 } from "../roles/market.ts";
-import { analyze, normalizeDomesticChart, normalizeOverseasChart, type Bar } from "pi-finance-core";
+import { analyze, chartCardDetails, chartPeriodLabel, normalizeDomesticChart, normalizeOverseasChart, type Bar, type ChartCardTemplate } from "pi-finance-core";
 import {
 	getAnalystConsensus,
 	getFinancialRatios,
@@ -71,9 +71,40 @@ export function dateStr(daysAgo = 0): string {
 	return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** execute 공통 에러 래퍼 — 기존 { ok: false, error } 형태 유지. */
-function jsonResult(value: unknown) {
-	return textResult(JSON.stringify(value, null, 2));
+/** execute 공통 에러 래퍼 — 기존 { ok: false, error } 형태 유지. details는 웹챗 카드 등 UI 전용. */
+function jsonResult(value: unknown, details: object = {}) {
+	return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }], details };
+}
+
+const CHART_KIND = Type.Union([
+	Type.Literal("candle"),
+	Type.Literal("rsi"),
+	Type.Literal("ichimoku"),
+	Type.Literal("bollinger"),
+	Type.Literal("macd"),
+	Type.Literal("stochastic"),
+	Type.Literal("atr"),
+	Type.Literal("drawdown"),
+	Type.Literal("adx"),
+]);
+
+function cardsDetails(opts: {
+	symbol: string;
+	name?: string;
+	period: string;
+	bars: Bar[];
+	kinds?: ChartCardTemplate[];
+	price?: number;
+	change?: number;
+	changePct?: number;
+}): object {
+	const kinds = [...new Set(opts.kinds?.length ? opts.kinds : ["candle"])] as ChartCardTemplate[];
+	const cards = kinds
+		.map((template) => chartCardDetails({ ...opts, template }))
+		.filter((c): c is NonNullable<typeof c> => Boolean(c));
+	if (cards.length === 0) return {};
+	if (cards.length === 1) return cards[0] ?? {};
+	return { kind: "chart-cards" as const, cards };
 }
 
 export function registerTools(pi: ExtensionAPI): void {
@@ -260,7 +291,14 @@ export function registerTools(pi: ExtensionAPI): void {
 					modp: params.modp ?? "0",
 					env: params.env ?? "auto",
 				});
-				return jsonResult(result);
+				const gubn = params.gubn ?? "0";
+				const bars = pickChartBars(result.data as Record<string, unknown>, normalizeOverseasChart);
+				const card = chartCardDetails({
+					symbol: params.symb,
+					period: chartPeriodLabel(gubn === "1" ? "W" : gubn === "2" ? "M" : "D"),
+					bars,
+				});
+				return jsonResult(result, card ?? {});
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
 			}
@@ -307,13 +345,27 @@ export function registerTools(pi: ExtensionAPI): void {
 		}),
 		async execute(_id, params) {
 			try {
+				const period = params.period ?? "D";
 				const result = await getDomesticChart(params.symb, {
-					period: params.period ?? "D",
+					period,
 					date1: params.date1 ?? dateStr(150),
 					date2: params.date2 ?? dateStr(),
 					env: params.env ?? "auto",
 				});
-				return jsonResult(result);
+				const data = result.data as Record<string, unknown>;
+				const summary = data.output1;
+				const name =
+					summary && typeof summary === "object" && !Array.isArray(summary)
+						? String((summary as Record<string, unknown>).hts_kor_isnm ?? "")
+						: "";
+				const bars = pickChartBars(data, normalizeDomesticChart);
+				const card = chartCardDetails({
+					symbol: params.symb,
+					name,
+					period: chartPeriodLabel(period),
+					bars,
+				});
+				return jsonResult(result, card ?? {});
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
 			}
@@ -358,7 +410,11 @@ export function registerTools(pi: ExtensionAPI): void {
 		name: "kis_technical",
 		label: "기술적 분석 (타점)",
 		description:
-			"매수/매도 타점용 기술적 지표 계산 — 차트(국내 v1_국내주식-016 / 해외 v1_해외주식-010)를 조회해 " +
+			"매수/매도 타점용 기술적 지표 계산. 일봉 조회 시 웹챗에 캔들 카드가 붙습니다. " +
+			"사용자가 RSI/볼린저/일목/MACD/스토캐스틱/ATR/낙폭/ADX를 보여달라고 하면 kinds를 넣으세요. " +
+			"예: kinds: [\"rsi\",\"macd\",\"adx\"]. " +
+			"텍스트 게이지로 그리지 마세요. mermaid 금지. " +
+			"차트(국내 v1_국내주식-016 / 해외 v1_해외주식-010)를 조회해 " +
 			"MA5/20/60, RSI(14), ATR(14), 볼린저(20,2), 지지/저항(최근 20봉), 추세(정배열/역배열)를 계산하고 " +
 			"신호 라벨(골든크로스, RSI 과매수/과매도, 저항 돌파, 볼린저 터치 등)을 반환합니다. " +
 			"국내는 최대 100봉, 해외는 최대 100행 한계 — 장기(200일 MA 등) 지표가 필요하면 기간을 나눠 여러 번 호출해 합산하세요. " +
@@ -368,6 +424,7 @@ export function registerTools(pi: ExtensionAPI): void {
 			market: Type.Union([Type.Literal("domestic"), Type.Literal("overseas")], { description: "domestic=국내, overseas=해외" }),
 			period: Type.Optional(Type.Union([Type.Literal("D"), Type.Literal("W"), Type.Literal("M")], { description: "D=일봉(기본), W=주봉, M=월봉" })),
 			excd: Type.Optional(Type.String({ description: "해외 거래소: NAS(기본)/NYS/AMS (market=overseas일 때 사용)" })),
+			kinds: Type.Optional(Type.Array(CHART_KIND, { description: "추가로 띄울 차트 카드. rsi/ichimoku/bollinger/macd/stochastic/atr/drawdown/adx" })),
 			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")], {
 				description: "real(실전)/paper(모의)/auto(기본: 모의 키 있으면 모의)",
 			})),
@@ -376,6 +433,9 @@ export function registerTools(pi: ExtensionAPI): void {
 			try {
 				const env = params.env ?? "auto";
 				const period = params.period ?? "D";
+				const kinds = params.kinds?.length
+					? (["candle", ...params.kinds] as ChartCardTemplate[])
+					: (["candle"] as ChartCardTemplate[]);
 				if (params.market === "domestic") {
 					const res = await getDomesticChart(params.symb, {
 						period,
@@ -388,7 +448,8 @@ export function registerTools(pi: ExtensionAPI): void {
 					if (bars.length === 0) {
 						return jsonResult({ ok: false, error: "차트 데이터 없음 — 종목코드/기간을 확인하거나 장 마감 후 재시도하세요. (broker_chart 재시도 시 fallback.tools에서 *_chart 툴 발견 후 툴 콜)" });
 					}
-					return jsonResult({ ok: true, market: "domestic", symb: params.symb, period, ...analyze(bars) });
+					const details = cardsDetails({ symbol: params.symb, period: chartPeriodLabel(period), bars, kinds });
+					return jsonResult({ ok: true, market: "domestic", symb: params.symb, period, ...analyze(bars) }, details);
 				}
 				const res = await getOverseasChart(params.excd ?? "NAS", params.symb, {
 					gubn: period === "D" ? "0" : period === "W" ? "1" : "2",
@@ -400,7 +461,8 @@ export function registerTools(pi: ExtensionAPI): void {
 				if (bars.length === 0) {
 					return jsonResult({ ok: false, error: "차트 데이터 없음 — 티커/거래소(excd)를 확인하거나 장 마감 후 재시도하세요. (broker_chart 재시도 시 fallback.tools에서 *_chart 툴 발견 후 툴 콜)" });
 				}
-				return jsonResult({ ok: true, market: "overseas", symb: params.symb, excd: params.excd ?? "NAS", period, ...analyze(bars) });
+				const details = cardsDetails({ symbol: params.symb, period: chartPeriodLabel(period), bars, kinds });
+				return jsonResult({ ok: true, market: "overseas", symb: params.symb, excd: params.excd ?? "NAS", period, ...analyze(bars) }, details);
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
 			}
@@ -466,6 +528,8 @@ function brokerErrorResult(pi: ExtensionAPI, e: unknown) {
 		name: "broker_chart",
 		label: "차트·지표 (KIS 우선, toss 툴 콜 폴백)",
 		description:
+			"사용자가 차트·캔들·일봉을 보여달라고 하거나 일/주/월봉 OHLCV가 필요하면 이 툴을 호출하세요. " +
+			"웹챗에 캔들 카드가 자동으로 붙습니다. mermaid/xychart/ascii로 차트를 그리지 마세요. " +
 			"차트 조회 + 기술지표 — KIS 우선. period: D/W/M/1d=일·주·월봉(KIS), 1m=1분봉(KIS 미지원). " +
 			"**KIS 미지원/실패 시 응답에 fallback: { func, tools, args, why } 지시가 포함됩니다** — " +
 			"tools는 설치된 `*_chart` 툴 후보(toss_chart/twelve_chart/finnhub_chart 등)이므로 그 중 하나를 이어서 호출하세요 " +
@@ -490,7 +554,111 @@ function brokerErrorResult(pi: ExtensionAPI, e: unknown) {
 					env: params.env ?? "auto",
 				});
 				const indicators = analyze(result.bars);
-				return jsonResult({ ok: true, broker: result.broker, period: result.period, source: result.source, bars: result.bars, indicators });
+				const card = chartCardDetails({
+					symbol: params.symbol,
+					period: chartPeriodLabel(result.period),
+					bars: result.bars,
+				});
+				return jsonResult({ ok: true, broker: result.broker, period: result.period, source: result.source, bars: result.bars, indicators }, card ?? {});
+			} catch (e) {
+				return brokerErrorResult(pi, e);
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "broker_chart_card",
+		label: "차트 카드 (화면 표시)",
+		description:
+			"캔들/RSI/일목/볼린저/MACD/스토캐스틱/ATR/낙폭/ADX 카드를 띄울 때 이 툴을 사용하세요. ASCII/텍스트 그림 금지. " +
+			"예: 「MACD ATR 보여줘」→ kinds: [\"macd\",\"atr\"]. 유형마다 별도 카드. " +
+			"시세는 툴이 직접 조회합니다. 종류 없는 「차트 보여줘」만 있으면 호출 전에 종류를 고르게 하세요. " +
+			"period: D=일봉(기본). name은 종목명(선택).",
+		parameters: Type.Object({
+			symbol: Type.String({ description: "종목 심볼: 6자리 국내코드 또는 해외 티커, 예: 005930 / SOXL" }),
+			period: Type.Optional(Type.Union(
+				[Type.Literal("D"), Type.Literal("W"), Type.Literal("M"), Type.Literal("1d")],
+				{ description: "D=일봉(기본), W=주봉, M=월봉" },
+			)),
+			kinds: Type.Optional(Type.Array(
+				Type.Union([
+					Type.Literal("candle"),
+					Type.Literal("rsi"),
+					Type.Literal("ichimoku"),
+					Type.Literal("bollinger"),
+					Type.Literal("macd"),
+					Type.Literal("stochastic"),
+					Type.Literal("atr"),
+					Type.Literal("drawdown"),
+					Type.Literal("adx"),
+				]),
+				{ description: "차트 유형. 기본 [\"candle\"]. rsi/ichimoku/bollinger/macd/stochastic/atr/drawdown/adx 각각 별도 카드" },
+			)),
+			name: Type.Optional(Type.String({ description: "종목명 (예: SK하이닉스). 없으면 심볼 표시" })),
+			env: Type.Optional(Type.Union([Type.Literal("real"), Type.Literal("paper"), Type.Literal("auto")], {
+				description: "real(실전)/paper(모의)/auto(기본) — KIS 호출에만 적용",
+			})),
+		}),
+		async execute(_id, params) {
+			try {
+				const period = params.period ?? "D";
+				const result = await brokerGetCandles(params.symbol, {
+					period,
+					env: params.env ?? "auto",
+				});
+				if (result.bars.length === 0) {
+					return jsonResult({ ok: false, error: "차트 데이터 없음" });
+				}
+				const last = result.bars[result.bars.length - 1];
+				const prev = result.bars[result.bars.length - 2];
+				let price = last.close;
+				let change = prev ? last.close - prev.close : 0;
+				let changePct = prev && prev.close ? (change / prev.close) * 100 : 0;
+				try {
+					const px = await brokerGetPrice(params.symbol, { env: params.env ?? "auto" });
+					const raw = px.quote as Record<string, unknown> | undefined;
+					const out = ((raw?.output ?? raw) ?? {}) as Record<string, unknown>;
+					const p = Number(out.stck_prpr ?? px.price);
+					const c = Number(out.prdy_vrss);
+					const pct = Number(out.prdy_ctrt);
+					if (Number.isFinite(p) && p > 0) {
+						price = p;
+						if (Number.isFinite(c)) change = c;
+						if (Number.isFinite(pct)) changePct = pct;
+					}
+				} catch {
+					// 봉 종가로 헤더 구성
+				}
+				const label = period === "W" ? "주봉" : period === "M" ? "월봉" : "일봉";
+				const name = (params.name ?? "").trim() || params.symbol;
+				const wanted = (params.kinds?.length ? params.kinds : ["candle"]) as ChartCardTemplate[];
+				const kinds = [...new Set(wanted)];
+				const cards = kinds
+					.map((template) => chartCardDetails({
+						symbol: params.symbol,
+						name,
+						period: label,
+						template,
+						bars: result.bars,
+						price,
+						change,
+						changePct,
+					}))
+					.filter((c): c is NonNullable<typeof c> => Boolean(c));
+				const sign = change >= 0 ? "+" : "";
+				const details = cards.length === 1
+					? cards[0]
+					: { kind: "chart-cards" as const, cards };
+				return {
+					content: [{
+						type: "text" as const,
+						text:
+							`${name}(${params.symbol}) ${label} ${kinds.join(", ")} 차트를 표시했습니다. ` +
+							`현재가 ${Math.round(price)} (${sign}${changePct.toFixed(2)}%). ` +
+							`봉 ${result.bars.length}개. 유형마다 별도 카드입니다.`,
+					}],
+					details,
+				};
 			} catch (e) {
 				return brokerErrorResult(pi, e);
 			}

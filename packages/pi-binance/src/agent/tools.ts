@@ -6,7 +6,7 @@
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { analyze } from "pi-finance-core";
+import { analyze, chartCardDetails, chartPeriodLabel } from "pi-finance-core";
 import {
 	cancelAllOrders,
 	cancelOrder,
@@ -45,8 +45,8 @@ import {
 	placeOtoco,
 } from "../roles/spot.ts";
 
-export function jsonResult(value: unknown) {
-	return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }], details: {} };
+export function jsonResult(value: unknown, details: object = {}) {
+	return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }], details };
 }
 
 const Market = Type.Optional(Type.Union([Type.Literal("spot"), Type.Literal("usdm")], { description: "spot=현물(기본), usdm=USDT-M 선물" }));
@@ -114,6 +114,9 @@ export function registerTools(pi: ExtensionAPI): void {
 				if (bars.length === 0) {
 					return jsonResult({ ok: false, error: "차트 데이터 없음 — 심볼/interval/시장을 확인하세요." });
 				}
+				const card = interval === "1d" || interval === "1w"
+					? chartCardDetails({ symbol, period: chartPeriodLabel(interval), bars })
+					: undefined;
 				return jsonResult({
 					ok: true,
 					source: "binance",
@@ -124,7 +127,7 @@ export function registerTools(pi: ExtensionAPI): void {
 					lastBar: bars[bars.length - 1],
 					recentBars: bars.slice(-10),
 					...analyze(bars),
-				});
+				}, card ?? {});
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
 			}
