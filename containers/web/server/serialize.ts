@@ -191,13 +191,6 @@ function requestedTemplates(userText: string): UIChartTemplate[] {
   return out;
 }
 
-function lastUserText(msgs: AnyMessage[]): string {
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    if (msgs[i].role === "user") return textFromContent(msgs[i].content);
-  }
-  return "";
-}
-
 function applyRequestedTemplates(charts: UIChartCard[], userText: string): UIChartCard[] {
   const extras = requestedTemplates(userText);
   if (extras.length === 0 || !charts[0]) return charts;
