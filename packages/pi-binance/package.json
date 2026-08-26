@@ -1,6 +1,6 @@
 {
   "name": "pi-binance",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Binance REST client for pi — 현물(Spot)·USDT-M 선물 시세·차트·잔고·주문 (HMAC SHA256, live/testnet). 출금·이체는 포함하지 않음.",
   "type": "module",
   "license": "MIT",
