@@ -1,23 +1,53 @@
 {
   "name": "pi-coingecko",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CoinGecko (공식 API) 클라이언트 for pi — 암호화폐 시세·차트·시장 랭킹·코인 상세·검색 (무료 Demo 키, 직접 REST, 의존성 0).",
   "type": "module",
   "license": "MIT",
   "author": "minsoo.lee <preinpost@gmail.com>",
-  "repository": { "type": "git", "url": "git+https://github.com/preinpost/pi-finances.git" },
-  "bugs": { "url": "https://github.com/preinpost/pi-finances/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/preinpost/pi-finances.git"
+  },
+  "bugs": {
+    "url": "https://github.com/preinpost/pi-finances/issues"
+  },
   "homepage": "https://github.com/preinpost/pi-finances#readme",
-  "engines": { "node": ">=22.6" },
-  "publishConfig": { "access": "public" },
-  "keywords": ["pi-package", "pi", "pi-coding-agent", "coingecko", "crypto", "market-data"],
+  "engines": {
+    "node": ">=22.6"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "coingecko",
+    "crypto",
+    "market-data"
+  ],
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "typebox": "*"
   },
-  "pi": { "extensions": ["./index.ts"] },
-  "files": ["index.ts", "src", "README.md"],
-  "dependencies": { "pi-finance-core": "workspace:*" },
-  "scripts": { "typecheck": "tsc --noEmit -p ." },
-  "bundledDependencies": ["pi-finance-core"]
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "files": [
+    "index.ts",
+    "src",
+    "README.md"
+  ],
+  "dependencies": {
+    "pi-finance-core": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "bundledDependencies": [
+    "pi-finance-core"
+  ]
 }
