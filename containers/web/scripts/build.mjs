@@ -5,7 +5,7 @@
  *   dist/index.js   — bundled Node server
  */
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
@@ -55,6 +55,13 @@ if (!existsSync(join(dist, "public/index.html"))) {
 if (!existsSync(join(dist, "index.js"))) {
   console.error("build failed: dist/index.js missing");
   process.exit(1);
+}
+
+const fluentKorean = join(root, "..", "agent-config", "fluent-korean.md");
+if (existsSync(fluentKorean)) {
+  copyFileSync(fluentKorean, join(dist, "fluent-korean.md"));
+} else {
+  console.warn("build: agent-config/fluent-korean.md missing — Korean output style will not be bundled");
 }
 
 console.log("✓ build complete → dist/index.js + dist/public/");

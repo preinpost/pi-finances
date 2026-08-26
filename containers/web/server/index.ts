@@ -49,6 +49,7 @@ import {
   verifyCredentials,
 } from "./auth.ts";
 import { envFilePath, upsertDotEnv } from "./env.ts";
+import { fluentKoreanBlock } from "./fluentKorean.ts";
 import { providerStatusBlock, responseRulesBlock } from "./providerStatus.ts";
 import { readCustomModels, validateProviders, writeCustomModels } from "./models-config.ts";
 import { serializeMessages } from "./serialize.ts";
@@ -182,7 +183,11 @@ const createRuntime: CreateAgentSessionRuntimeFactory = async ({ cwd, sessionMan
     // 데이터 제공자 키 상태를 세션 시스템 프롬프트에 동적 주입 (미설정 브로커
     // 순차 시도 방지 — .env 저장 등 런타임 변경이 다음 세션부터 반영됨)
     resourceLoaderOptions: {
-      appendSystemPrompt: [providerStatusBlock(process.env), responseRulesBlock()],
+      appendSystemPrompt: [
+        providerStatusBlock(process.env),
+        responseRulesBlock(),
+        fluentKoreanBlock(),
+      ].filter((b) => b.trim().length > 0),
     },
   });
   // env 기본 모델/thinking — 빈 세션(새 초안)에만 적용.

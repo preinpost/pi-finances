@@ -16,6 +16,14 @@
 
 이미 `responseRulesBlock()`에 구현되어 있다 — 응답 본문에 도구 이름(`kis_api`, `broker_price` 등)을 노출하지 않는 규칙.
 
+## "말투 보정 / fluent-korean" 요청이 오면
+
+이미 적용되어 있다. Claude Code 플러그인이 아니라 **시스템 프롬프트에 상시 주입**한다
+(온디맨드 스킬이면 매 턴 말투가 안 붙는다).
+- 원본: https://github.com/snflkd/fluent-korean (MIT) `fluent-korean-not-coding`
+- 파일: `containers/agent-config/fluent-korean.md` (+ AlphaFolio 추가 지침: 한국어로 사고·출력)
+- 주입: `fluentKoreanBlock()` → `appendSystemPrompt`
+
 ## "사고토큰/thinking 노출하지 마라" 요청이 오면
 
 이미 막아 두었다.
