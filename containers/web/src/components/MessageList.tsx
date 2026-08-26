@@ -282,36 +282,12 @@ function ToolCallCard({
   );
 }
 
-/** 접이식 thinking 트레이스 — 스파크 + 쉬머 라벨, 펼치면 본문 */
-function Thinking({ text, streaming, seed }: { text: string; streaming?: boolean; seed: string }) {
-  const locale = useLocale();
-  const label = pickThinkingLine(streaming ? "running" : "done", seed, locale);
-  return (
-    <details className="group my-1.5 text-sm">
-      <summary className="flex w-fit cursor-pointer items-center gap-1.5 rounded-lg px-1.5 py-1 transition-colors select-none hover:bg-hover">
-        <SparkleIcon className="size-3.5 shrink-0 text-accent" />
-        {streaming ? (
-          <span className="shimmer-text text-[12.5px] font-medium">{label}</span>
-        ) : (
-          <span className="text-[12.5px] font-medium text-muted">{label}</span>
-        )}
-        <ChevronIcon className="size-3.5 text-faint transition-transform duration-200 group-open:rotate-180" />
-      </summary>
-      <div className="mt-1 ml-[9px] border-l border-line pl-4 text-[13px] leading-relaxed text-muted whitespace-pre-wrap">
-        {text}
-      </div>
-    </details>
-  );
-}
-
 function Blocks({
   blocks,
   markdown,
-  seedPrefix,
 }: {
   blocks: UIContentBlock[];
   markdown: boolean;
-  seedPrefix: string;
 }) {
   const t = useT();
   return (
@@ -327,7 +303,8 @@ function Blocks({
               </div>
             );
           case "thinking":
-            return <Thinking key={i} text={b.text} seed={`${seedPrefix}:think`} />;
+            // 사고 토큰은 사용자에게 노출하지 않는다
+            return null;
           case "toolCall":
             return <ToolCallCard key={i} block={b} />;
           case "image":
@@ -353,18 +330,16 @@ function Message({
   message,
   canRetry,
   retryText,
-  seedPrefix,
 }: {
   message: UIMessage;
   canRetry?: boolean;
   retryText?: string;
-  seedPrefix: string;
 }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%] rounded-2xl rounded-br-md bg-bubble px-4 py-2.5 text-[15px] whitespace-pre-wrap text-ink sm:max-w-[75%]">
-          <Blocks blocks={message.content} markdown={false} seedPrefix={seedPrefix} />
+          <Blocks blocks={message.content} markdown={false} />
         </div>
       </div>
     );
@@ -375,7 +350,7 @@ function Message({
     .join("\n\n");
   return (
     <div className="text-[15px]">
-      <Blocks blocks={message.content} markdown seedPrefix={seedPrefix} />
+      <Blocks blocks={message.content} markdown />
       {message.errorMessage && (
         <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/50 dark:text-red-400">
           {message.errorMessage}
@@ -525,8 +500,9 @@ export function MessageList({
     !last ||
     last.role === "user" ||
     (last.role === "assistant" && last.content.some((b) => b.type === "toolCall" && b.result));
+  // thinking 스트리밍 중에도 토큰 본문 대신 로더만 보여 사고 과정을 숨긴다
   const showTyping =
-    isStreaming && !streamText && !streamThinking && activeTools.length === 0 && waitingForAssistant;
+    isStreaming && !streamText && activeTools.length === 0 && waitingForAssistant;
 
   // 재생성(retry)용: 마지막 유저 메시지 텍스트
   const lastUser = useMemo(() => {
@@ -585,12 +561,8 @@ export function MessageList({
                   !isStreaming && m.role === "assistant" && i === messages.length - 1
                 }
                 retryText={lastUser}
-                seedPrefix={`msg:${i}`}
               />
             ))}
-            {streamThinking && (
-              <Thinking text={streamThinking} streaming seed={`msg:${messages.length}:think`} />
-            )}
             {streamText && <StreamingText text={streamText} />}
             {toolChips.map((tool) => (
               <div

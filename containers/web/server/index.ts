@@ -52,6 +52,7 @@ import { envFilePath, upsertDotEnv } from "./env.ts";
 import { providerStatusBlock, responseRulesBlock } from "./providerStatus.ts";
 import { readCustomModels, validateProviders, writeCustomModels } from "./models-config.ts";
 import { serializeMessages } from "./serialize.ts";
+import { ThinkTagRouter } from "./thinkingText.ts";
 import { SECRET_FIELDS, SECRET_KEY_SET, type UISecretsResponse } from "../shared/secrets.ts";
 
 const PORT = Number(process.env.PORT ?? 3141);
@@ -231,6 +232,8 @@ interface SessionEntry {
   clients: Set<WebSocket>;
   unsubscribe?: () => void;
   lastActive: number;
+  /** 본문에 섞인 <think> 태그를 스트리밍 중 분리 */
+  thinkRouter: ThinkTagRouter;
   /**
    * URL(/s/:id)에 공개했는지.
    * `/` 접속으로 만든 빈 초안은 첫 prompt 전까지 false — 주소에 sessionId를 붙이지 않는다.
@@ -296,6 +299,7 @@ async function createEntry(id: string | null): Promise<SessionEntry> {
     runtime,
     clients: new Set(),
     lastActive: Date.now(),
+    thinkRouter: new ThinkTagRouter(),
     // 명시적 세션 id로 연 경우만 즉시 공개. null 접속은 빈 초안.
     published: id !== null,
   };
@@ -408,13 +412,19 @@ function bindSession(entry: SessionEntry) {
       case "message_update": {
         const e = event.assistantMessageEvent;
         if (e.type === "text_delta") {
-          broadcast({ type: "delta", kind: "text", delta: e.delta });
-        } else if (e.type === "thinking_delta") {
-          broadcast({ type: "delta", kind: "thinking", delta: e.delta });
+          // <think> 본문 누수는 버리고, 태그를 벗긴 텍스트만 보낸다
+          for (const part of entry.thinkRouter.push(e.delta)) {
+            if (part.kind === "text" && part.delta) {
+              broadcast({ type: "delta", kind: "text", delta: part.delta });
+            }
+          }
         }
+        // thinking_delta 는 웹챗에 노출하지 않는다
         break;
       }
       case "message_end":
+        entry.thinkRouter.flush();
+        entry.thinkRouter.reset();
         broadcastSnapshot(entry);
         break;
       case "tool_execution_start":
@@ -430,9 +440,11 @@ function bindSession(entry: SessionEntry) {
         broadcastSnapshot(entry);
         break;
       case "agent_start":
+        entry.thinkRouter.reset();
         broadcast({ type: "agent_start" });
         break;
       case "agent_end": {
+        entry.thinkRouter.reset();
         broadcast({ type: "agent_end" });
         // agent_end 직후 session.isStreaming 이 아직 true일 수 있어 명시적으로 false
         const snap = buildSnapshot(entry);

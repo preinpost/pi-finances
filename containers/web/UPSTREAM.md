@@ -31,6 +31,9 @@
     노출하지 않고, 분류별 장르 말투만 표시 (`src/lib/toolFlavor.ts` +
     `src/i18n/flavorLines.ts`). 분류마다 실행/완료/실패 10개, 생각하는 중도 10개.
     같은 호출(id)은 같은 문구를 고정. 확장 목록 다이얼로그는 그대로.
+  - **사고 토큰 숨김 (로컬 적응)**: thinking 채널·`<think>` 본문을 웹챗에 노출하지 않는다.
+    서버는 `thinking_delta`를 보내지 않고 본문의 think 태그를 제거 (`server/thinkingText.ts`).
+    UI는 thinking 블록을 렌더하지 않고 생각하는 중에는 로더만 표시.
   - **스트리밍 텍스트 (beautiful-ui 스타일)** (`StreamingText.tsx` 신규 + `MessageList.tsx`):
     - 스트리밍 중 단어 blur 해소 애니메이션 — **v2: 전체를 단어 span 하나의 인라인 흐름으로 렌더**
       (v1의 마크다운 블록+꼬리 span 하이브리드는 시임에서 줄이 튀어 폐기). 인라인 마크다운

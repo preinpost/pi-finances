@@ -99,6 +99,8 @@ export function responseRulesBlock(): string {
     "",
     "- 응답 본문에 도구(tool) 이름을 노출하지 않는다. (`kis_api로 조회했습니다`, `broker_price 호출 결과` 같은 표현 금지)",
     "- 도구 이름 대신 데이터 내용과 해석만 자연스럽게 전달한다. (예: \"현재가 기준으로 …\", \"최근 조회한 시세에 따르면 …\")",
+    "- 응답 본문에 내부 추론·사고 과정·계획 독백을 쓰지 않는다. (`The user wants…`, `Let me check…`, `Wait,`, `Actually,`, `Hmm` 같은 혼잣말 금지)",
+    "- 사고(thinking)는 thinking 채널로만 하고, 사용자에게는 결과와 다음 행동만 한국어로 전달한다.",
   ].join("\n");
 }
 

@@ -15,3 +15,10 @@
 ## "도구 이름 노출하지 마라" 요청이 오면
 
 이미 `responseRulesBlock()`에 구현되어 있다 — 응답 본문에 도구 이름(`kis_api`, `broker_price` 등)을 노출하지 않는 규칙.
+
+## "사고토큰/thinking 노출하지 마라" 요청이 오면
+
+이미 막아 두었다.
+- UI (`MessageList.tsx`): thinking 블록·streamThinking 본문을 렌더하지 않고, 생각하는 중에는 로더만 표시
+- 서버 (`thinkingText.ts` + `index.ts` + `serialize.ts`): `thinking_delta` 미전송, 본문의 `<think>`/`<thinking>` 태그 제거
+- `responseRulesBlock()`: 본문 혼잣말(The user wants / Let me check 등) 금지
