@@ -1,5 +1,5 @@
 import type { UIContentBlock, UIMessage } from "../shared/protocol.ts";
-import { stripThinkTags } from "./thinkingText.ts";
+import { sanitizeAssistantText } from "./thinkingText.ts";
 
 type AnyMessage = {
   role: string;
@@ -68,7 +68,7 @@ export function serializeMessages(messages: unknown[]): UIMessage[] {
       if (Array.isArray(m.content)) {
         for (const b of m.content as Record<string, unknown>[]) {
           if (b.type === "text" && typeof b.text === "string" && b.text.length > 0) {
-            const text = stripThinkTags(b.text);
+            const text = sanitizeAssistantText(b.text);
             if (text) blocks.push({ type: "text", text });
           } else if (b.type === "thinking") {
             continue; // 사고 토큰은 웹챗에 노출하지 않는다

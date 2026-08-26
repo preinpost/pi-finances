@@ -52,7 +52,7 @@ import { envFilePath, upsertDotEnv } from "./env.ts";
 import { providerStatusBlock, responseRulesBlock } from "./providerStatus.ts";
 import { readCustomModels, validateProviders, writeCustomModels } from "./models-config.ts";
 import { serializeMessages } from "./serialize.ts";
-import { ThinkTagRouter } from "./thinkingText.ts";
+import { CotStreamFilter, ThinkTagRouter } from "./thinkingText.ts";
 import { SECRET_FIELDS, SECRET_KEY_SET, type UISecretsResponse } from "../shared/secrets.ts";
 
 const PORT = Number(process.env.PORT ?? 3141);
@@ -234,6 +234,8 @@ interface SessionEntry {
   lastActive: number;
   /** 본문에 섞인 <think> 태그를 스트리밍 중 분리 */
   thinkRouter: ThinkTagRouter;
+  /** 태그 없는 사고 독백을 문장 단위로 걸러 낸다 */
+  cotFilter: CotStreamFilter;
   /**
    * URL(/s/:id)에 공개했는지.
    * `/` 접속으로 만든 빈 초안은 첫 prompt 전까지 false — 주소에 sessionId를 붙이지 않는다.
@@ -300,6 +302,7 @@ async function createEntry(id: string | null): Promise<SessionEntry> {
     clients: new Set(),
     lastActive: Date.now(),
     thinkRouter: new ThinkTagRouter(),
+    cotFilter: new CotStreamFilter(),
     // 명시적 세션 id로 연 경우만 즉시 공개. null 접속은 빈 초안.
     published: id !== null,
   };
@@ -412,11 +415,11 @@ function bindSession(entry: SessionEntry) {
       case "message_update": {
         const e = event.assistantMessageEvent;
         if (e.type === "text_delta") {
-          // <think> 본문 누수는 버리고, 태그를 벗긴 텍스트만 보낸다
+          // <think> 본문 누수 + 태그 없는 사고 독백은 버리고, 사용자 답만 보낸다
           for (const part of entry.thinkRouter.push(e.delta)) {
-            if (part.kind === "text" && part.delta) {
-              broadcast({ type: "delta", kind: "text", delta: part.delta });
-            }
+            if (part.kind !== "text" || !part.delta) continue;
+            const visible = entry.cotFilter.push(part.delta);
+            if (visible) broadcast({ type: "delta", kind: "text", delta: visible });
           }
         }
         // thinking_delta 는 웹챗에 노출하지 않는다
@@ -425,6 +428,8 @@ function bindSession(entry: SessionEntry) {
       case "message_end":
         entry.thinkRouter.flush();
         entry.thinkRouter.reset();
+        entry.cotFilter.flush();
+        entry.cotFilter.reset();
         broadcastSnapshot(entry);
         break;
       case "tool_execution_start":
@@ -441,10 +446,12 @@ function bindSession(entry: SessionEntry) {
         break;
       case "agent_start":
         entry.thinkRouter.reset();
+        entry.cotFilter.reset();
         broadcast({ type: "agent_start" });
         break;
       case "agent_end": {
         entry.thinkRouter.reset();
+        entry.cotFilter.reset();
         broadcast({ type: "agent_end" });
         // agent_end 직후 session.isStreaming 이 아직 true일 수 있어 명시적으로 false
         const snap = buildSnapshot(entry);

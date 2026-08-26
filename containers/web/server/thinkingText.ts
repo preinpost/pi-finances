@@ -136,3 +136,117 @@ export function stripThinkTags(input: string): string {
     .replace(/^\n+/, "")
     .replace(/\n+$/, "");
 }
+
+// ---------------------------------------------------------------------------
+// 태그 없는 사고 독백 (DeepSeek 등이 thinking 채널 대신 본문에 씀)
+// ---------------------------------------------------------------------------
+
+const COT_OPENER =
+  /^(?:the user\b|wait\b|actually\b|hmm\b|let me\b|let's\b|i need to\b|i['’]ll\b|i will\b|first(?:\s+i|\s*,|\s+let)\b|so(?:,)?\s+(?:the user|let me|i need)\b|looking at\b|ok(?:ay)?[,.]?\s+let me\b|this is\b.{0,80}\b(?:request|skill))/i;
+
+const COT_PLAN =
+  /\b(?:let me (?:check|start|read|use|get|also|confirm|do|be|try|look|see)|need to (?:check|find|get|use|read)|be efficient|skill (?:first|approach)|related research)\b/i;
+
+const TOOL_ID =
+  /\b(?:broker_price|broker_chart|market_status|toss_[a-z][a-z0-9_]*|kis_[a-z][a-z0-9_]*|naver_news_search|finnhub_[a-z][a-z0-9_]*|twelve_[a-z][a-z0-9_]*|coingecko_[a-z][a-z0-9_]*|binance_[a-z][a-z0-9_]*|web_access|kis-stock-research|kis-sector-research|kis-timing|kis-trading|binance-trading)\b/;
+
+function latinRatio(s: string): number {
+  const letters = s.replace(/[^A-Za-z가-힣]/g, "");
+  if (!letters) return 0;
+  return letters.replace(/[^A-Za-z]/g, "").length / letters.length;
+}
+
+export function isCotChunk(s: string): boolean {
+  const t = s.trim();
+  if (!t) return false;
+  if (COT_OPENER.test(t)) return true;
+  const latin = latinRatio(t);
+  if (TOOL_ID.test(t) && latin >= 0.35) return true;
+  if (COT_PLAN.test(t) && latin >= 0.45) return true;
+  return false;
+}
+
+/** 문장/줄 단위로 쪼개되 구분자는 청크에 붙인다 */
+function splitChunks(s: string): string[] {
+  const out: string[] = [];
+  let i = 0;
+  while (i < s.length) {
+    let j = i;
+    while (j < s.length) {
+      const ch = s[j]!;
+      if (ch === "\n") {
+        j += 1;
+        while (j < s.length && s[j] === "\n") j += 1;
+        break;
+      }
+      if ((ch === "." || ch === "!" || ch === "?" || ch === "。") && (j + 1 >= s.length || /\s/.test(s[j + 1]!))) {
+        j += 1;
+        while (j < s.length && /[ \t]/.test(s[j]!)) j += 1;
+        break;
+      }
+      j += 1;
+    }
+    out.push(s.slice(i, j));
+    i = j;
+  }
+  return out;
+}
+
+function isCompleteChunk(c: string): boolean {
+  return /(?:[\n.!?。]\s*)$/.test(c);
+}
+
+function collapseBlanks(s: string): string {
+  return s.replace(/[^\S\n]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/^\s+/, "").replace(/\s+$/, "");
+}
+
+/** 태그 없는 사고 독백 문장을 본문에서 제거 */
+export function stripCotText(input: string): string {
+  if (!input) return "";
+  let out = "";
+  for (const c of splitChunks(input)) {
+    if (!isCotChunk(c)) out += c;
+  }
+  return collapseBlanks(out);
+}
+
+/** think 태그 + 사고 독백을 모두 걷어낸 사용자 표시용 본문 */
+export function sanitizeAssistantText(input: string): string {
+  return stripCotText(stripThinkTags(input));
+}
+
+/** 스트리밍 중 문장이 완성되기 전에 독백을 내보내지 않는다 */
+export class CotStreamFilter {
+  private buf = "";
+
+  push(delta: string): string {
+    if (!delta) return "";
+    this.buf += delta;
+    const chunks = splitChunks(this.buf);
+    if (chunks.length === 0) return "";
+    let out = "";
+    let rest = "";
+    for (let i = 0; i < chunks.length; i++) {
+      const c = chunks[i]!;
+      const isLast = i === chunks.length - 1;
+      if (isLast && !isCompleteChunk(c)) {
+        rest = c;
+        break;
+      }
+      if (!isCotChunk(c)) out += c;
+    }
+    this.buf = rest;
+    return out;
+  }
+
+  flush(): string {
+    const s = this.buf;
+    this.buf = "";
+    if (!s || isCotChunk(s)) return "";
+    return s;
+  }
+
+  reset() {
+    this.buf = "";
+  }
+}

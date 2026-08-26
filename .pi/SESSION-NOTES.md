@@ -20,5 +20,5 @@
 
 이미 막아 두었다.
 - UI (`MessageList.tsx`): thinking 블록·streamThinking 본문을 렌더하지 않고, 생각하는 중에는 로더만 표시
-- 서버 (`thinkingText.ts` + `index.ts` + `serialize.ts`): `thinking_delta` 미전송, 본문의 `<think>`/`<thinking>` 태그 제거
-- `responseRulesBlock()`: 본문 혼잣말(The user wants / Let me check 등) 금지
+- 서버 (`thinkingText.ts` + `index.ts` + `serialize.ts`): `thinking_delta` 미전송, 본문의 `<think>` 태그 제거, **태그 없는 영어 혼잣말(Let me / The user / 툴 이름)도 문장 단위로 제거**
+- `responseRulesBlock()`: 본문 혼잣말 금지
