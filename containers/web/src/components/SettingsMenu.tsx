@@ -54,7 +54,7 @@ export function SettingsMenu({ modelSelectionDisabled = false }: { modelSelectio
           </svg>
         </Menu.Trigger>
         <Menu.Portal>
-          <Menu.Positioner sideOffset={6} align="end">
+          <Menu.Positioner sideOffset={6} align="end" className="z-[60]">
             <Menu.Popup className="w-52 rounded-xl border border-line bg-card py-1 shadow-xl outline-none">
               <Menu.Group>
                 <Menu.GroupLabel className="px-3 pt-2 pb-1 text-[11px] font-medium tracking-wide text-faint uppercase">

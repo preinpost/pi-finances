@@ -59,7 +59,7 @@ export function ModelMenu({ current }: { current: UIModel | null }) {
         </svg>
       </Menu.Trigger>
       <Menu.Portal>
-        <Menu.Positioner sideOffset={6} align="end">
+        <Menu.Positioner sideOffset={6} align="end" className="z-[60]">
           <Menu.Popup className="flex w-72 flex-col overflow-hidden rounded-xl border border-line bg-card shadow-xl outline-none">
             <div className="border-b border-line p-2">
               <div className="flex items-center gap-2 rounded-lg bg-hover px-2.5">

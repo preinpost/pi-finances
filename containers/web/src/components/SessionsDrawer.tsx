@@ -334,8 +334,8 @@ export function SessionsDrawer({ currentSessionFile }: { currentSessionFile?: st
       </Dialog.Trigger>
       {!instantHide && (
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 bg-black/40 transition-opacity data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
-          <Dialog.Popup className="fixed inset-y-0 left-0 flex w-[82vw] max-w-xs flex-col bg-sidebar shadow-2xl outline-none transition-transform data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full">
+          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40 transition-opacity data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
+          <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex w-[82vw] max-w-xs flex-col bg-sidebar shadow-2xl outline-none transition-transform data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full">
             <SessionsPanel
               currentSessionFile={currentSessionFile}
               active={open}

@@ -31,7 +31,7 @@ export function ThinkingMenu({
         </svg>
       </Menu.Trigger>
       <Menu.Portal>
-        <Menu.Positioner sideOffset={6} align="end">
+        <Menu.Positioner sideOffset={6} align="end" className="z-[60]">
           <Menu.Popup className="w-36 rounded-xl border border-line bg-card py-1 shadow-xl outline-none">
             {levels.map((level) => (
               <Menu.Item
