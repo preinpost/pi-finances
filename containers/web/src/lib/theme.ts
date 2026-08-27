@@ -32,6 +32,12 @@ function apply(theme: Theme) {
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute("content", theme === "dark" ? "#0a111b" : "#edf1f7");
+  // iOS PWA status bar: 라이트 테마엔 어두운 글리프(default)로 또렷하게,
+  // 다크 테마엔 밝은 글리프를 쓰도록 전환. (black-translucent를 항상 쓰거나
+  // default로 고정하면 반대 테마에서 상단이 뿌옇게 보이거나 글자가 안 보인다.)
+  document
+    .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+    ?.setAttribute("content", theme === "dark" ? "black-translucent" : "default");
 }
 
 function notify() {
