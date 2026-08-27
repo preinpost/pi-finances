@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type TouchEvent, type WheelEvent 
 /** "진짜 바닥" 판정 여유 (px). 이 밴드 안에서만 재고정/스냅한다. */
 const BOTTOM_TOLERANCE = 8;
 import type { UIContentBlock, UIMessage } from "../../shared/protocol";
-import type { ActiveTool } from "../lib/chat";
+import type { ActiveTool, RunNote } from "../lib/chat";
 import { chatClient } from "../lib/chat";
 import { useLocale, useT } from "../lib/i18n";
 import { pickThinkingLine, pickToolFlavorLine } from "../lib/toolFlavor";
@@ -434,12 +434,14 @@ export function MessageList({
   streamThinking,
   activeTools,
   isStreaming,
+  runNote,
 }: {
   messages: UIMessage[];
   streamText: string;
   streamThinking: string;
   activeTools: ActiveTool[];
   isStreaming: boolean;
+  runNote?: RunNote | null;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -600,8 +602,34 @@ export function MessageList({
                 </span>
               </div>
             )}
+            {runNote && !isStreaming && (
+              <RunNoteBanner note={runNote} />
+            )}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** 런 비정상 종료·재시도 공지 — 말이 도중에 끊긴 원인을 채팅 안에 알려준다 */
+function RunNoteBanner({ note }: { note: RunNote }) {
+  const warn = note.level === "warn";
+  return (
+    <div
+      role="status"
+      key={note.id}
+      className={`fade-up rounded-xl border px-4 py-3 text-[13.5px] leading-relaxed ${
+        warn
+          ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300"
+          : "border-line bg-card/70 text-muted"
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        <span aria-hidden className={warn ? "mt-0.5 text-red-400 dark:text-red-500" : "mt-0.5 text-faint"}>
+          {warn ? "!" : "i"}
+        </span>
+        <p>{note.text}</p>
       </div>
     </div>
   );

@@ -237,6 +237,8 @@ interface SessionEntry {
   clients: Set<WebSocket>;
   unsubscribe?: () => void;
   lastActive: number;
+  /** 비정상 종료(run_interrupted/output_truncated) 공지 예약 타이머 */
+  runNoteTimer?: ReturnType<typeof setTimeout>;
   /** 본문에 섞인 <think> 태그를 스트리밍 중 분리 */
   thinkRouter: ThinkTagRouter;
   /** 태그 없는 사고 독백을 문장 단위로 걸러 낸다 */
@@ -272,6 +274,75 @@ function broadcastTo(entry: SessionEntry, event: ServerEvent) {
   for (const ws of entry.clients) {
     if (ws.readyState === ws.OPEN) ws.send(data);
   }
+}
+
+// ---------------------------------------------------------------------------
+// 런 생명주기 공지 (run_note)
+//
+// SDK는 provider 오류/출력 한도(truncation)에서 자동 재시도와 compaction 복구를
+// 한다. 재시도까지 소진돼 끝난 런은 마지막 assistant 문장이 도중에 잘린 채
+// agent_end가 나는데, 이를 사용자에게 알려주지 않으면 "말하다 마니"가 된다.
+// agent_end(willRetry:false) 직후 stopReason을 검사해 run_note를 내보낸다.
+// ---------------------------------------------------------------------------
+
+/** 비정상 종료 판정 전 살짝 지연 — snapshot 대소문 경합과 즉발 플래시를 완화 */
+const RUN_NOTE_DELAY_MS = 900;
+
+type InterruptibleAssistant = {
+  role?: unknown;
+  stopReason?: unknown;
+  errorMessage?: unknown;
+};
+
+function lastAssistantOf(messages: readonly unknown[]): InterruptibleAssistant | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i] as InterruptibleAssistant | undefined | null;
+    if (m && m.role === "assistant") return m;
+  }
+  return undefined;
+}
+
+function clearRunNoteTimer(entry: SessionEntry) {
+  if (entry.runNoteTimer) {
+    clearTimeout(entry.runNoteTimer);
+    entry.runNoteTimer = undefined;
+  }
+}
+
+function broadcastRunNote(
+  entry: SessionEntry,
+  note: Extract<ServerEvent, { type: "run_note" }>['note'],
+) {
+  broadcastTo(entry, { type: "run_note", note });
+}
+
+/** 에러/길이 제한으로 끝난 런 → 문장 잘림 공지 예약 (새 실행 시작 시 취소됨) */
+function scheduleRunEndNote(entry: SessionEntry, messages?: readonly unknown[]) {
+  const last = lastAssistantOf(messages ?? []);
+  const stop = String(last?.stopReason ?? "");
+  if (stop !== "error" && stop !== "length") return;
+  const detail = typeof last?.errorMessage === "string" ? last.errorMessage.trim() : "";
+  clearRunNoteTimer(entry);
+  entry.runNoteTimer = setTimeout(() => {
+    entry.runNoteTimer = undefined;
+    broadcastRunNote(
+      entry,
+      stop === "length"
+        ? {
+            level: "warn",
+            kind: "output_truncated",
+            text:
+              '출력 한도에 도달해 답변이 도중에 끊겼어요. "계속"이라고 보내면 이어서 완성합니다.',
+          }
+        : {
+            level: "warn",
+            kind: "run_interrupted",
+            text: detail
+              ? `조회·응답 처리가 오류로 중단됐어요 (${detail}). 마지막 문장이 잘렸을 수 있어요. "계속"으로 이어 하거나 다시 요청해 주세요.`
+              : '조회·응답 처리가 오류로 중단됐어요. 마지막 문장이 잘렸을 수 있어요. "계속"으로 이어 하거나 다시 요청해 주세요.',
+          },
+    );
+  }, RUN_NOTE_DELAY_MS);
 }
 
 /** 세션을 URL에 공개 (idempotent). 첫 메시지·기존 세션 접속·포크 시 호출 */
@@ -437,6 +508,38 @@ function bindSession(entry: SessionEntry) {
         entry.cotFilter.reset();
         broadcastSnapshot(entry);
         break;
+      case "auto_retry_start":
+        broadcastRunNote(entry, {
+          level: "info",
+          kind: "retrying",
+          text: `일시적 오류로 재시도 중이에요 (${event.attempt}/${event.maxAttempts})… ${event.errorMessage}`,
+        });
+        break;
+      case "auto_retry_end":
+        if (!event.success) {
+          broadcastRunNote(entry, {
+            level: "warn",
+            kind: "retry_exhausted",
+            text: `재시도 ${event.attempt}회 모두 실패했어요${event.finalError ? ` (${event.finalError})` : ""}. 요청을 줄여 다시 시도해 주세요.`,
+          });
+        }
+        break;
+      case "compaction_start":
+        broadcastRunNote(entry, {
+          level: "info",
+          kind: "compacting",
+          text: "대화 길이 관리를 위해 이전 내용을 압축·요약하는 중…",
+        });
+        break;
+      case "compaction_end":
+        if (event.errorMessage) {
+          broadcastRunNote(entry, {
+            level: "warn",
+            kind: "compaction_failed",
+            text: `컨텍스트 압축·복구에 실패했어요 (${event.errorMessage}). 모델 컨텍스트가 큰 종목일수록 조회량을 줄여 주세요.`,
+          });
+        }
+        break;
       case "tool_execution_start":
         broadcast({ type: "tool_start", toolCallId: event.toolCallId, toolName: event.toolName });
         break;
@@ -450,6 +553,8 @@ function bindSession(entry: SessionEntry) {
         broadcastSnapshot(entry);
         break;
       case "agent_start":
+        // 재시도/새 프롬프트로 새 실행이 시작되면 예약된 종료 공지는 무효다
+        clearRunNoteTimer(entry);
         entry.thinkRouter.reset();
         entry.cotFilter.reset();
         broadcast({ type: "agent_start" });
@@ -462,6 +567,8 @@ function bindSession(entry: SessionEntry) {
         const snap = buildSnapshot(entry);
         snap.isStreaming = false;
         broadcast({ type: "snapshot", snapshot: snap });
+        // willRetry:false 로 끝났는데 stopReason이 error/length면 문장이 잘렸다.
+        if (!event.willRetry) scheduleRunEndNote(entry, event.messages);
         break;
       }
     }
@@ -496,7 +603,14 @@ async function handleCommand(cmd: ClientCommand, ws: WebSocket) {
           ...(session.isStreaming ? { streamingBehavior: "steer" as const } : {}),
         })
         .catch((err) => {
-          sendTo(ws, { type: "error", message: String(err instanceof Error ? err.message : err) });
+          const message = String(err instanceof Error ? err.message : err);
+          sendTo(ws, { type: "error", message });
+          // 콘솔용 error 이벤트는 사용자 눈에 안 보인다 — 채팅 안에도 공지
+          broadcastRunNote(entry, {
+            level: "warn",
+            kind: "run_failed",
+            text: `요청 처리가 오류로 중단됐어요 (${message}). 다시 시도해 주세요.`,
+          });
         });
       break;
     }

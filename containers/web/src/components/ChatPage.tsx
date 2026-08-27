@@ -40,7 +40,8 @@ function connectionLabel(
 
 export function ChatPage() {
   const t = useT();
-  const { connection, sessionId, snapshot, streamText, streamThinking, activeTools } = useChat();
+  const { connection, sessionId, snapshot, streamText, streamThinking, activeTools, runNote } =
+    useChat();
   const isStreaming = snapshot?.isStreaming ?? false;
   const sidebarPinned = useSidebarPinned();
   const startNewSession = useNewSession();
@@ -138,6 +139,7 @@ export function ChatPage() {
               streamThinking={streamThinking}
               activeTools={activeTools}
               isStreaming={isStreaming}
+              runNote={runNote}
             />
             <Composer isStreaming={isStreaming} />
           </>

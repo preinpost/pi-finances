@@ -216,7 +216,25 @@ export type ServerEvent =
   | { type: "forked"; selectedText?: string }
   /** 이 연결에 바인딩된 세션이 삭제됨 — 클라이언트는 새 초안으로 재연결 */
   | { type: "session_deleted" }
+  /**
+   * 런 생명주기 공지 — 재시도·압축·비정상 종료(문장 잘림)를 채팅 안에 노출한다.
+   * 기존 "error" 이벤트는 개발자 콘솔로만 흘러 사용자가 왜 말이 끊겼는지 몰랐다.
+   */
+  | { type: "run_note"; note: UIRunNote }
   | { type: "error"; message: string };
+
+export interface UIRunNote {
+  level: "info" | "warn";
+  kind:
+    | "run_interrupted"
+    | "output_truncated"
+    | "retrying"
+    | "retry_exhausted"
+    | "compacting"
+    | "compaction_failed"
+    | "run_failed";
+  text: string;
+}
 
 export type ClientCommand =
   | { type: "prompt"; text: string; images?: UIImageAttachment[] }

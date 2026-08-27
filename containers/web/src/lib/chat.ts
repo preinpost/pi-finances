@@ -1,11 +1,14 @@
 import { useSyncExternalStore } from "react";
-import type { ClientCommand, ServerEvent, UISnapshot } from "../../shared/protocol";
+import type { ClientCommand, ServerEvent, UISnapshot, UIRunNote } from "../../shared/protocol";
 import { refreshAuth } from "./auth";
 
 export interface ActiveTool {
   toolCallId: string;
   toolName: string;
 }
+
+/** 서버가 보낸 런 생명주기 공지 (재시도·압축·비정상 종료) */
+export type RunNote = UIRunNote & { id: number };
 
 /** WS lifecycle for chrome status (avoid red flash on first paint). */
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
@@ -23,6 +26,8 @@ export interface ChatState {
   injectText: string | null;
   /** 증가할 때마다 composer textarea 포커스 */
   focusToken: number;
+  /** 런 중단·재시도 공지 — 새 실행(agent_start)이 시작되면 해제된다 */
+  runNote: RunNote | null;
 }
 
 const initialState: ChatState = {
@@ -34,6 +39,7 @@ const initialState: ChatState = {
   activeTools: [],
   injectText: null,
   focusToken: 0,
+  runNote: null,
 };
 
 class ChatClient {
@@ -76,6 +82,7 @@ class ChatClient {
         streamText: "",
         streamThinking: "",
         activeTools: [],
+        runNote: null,
       });
     }
     this.target = sessionId;
@@ -202,8 +209,10 @@ class ChatClient {
         });
         break;
       case "agent_start":
+        // 새 실행이 시작되면 이전 런의 중단 공지는 해제한다
         this.update({
           snapshot: this.state.snapshot ? { ...this.state.snapshot, isStreaming: true } : null,
+          runNote: null,
         });
         break;
       case "agent_end":
@@ -225,8 +234,22 @@ class ChatClient {
         // 다른 탭/사용자가 이 세션을 삭제 → 상태 초기화 후 새 초안에 재연결
         this.resetToDraft();
         break;
+      case "run_note":
+        // 재시도·압축·비정상 종료 공지를 채팅 하단에 노출 (말이 끊긴 원인 안내)
+        this.update({ runNote: { ...event.note, id: Date.now() } });
+        break;
       case "error":
         console.error("[pi-web-chat]", event.message);
+        if (!this.state.runNote) {
+          this.update({
+            runNote: {
+              level: "warn",
+              kind: "run_failed",
+              id: Date.now(),
+              text: `요청 처리 중 오류가 발생했어요 (${event.message}).`,
+            },
+          });
+        }
         break;
     }
   }
@@ -251,6 +274,7 @@ class ChatClient {
       streamText: "",
       streamThinking: "",
       activeTools: [],
+      runNote: null,
     });
     this.connect(null, { force: true });
   }
