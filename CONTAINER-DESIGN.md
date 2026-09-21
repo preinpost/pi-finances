@@ -116,6 +116,7 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 | APPEND_SYSTEM.md | "금융분석 전문 에이전트" persona 강화 | 시스템 프롬프트 append |
 | 프롬프트 템플릿 | "일일 리포트", "종목 딥다이브", "섹터 스크리닝" 등 `/template` | pi prompt-templates |
 | 모델 기본값 | `PI_DEFAULT_MODEL`/`PI_DEFAULT_THINKING` env → 엔트리포인트가 `--model`/`--thinking` 플래그로 전달 (TUI `/model`로 변경 가능, pi에 env 기반 기본모델 설정은 없음 — usage.md 옵션 표) | pi CLI 플래그 |
+| models.json | OpenRouter 라우팅 가드 — deepseek flash 계열에 처리량/지연/가격 조건을 걸어 느린 프로바이더 회피 (`modelOverrides.compat.openRouterRouting`) | pi docs/models.md — Per-model Overrides |
 
 ## 5. 키 주입 계약 (코드 검증 테이블)
 

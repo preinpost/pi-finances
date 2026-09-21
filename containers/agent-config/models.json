@@ -1,0 +1,66 @@
+// OpenRouter 라우팅 가드 — 간헐적으로 잡히는 느린/비싼 프로바이더 회피
+//
+// pi는 에이전트 디렉터리의 models.json을 읽는다. 컨테이너는 PI_CODING_AGENT_DIR=/opt/pi-agent 이고
+// Dockerfile의 `COPY agent-config/ /opt/pi-agent/` 로 이 파일이 /opt/pi-agent/models.json 이 된다.
+// (호스트 개발 환경의 ~/.pi/agent/models.json 과 같은 역할)
+//
+// modelOverrides.compat.openRouterRouting 객체는 OpenRouter 요청의 `provider` 필드로 그대로
+// 전달된다 (pi docs/models.md — Per-model Overrides / openRouterRouting).
+//   sort: "throughput"        — 처리량 높은 프로바이더 우선 선택
+//   preferred_min_throughput  — 토큰/초 하한 (p50, 소프트 선호)
+//   preferred_max_latency     — 첫 토큰 지연 상한 초 (p90, 소프트 선호)
+//   max_price                 — $/1M 토큰 상한 (하드 필터 — 비싼 프로바이더 배제)
+//   allow_fallbacks: true     — 조건을 만족하는 프로바이더가 없으면 일반 라우팅으로 폴백
+//                               (false면 조건 미충족 시 요청 자체가 실패한다)
+//
+// ⚠️ 이 오버라이드는 openrouter 프로바이더 경유로 쓸 때만 적용된다 (DEEPSEEK_API_KEY 직결은 해당 없음).
+//    PI_DEFAULT_MODEL은 `openrouter/deepseek/deepseek-v4.1-flash`, 또는 모델 ID가 유일하면
+//    `deepseek/deepseek-v4.1-flash`처럼 프로바이더 접두어 없이 써도 openrouter로 해석된다
+//    (검증: 키 없이 실행 시 "No API key found for openrouter").
+{
+  "providers": {
+    "openrouter": {
+      "modelOverrides": {
+        "deepseek/deepseek-v4.1-flash": {
+          "name": "DS V4.1 Flash - Low-cost + tps-guarded",
+          "compat": {
+            "openRouterRouting": {
+              "sort": "throughput",
+              "preferred_min_throughput": {
+                "p50": 50
+              },
+              "preferred_max_latency": {
+                "p90": 3
+              },
+              "max_price": {
+                "prompt": 0.22,
+                "completion": 0.66
+              },
+              "allow_fallbacks": true
+            }
+          }
+        },
+        // compose.yaml 기본값 — v4.1-flash로 바꿔도 이 항목은 남겨둔다 (UI 모델 선택 대비)
+        "deepseek/deepseek-v4-flash-0731": {
+          "name": "DS V4 Flash - Low-cost + tps-guarded",
+          "compat": {
+            "openRouterRouting": {
+              "sort": "throughput",
+              "preferred_min_throughput": {
+                "p50": 30
+              },
+              "preferred_max_latency": {
+                "p90": 3
+              },
+              "max_price": {
+                "prompt": 0.105,
+                "completion": 0.21
+              },
+              "allow_fallbacks": true
+            }
+          }
+        }
+      }
+    }
+  }
+}
