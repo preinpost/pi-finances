@@ -6,7 +6,7 @@
  *   src/client.ts     — HMAC SHA256 서명 + 서버시간 보정 + 레이트리밋
  *   src/secret.ts     — pi-binance 전용 키 스토어 (BINANCE_API_KEY/SECRET/ENV 폴백)
  *   src/roles/        — 시세·차트·잔고·주문·선물 전용 정규화
- *   src/agent/        — binance_* 8툴, /binance-key, /binance-status
+ *   src/agent/        — binance_* 9툴, /binance-key, /binance-status
  *
  * Tools:
  *   - binance_price     현재가·24h 변동 (현물/USDT-M, 키 없이 가능)
@@ -17,13 +17,14 @@
  *   - binance_orders    미체결/상세/취소/체결/전체이력
  *   - binance_orderlist 현물 OCO/OTO/OTOCO
  *   - binance_futures   펀딩·마크가·미결제약정·레버리지·마진타입
+ *   - binance_wallet    지갑별 잔고(Spot/Funding/Earn/Futures) + 지갑 간 이동 (확인 카드 승인 후에만)
  *
  * Commands:
  *   - /binance-key     API Key/Secret + live|testnet 등록
  *   - /binance-status  연동 상태 진단
  *
  * 인증: HMAC SHA256 (헤더 X-MBX-APIKEY + query signature).
- * 출금·내부이체·API 키 관리는 제공하지 않음.
+ * 외부 출금·서브계정 이체·API 키 관리는 제공하지 않음 (같은 계정 지갑 간 이동만).
  */
 import registerExtension from "./src/agent/extension.ts";
 

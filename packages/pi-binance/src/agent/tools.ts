@@ -1,5 +1,5 @@
 /**
- * src/agent/tools.ts — pi 툴 등록 (binance_* 8개).
+ * src/agent/tools.ts — pi 툴 등록 (binance_* 9개).
  *
  * 모든 응답은 roles/binance.ts에서 compact 정규화 후
  * jsonResult({ ok: true, ... }) — 실패 시 jsonResult({ ok: false, error }).
@@ -44,6 +44,24 @@ import {
 	placeOto,
 	placeOtoco,
 } from "../roles/spot.ts";
+import {
+	describePlan,
+	executeTransfer,
+	getWalletOverview,
+	planTransfer,
+	WALLET_LABELS,
+	WALLETS,
+	type Wallet,
+} from "../roles/wallet.ts";
+
+/** 지갑 이동 확인 카드 대기 시간 — 지나면 취소로 처리. */
+const TRANSFER_CONFIRM_TIMEOUT_MS = 3 * 60_000;
+
+const WalletParam = (description: string) =>
+	Type.Union(
+		[Type.Literal("SPOT"), Type.Literal("FUNDING"), Type.Literal("EARN"), Type.Literal("FUTURES")],
+		{ description: `${description} — SPOT(현물)/FUNDING(펀딩)/EARN(Simple Earn 유연)/FUTURES(USDⓈ-M 선물)` },
+	);
 
 export function jsonResult(value: unknown, details: object = {}) {
 	return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }], details };
@@ -590,6 +608,83 @@ export function registerTools(pi: ExtensionAPI): void {
 				return jsonResult({ ok: false, error: `알 수 없는 kind: ${params.kind}` });
 			} catch (e) {
 				return jsonResult({ ok: false, error: (e as Error).message });
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "binance_wallet",
+		label: "바이낸스 지갑",
+		description:
+			"Binance 지갑(Wallet)별 잔고 조회 + 지갑 간 이동 (같은 계정 내부 — 외부 출금 아님). " +
+			"지갑: SPOT(현물)/FUNDING(펀딩)/EARN(Simple Earn 유연 예치)/FUTURES(USDⓈ-M 선물). " +
+			"action=balances: 지갑별 잔고 — 현물에서 USDT가 0인데 Earn·펀딩에 있을 수 있으니 '잔고' 질문엔 이걸 쓸 것. " +
+			"action=transfer: from/to/asset + amount 또는 all=true. 실행 전 사용자에게 **확인 카드**가 뜨고, " +
+			"사용자가 카드에서 확인을 눌러야만 이동된다 (취소·시간초과·확인 UI 없음이면 실행 안 함). " +
+			"EARN↔FUTURES는 직접 경로 없음 — SPOT 경유 2번. 매수 전 Earn에 있는 USDT는 EARN→SPOT으로 옮긴다.",
+		parameters: Type.Object({
+			action: Type.Union([Type.Literal("balances"), Type.Literal("transfer")], { description: "balances=지갑별 잔고, transfer=지갑 간 이동" }),
+			from: Type.Optional(WalletParam("보내는 지갑 (transfer 필수)")),
+			to: Type.Optional(WalletParam("받는 지갑 (transfer 필수)")),
+			asset: Type.Optional(Type.String({ description: "자산, 예: USDT (transfer 필수, balances는 필터)" })),
+			amount: Type.Optional(Type.String({ description: "이동 수량 (all=true면 생략)" })),
+			all: Type.Optional(Type.Boolean({ description: "보내는 지갑의 이동 가능 전량 (기본 false)" })),
+			wallets: Type.Optional(Type.String({ description: "balances 대상 지갑 콤마 구분, 예: SPOT,EARN (기본 전체)" })),
+			env: Env,
+		}),
+		async execute(_id, params, signal, _onUpdate, ctx) {
+			try {
+				if (params.action === "balances") {
+					const wallets = params.wallets
+						?.split(",")
+						.map((w) => w.trim().toUpperCase())
+						.filter((w): w is Wallet => (WALLETS as readonly string[]).includes(w));
+					const data = await getWalletOverview({ env: params.env, wallets, asset: params.asset });
+					return jsonResult({ ok: true, source: "binance", wallets: data });
+				}
+
+				if (!params.from || !params.to || !params.asset) {
+					return jsonResult({ ok: false, error: "transfer는 from, to, asset 이 필요합니다." });
+				}
+				if (!ctx.hasUI) {
+					return jsonResult({
+						ok: false,
+						executed: false,
+						error: "확인 카드를 띄울 UI가 없어 지갑 이동을 실행하지 않았습니다. 웹챗 또는 pi 인터랙티브 모드에서 다시 요청하세요.",
+					});
+				}
+				const plan = await planTransfer({
+					from: params.from,
+					to: params.to,
+					asset: params.asset,
+					amount: params.amount,
+					all: params.all,
+					env: params.env,
+				});
+				const { title, message } = describePlan(plan);
+				const confirmed = await ctx.ui.confirm(title, message, { signal, timeout: TRANSFER_CONFIRM_TIMEOUT_MS });
+				if (!confirmed) {
+					return jsonResult({
+						ok: false,
+						executed: false,
+						error: "사용자가 확인하지 않아 지갑 이동을 실행하지 않았습니다 (취소 또는 시간 초과).",
+						plan: { from: plan.from, to: plan.to, asset: plan.asset, amount: plan.amount },
+					});
+				}
+				const result = await executeTransfer(plan, { env: params.env });
+				return jsonResult({
+					ok: true,
+					executed: true,
+					source: "binance",
+					from: WALLET_LABELS[plan.from],
+					to: WALLET_LABELS[plan.to],
+					asset: plan.asset,
+					amount: plan.amount,
+					api: plan.route.api,
+					result,
+				});
+			} catch (e) {
+				return jsonResult({ ok: false, executed: false, error: (e as Error).message });
 			}
 		},
 	});

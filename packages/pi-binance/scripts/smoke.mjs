@@ -15,6 +15,7 @@ const EXPECTED_TOOLS = [
 	"binance_orders",
 	"binance_orderlist",
 	"binance_futures",
+	"binance_wallet",
 ];
 const EXPECTED_COMMANDS = ["binance-key", "binance-status"];
 
